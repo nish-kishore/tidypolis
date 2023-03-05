@@ -1,3 +1,14 @@
+# You can learn more about package authoring with RStudio at:
+#
+#   http://r-pkgs.had.co.nz/
+#
+# Some useful keyboard shortcuts for package authoring:
+#
+#   Install Package:           'Ctrl + Shift + B'
+#   Check Package:             'Ctrl + Shift + E'
+#   Test Package:              'Ctrl + Shift + T'
+
+
 #' @description Initialize API Key and local data cache for tidypolis. inspiration from
 #' tidycensus process for managing their API
 #' @param polid_data_folder str: location of folder where to store all information
@@ -37,9 +48,63 @@ init_tidypolis <- function(
   #check if key details exist, if not ask for them, test them and store them
   #if they exist, check the key
   #if key doesn't work ask for another one
+  cred_file <- file.path(polis_data_folder, "creds.yaml")
+  if(file.exists(cred_file)){
+    message("POLIS API Key found - validating key")
+
+    if(test_polis_key(yaml::read_yaml(cred_file)$polis_api_key)){
+      message("POLIS API Key validated!")
+    }else{
+      message("POLIS API Key is not valid - please enter new key")
+
+      i <- 1
+      fail <- T
+      while(i < 3 | fail){
+
+        message(paste0("Attempt - ", i, "/3"))
+
+
+        key <- readline(prompt = "Please enter API Key: ")
+
+        if(test_polis_key(key)){
+
+          fail <- F
+
+          list(
+            "polis_api_key" = key,
+            "polis_data_folder" = polis_data_folder
+          )
+
+          message("POLIS API Key validated!")
+
+        }
+
+      }
+
+      if(i == 3){
+        stop("Please verify your POLIS API key and try again")
+      }
+
+    }
+  }
+
   #check if cache exists, if not, create it
 
-  if(dir.exists(cache_loc))
+  cache_file <- file.path(polis_data_folder, "cache.rds")
+
+  if(file.exists(cache_file)){
+    message("Previous cache located!")
+  }else{
+    tibble::tibble(
+      "table" = c("cache", "virus", "case", "human_specimen", "environmental_sample",
+                  "activity", "sub_activity", "lqas", "im", "population", "geography",
+                  "synonym", "indicator", "reference_data"),
+      "nrow" = NA
+    ) |>
+      dplyr::mutate(last_updated = Sys.time(),
+                    nrow = ifelse(table == "cache", 14, NA)) |>
+      readr::write_rds(cache.file)
+  }
 
   if(test_polis_key(key)){
 
@@ -100,10 +165,24 @@ test_polis_key <- function(key){
   api_url <- paste0(polis_api_root_url, "Virus?$top=1")
 
   # connect to the API and Get data
-  get_result <- GET(api_url, add_headers("authorization-token" = key))
-  content(get_result, type="application/json", encoding = "UTF-8")
+  get_result <- httr::GET(api_url, httr::add_headers("authorization-token" = key))
+  httr::content(get_result, type="application/json", encoding = "UTF-8")
 
   # Display the status which should be 200 (OK)
-  return(status_code(get_result) == 200)
+  return(httr::status_code(get_result) == 200)
 
 }
+
+#' @description Create creds file
+#' @param polis_data_folder str: location of POLIS data folder
+#' @returns boolean for folder creation
+create_cred_file <- function(
+    polis_data_folder
+){
+  list(
+    "polis_api_key" = "",
+    "polis_data_folder" = ""
+  ) |>
+    yaml::write_yaml(file = file.path(polis_data_folder,"creds.yaml"))
+}
+
