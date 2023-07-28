@@ -1,3 +1,8 @@
+api_key <- "BRfIZj%2fI9B3MwdWKtLzG%2bkpEHdJA31u5cB2TjsCFZDdMZqsUPNrgiKBhPv3CeYRg4wrJKTv6MP9UidsGE9iIDmaOs%2bGZU3CP5ZjZnaBNbS0uiHWWhK8Now3%2bAYfjxkuU1fLiC2ypS6m8Jy1vxWZlskiPyk6S9IV2ZFOFYkKXMIw%3d"
+
+
+
+
 #date_min_conv (Note: this is copied from idm_polis_api)
 
 #' @param field_name The name of the field used for date filtering.
@@ -598,3 +603,70 @@ call_url <- function(url,
 load_GetPOLIS("C:/Users/ynm2/Desktop/gitrepos/")
 init_polis_data_struc(folder = "C:/Users/ynm2/Desktop/POLIS_data",
                       token = "BRfIZj%2fI9B3MwdWKtLzG%2bkpEHdJA31u5cB2TjsCFZDdMZqsUPNrgiKBhPv3CeYRg4wrJKTv6MP9UidsGE9iIDmaOs%2bGZU3CP5ZjZnaBNbS0uiHWWhK8Now3%2bAYfjxkuU1fLiC2ypS6m8Jy1vxWZlskiPyk6S9IV2ZFOFYkKXMIw%3d")
+
+
+#example from tidycensus
+if(test_polis_key(key)){
+
+
+  home <- Sys.getenv("HOME")
+  renv <- file.path(home, ".Renviron")
+
+  if(!file.exists(renv)){
+    file.create(renv)
+  }
+
+  key_exists <- any(grepl("POLIS_API_KEY", readLines(renv)))
+
+  if(key_exists){
+    message("An API key alread exists for POLIS")
+  }
+
+  else{
+    if(isTRUE(overwrite)){
+      message("Your original .Renviron will be backed up and stored in your R HOME directory if needed.")
+      oldenv = read.table(renv, stringsAsFactors = FALSE)
+      newenv <- oldenv[-grep("CENSUS_API_KEY", oldenv),
+      ]
+      write.table(newenv, renv, quote = FALSE, sep = "\n",
+                  col.names = FALSE, row.names = FALSE)
+    }
+    else{
+      tv <- readLines(renv)
+      if(any(grepl("CENSUS_API_KEY", tv))) {
+        stop("A CENSUS_API_KEY already exists. You can overwrite it with the argument overwrite=TRUE",
+             call. = FALSE)
+      }
+    }
+  }
+  keyconcat <- paste0("CENSUS_API_KEY='", key, "'")
+  write(keyconcat, renv, sep = "\n", append = TRUE)
+  message("Your API key has been stored in your .Renviron and can be accessed by Sys.getenv(\"CENSUS_API_KEY\"). \nTo use now, restart R or run `readRenviron(\"~/.Renviron\")`")
+  return(key)
+
+}else{
+
+  stop(paste0("Please verify POLIS API Key, key provided returned an error.\nKey: ", key))
+
+}
+
+api_url <- "https://extranet.who.int/polis/api/v2/Population"
+get_result <- httr::GET(api_url, httr::add_headers("authorization-token" = key))
+x <- httr::content(get_result, type="application/json", encoding = "UTF-8")
+
+data <- jsonlite::fromJSON(rawToChar(get_result$content))
+
+while("odata.metadata" %in% names(x)){
+  api_url <- x$odata.nextLink
+  get_result <- httr::GET(api_url, httr::add_headers("authorization-token" = key))
+  x <- httr::content(get_result, type="application/json", encoding = "UTF-8")
+  data <- dplyr::bind_rows(
+    data,
+    jsonlite::fromJSON(rawToChar(get_result$content))
+  )
+}
+
+pop <- data$value
+
+readr::write_rds(pop, "C:/Users/ynm2/Desktop/pop.rds")
+
