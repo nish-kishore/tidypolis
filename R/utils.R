@@ -190,7 +190,7 @@ get_table_data <- function(
 
         table_url <- gsub(" ", "+", table_url, )
 
-        if(table_data$table %in% c("human_specimen", "environmental_sample")){
+        if(table_data$table %in% c("human_specimen", "environmental_sample", "activity", "sub_activity", "lqas")){
           urls <- create_table_urls(url = table_url, table_size = table_size, type = "lab-partial")
         }else{
           urls <- create_table_urls(url = table_url, table_size = table_size, type = "partial")
@@ -440,7 +440,7 @@ get_table_ids <- function(.table, .id, api_key = Sys.getenv("POLIS_API_KEY")){
 
   table_size <- get_table_size(.table = "case")
 
-  if(table_data$table %in% c("human_specimen", "environmental_sample")){
+  if(table_data$table %in% c("human_specimen", "environmental_sample", "activity", "sub_activity", "lqas")){
     urls <- create_table_urls(url = api_url, table_size = table_size, type = "lab-partial")
   }else{
     urls <- create_table_urls(url = api_url, table_size = table_size, type = "partial")
