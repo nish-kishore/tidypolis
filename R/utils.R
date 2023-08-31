@@ -110,6 +110,7 @@ get_polis_cache <- function(
 #' @param .table Table value to retrieve
 #' @param .last_update Time of last update
 #' @param
+#' @export
 #' @returns Tibble with reference data
 get_table_data <- function(
     api_key = Sys.getenv("POLIS_API_Key"),
@@ -136,7 +137,7 @@ get_table_data <- function(
 
     cli::cli_process_start("Downloading data")
     out <- call_urls(urls)
-    update_polis_log(.event = paste0("Downloaded ", table_size, "rows of ", table_data$table, " data"))
+    update_polis_log(.event = paste0("Downloaded ", table_size, " rows of ", table_data$table, " data"))
     cli::cli_process_done()
 
     #update cache information
@@ -271,6 +272,7 @@ get_table_data <- function(
 #' @param .table str: Table to be downloaded
 #' @param api_key str: API Key
 #' @param cache_file str: Cache file location
+#' @export
 get_table_size <- function(
     .table,
     api_key = Sys.getenv("POLIS_API_KEY"),
@@ -302,7 +304,7 @@ get_table_size <- function(
 
   out <- jsonlite::fromJSON(rawToChar(response$content))
 
-  tibble::as_tibble(out$value)
+  #tibble::as_tibble(out$value)
 
 
   table_size <- response |>
@@ -390,10 +392,12 @@ call_urls <- function(urls){
 #' @description Call a return the formatted output frome one URL
 #' @param url
 #' @param api_key
+#' @param times
 #' @return tibble
 call_single_url <- function(
     url,
-    api_key = Sys.getenv("POLIS_API_KEY")
+    api_key = Sys.getenv("POLIS_API_KEY"),
+    times = 10
     ){
   # disable SSL Mode
   httr::set_config(httr::config(ssl_verifypeer = 0L))
@@ -404,7 +408,7 @@ call_single_url <- function(
     verb = "GET",
     url = url,
     config = httr::add_headers("authorization-token" = api_key),
-    times = 10,
+    times = times,
     quiet = TRUE,
     terminate_on_success = TRUE
   )
@@ -420,7 +424,7 @@ call_single_url <- function(
 #' Get Ids
 #'
 #' @description return Ids availalbe in table
-#' @param table str: table
+#' @param .table str: table
 #' @param id str: id variable
 #' @param api_key str: POLIS API Key
 #' @return character array of ids
@@ -438,7 +442,7 @@ get_table_ids <- function(.table, .id, api_key = Sys.getenv("POLIS_API_KEY")){
 
   api_url <- paste0(polis_api_root_url, table_data$endpoint, "?$select=", table_data$polis_id)
 
-  table_size <- get_table_size(.table = "case")
+  table_size <- get_table_size(.table = .table)
 
   if(table_data$table %in% c("human_specimen", "environmental_sample", "activity", "sub_activity", "lqas")){
     urls <- create_table_urls(url = api_url, table_size = table_size, type = "lab-partial")
@@ -458,7 +462,7 @@ get_table_ids <- function(.table, .id, api_key = Sys.getenv("POLIS_API_KEY")){
 }
 
 #' Manager function to get and update POLIS data
-#'
+#' @export
 get_polis_data <- function(){
 
   tables <- c("virus", "case", "human_specimen", "environmental_sample",
@@ -493,5 +497,84 @@ bind_and_reconcile <- function(new_data, old_data){
   old_data <- tibble::as_tibble(old_data)
 
   return(dplyr::bind_rows(old_data, new_data))
+
+}
+
+#' Run diagnostic test on polis connections
+#' @description Run diagnostics
+#' @returns tibble with diagnostic results
+run_diagnostics <- function(){
+
+  tables <- c("virus", "case", "human_specimen", "environmental_sample",
+              "activity", "sub_activity", "lqas", "im")
+
+  lapply(tables, function(x) run_single_table_diagnostic(.table = x)) |>
+    bind_rows()
+
+}
+
+#' Run single table diagnostic
+#' @description Run single table diagnostic
+#' @param .table str: table name
+#' @param key str: POLIS API Key
+#' @returns tibble with diagnostic data
+run_single_table_diagnostic <- function(.table, key =  Sys.getenv("POLIS_API_Key")){
+
+  base_url <- "https://extranet.who.int/polis/api/v2/"
+  table_data <- get_polis_cache(.table = .table)
+  table_url <- paste0(base_url, table_data$endpoint)
+  table_size <- get_table_size(.table = .table)
+
+  if(table_data$table %in% c("human_specimen", "environmental_sample", "activity", "sub_activity", "lqas")){
+    urls <- create_table_urls(url = table_url, table_size = table_size, type = "lab")
+  }else{
+    urls <- create_table_urls(url = table_url, table_size = table_size, type = "full")
+  }
+
+  data_url <- urls[1]
+
+
+  # disable SSL Mode
+  httr::set_config(httr::config(ssl_verifypeer = 0L))
+
+  # Variables: URL, Token, Filters, ...
+  polis_api_root_url <- "https://extranet.who.int/polis/api/v2/"
+
+  api_url <- paste0(polis_api_root_url, table_data$endpoint, "?$select=", table_data$polis_id)
+
+  if(table_data$table %in% c("human_specimen", "environmental_sample", "activity", "sub_activity", "lqas")){
+    urls <- create_table_urls(url = api_url, table_size = table_size, type = "lab-partial")
+  }else{
+    urls <- create_table_urls(url = api_url, table_size = table_size, type = "partial")
+  }
+
+  id_url <- urls[1]
+
+  tick <- Sys.time()
+  data_return <- tryCatch(
+    call_single_url(data_url, times = 1),
+    error = function(cond){
+      return("Error")
+    }
+  )
+  tock <- Sys.time()
+  data_time <- tock - tick
+
+  tick <- Sys.time()
+  id_return <- tryCatch(
+    call_single_url(id_url, times = 1),
+    error = function(cond){
+      return("Error")
+    }
+  )
+  tock <- Sys.time()
+  id_time <- tock - tick
+
+  return(tibble("table" = .table,
+                "data" = ifelse(is.data.frame(data_return), "Success", "Error"),
+                "data_time" = data_time,
+                "id" = ifelse(is.data.frame(id_return), "Success", "Error"),
+                "id_time" = id_time))
+
 
 }
