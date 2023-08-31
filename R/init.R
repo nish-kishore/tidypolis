@@ -1,9 +1,10 @@
-#' A function to intitialize polis
+#' A function to intitialize a POLIS data folder
 #'
 #' @description Initialize API Key and local data cache for tidypolis. inspiration from
 #' tidycensus process for managing their API
-#' @param polid_data_folder str: location of folder where to store all information
+#' @param polis_data_folder str: location of folder where to store all information
 #' @returns Messages on process
+#' @export
 init_tidypolis <- function(
     polis_data_folder
     ){
@@ -162,34 +163,31 @@ init_tidypolis <- function(
 
 
 
-#' @description Test POLIS API Key
-#' @param key str: POLIS API Key
-#' @returns boolean
-test_polis_key <- function(key){
+#' Manager function to get and update POLIS data
+#'
+#' @description This function iterates through all tables and loads POLIS data
+#' @export
+get_polis_data <- function(){
 
-  # Variables: URL, Token, Filters, ...
-  polis_api_root_url <- "https://extranet.who.int/polis/api/v2/"
+  tables <- c("virus", "case", "human_specimen", "environmental_sample",
+              "activity", "sub_activity", "lqas", "im")
 
-  api_url <- paste0(polis_api_root_url, "$metadata")
-
-  # connect to the API and Get data
-  get_result <- httr::GET(api_url, httr::add_headers("authorization-token" = key))
-
-  # Display the status which should be 200 (OK)
-  return(httr::status_code(get_result) == 200)
+  sapply(tables, function(x) get_table_data(.table = x))
 
 }
 
-#' @description Create creds file
-#' @param polis_data_folder str: location of POLIS data folder
-#' @returns boolean for folder creation
-create_cred_file <- function(
-    polis_data_folder
-){
-  list(
-    "polis_api_key" = "",
-    "polis_data_folder" = ""
-  ) |>
-    yaml::write_yaml(file = file.path(polis_data_folder,"creds.yaml"))
-}
 
+#' Run diagnostic test on polis connections
+#'
+#' @description Run diagnostics of API connection with POLIS
+#' @returns tibble with diagnostic results
+#' @export
+run_diagnostics <- function(){
+
+  tables <- c("virus", "case", "human_specimen", "environmental_sample",
+              "activity", "sub_activity", "lqas", "im")
+
+  lapply(tables, function(x) run_single_table_diagnostic(.table = x)) |>
+    bind_rows()
+
+}

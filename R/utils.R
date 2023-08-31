@@ -1,121 +1,17 @@
-#' @description Manage input
-#' @param request str:
-#' @param error_resp str:
-#' @param vals array:
-#' @param max_i int:
-#' @returns val from `vals` or stops output
-request_input <- function(
-    request,
-    vals,
-    error_resp = "Valid input not chosen",
-    max_i = 3
-){
+#### POLIS Interactions ####
 
-  message(request)
-
-  i <- 1
-
-  vals_str <- paste0("Please choose one of the following [",
-                     paste0(as.character(vals), collapse = "/"),
-                     "]:  \n")
-
-  val <- readline(prompt = vals_str)
-
-  while(!val %in% vals){
-    val <- readline(prompt = vals_str)
-    i <- i + 1
-    if(i == max_i){
-      stop(error_resp)
-    }
-  }
-
-  return(val)
-
-}
-
-
-#' @description Update the POLIS cache directory
-#' @param cache_file str: location of cache file
-#' @param table str: table to be updated
-#' @param nrow double: nrow of table to be updated
-#' @returns Return true if cache updated
-update_polis_cache <- function(
-    cache_file = Sys.getenv("POLIS_CACHE_FILE"),
-    .table,
-    .nrow,
-    .update_val
-){
-
-  readr::read_rds(cache_file) |>
-    dplyr::mutate(
-      nrow = ifelse(table == .table, .nrow, nrow),
-      last_sync = ifelse(table == .table, lubridate::as_datetime(Sys.time()), last_sync),
-      last_user = ifelse(table == .table, Sys.getenv("USERNAME"), last_user),
-      polis_update_value = ifelse(table == .table, lubridate::as_datetime(.update_val), polis_update_value),
-      last_sync = lubridate::as_datetime(last_sync),
-      polis_update_value = lubridate::as_datetime(polis_update_value)
-    ) |>
-    readr::write_rds(cache_file)
-
-}
-
-
-#' @description Update the POLIS log
-#' @param log_file str: location of cache file
-#' @param .time dttm: time of update
-#' @param .user double: user who conducted the action
-#' @param .event str: event to be logged
-#' @returns Return true if cache updated
-update_polis_log <- function(
-    log_file = Sys.getenv("POLIS_LOG_FILE"),
-    .time = Sys.time(),
-    .user = Sys.getenv("USERNAME"),
-    .event
-){
-
-  readr::read_rds(log_file) |>
-    tibble::add_row(
-      time = .time,
-      user = .user,
-      event = .event
-    ) |>
-    readr::write_rds(log_file)
-
-}
-
-
-#' @description Pull cache data for a particular talbe
-#' @param cache_file str: location of cache file
-#' @param table str: table to be loaded
-#' @returns Return tibble with table information
-get_polis_cache <- function(
-    cache_file = Sys.getenv("POLIS_CACHE_FILE"),
-    .table
-){
-  cache <- readr::read_rds(cache_file)
-
-  if(.table %in% dplyr::pull(cache, table)){
-    cache |>
-      dplyr::filter(table == .table)
-  }else{
-    cli::cli_alert_warning(paste0("No entry found in the cache table for: ", .table))
-  }
-
-
-}
-
-
+#' Request data from single table
+#'
 #' @description Get POLIS table Data
 #' @param api_key API Key
 #' @param .table Table value to retrieve
 #' @param .last_update Time of last update
 #' @param
-#' @export
 #' @returns Tibble with reference data
 get_table_data <- function(
     api_key = Sys.getenv("POLIS_API_Key"),
     .table
-    ){
+){
 
   base_url <- "https://extranet.who.int/polis/api/v2/"
   table_data <- get_polis_cache(.table = .table)
@@ -147,7 +43,7 @@ get_table_data <- function(
       .table = .table,
       .nrow = nrow(out),
       .update_val = max(lubridate::as_datetime(dplyr::pull(out[table_data$polis_update_id])))
-      )
+    )
     cli::cli_process_done()
 
     cli::cli_process_start("Writing data cache")
@@ -267,8 +163,8 @@ get_table_data <- function(
 
 }
 
-
 #' Get table size from POLIS
+#'
 #' @param .table str: Table to be downloaded
 #' @param api_key str: API Key
 #' @param cache_file str: Cache file location
@@ -317,110 +213,6 @@ get_table_size <- function(
 
 }
 
-#' Create table URLs
-#'
-#' @description create urls from table size and base url
-#' @url str: base url to be queried
-#' @table_size int: integer of download
-#' @type str: "full" or "partial"
-#' @returns array of urls
-create_table_urls <- function(
-    url,
-    table_size,
-    type
-){
-
-  prior_scipen <- getOption("scipen")
-  options(scipen = 999)
-
-  if(sum(type %in% c("full", "partial", "lab", "lab-partial")) > 0){
-
-    if(type == "full"){
-      urls <- paste0(url, "?$top=2000&$skip=",as.character(seq(0,as.numeric(table_size), by = 2000)))
-    }
-
-    if(type == "partial"){
-      urls <- paste0(url, "&$top=2000&$skip=",seq(0,as.numeric(table_size), by = 2000))
-    }
-
-    if(type == "lab"){
-      urls <- paste0(url, "?$top=1000&$skip=",as.character(seq(0,as.numeric(table_size), by = 1000)))
-    }
-
-    if(type == "lab-partial"){
-      urls <- paste0(url, "&$top=1000&$skip=",seq(0,as.numeric(table_size), by = 1000))
-    }
-
-  }
-  return(urls)
-
-}
-
-
-#' Call multiple URLs
-#' @description Call multiple URLs
-#' @param urls
-#' @return tibble with all data
-call_urls <- function(urls){
-
-  doFuture::registerDoFuture() ## tell foreach to use futures
-  future::plan(future::multisession) ## parallelize over a local PSOCK cluster
-  options(doFuture.rng.onMisuse = "ignore")
-  xs <- 1:length(urls)
-
-  progressr::handlers("cli")
-
-  progressr::with_progress({
-    p <- progressr::progressor(along = xs)
-    y <- foreach::`%dopar%`(foreach::foreach(x = xs), {
-      # signal a progression update
-      p()
-      # jitter the parallel calls to not overwhelm the server
-      Sys.sleep(1 + rpois(1, 10)/100)
-      call_single_url(urls[x])
-    })
-  })
-
-  y <- dplyr::bind_rows(y)
-  gc()
-  return(y)
-
-}
-
-
-#' Call single URL
-#' @description Call a return the formatted output frome one URL
-#' @param url
-#' @param api_key
-#' @param times
-#' @return tibble
-call_single_url <- function(
-    url,
-    api_key = Sys.getenv("POLIS_API_KEY"),
-    times = 10
-    ){
-  # disable SSL Mode
-  httr::set_config(httr::config(ssl_verifypeer = 0L))
-
-  #response <- httr::GET(url=url, httr::add_headers("authorization-token" = api_key))
-
-  response <- httr::RETRY(
-    verb = "GET",
-    url = url,
-    config = httr::add_headers("authorization-token" = api_key),
-    times = times,
-    quiet = TRUE,
-    terminate_on_success = TRUE
-  )
-
-  out <- jsonlite::fromJSON(rawToChar(response$content))
-
-  tibble::as_tibble(out$value)
-
-  #Sys.sleep(1.25)
-
-}
-
 #' Get Ids
 #'
 #' @description return Ids availalbe in table
@@ -461,59 +253,96 @@ get_table_ids <- function(.table, .id, api_key = Sys.getenv("POLIS_API_KEY")){
 
 }
 
-#' Manager function to get and update POLIS data
-#' @export
-get_polis_data <- function(){
+#### POLIS API ####
 
-  tables <- c("virus", "case", "human_specimen", "environmental_sample",
-              "activity", "sub_activity", "lqas", "im")
-
-  sapply(tables, function(x) get_table_data(.table = x))
-
-}
-
-
-# old_data <- x
-# new_data <- tibble::as_tibble(lapply(old_data, as.character))
-#' Reconcile classes and bind two tibbles
+#' Test out if POLIS key is valid
 #'
-#' @param new tibble: Tibble to be converted and bound
-#' @param old tibble: Tibble to be referenced
-#' @returns tibble: bound tibble
-bind_and_reconcile <- function(new_data, old_data){
+#' @description Test POLIS API Key
+#' @param key str: POLIS API Key
+#' @returns boolean
+#' @export
+test_polis_key <- function(key){
 
-  old_names <- names(old_data)
-  classes_old <- sapply(old_data, class)
-  new_data <- as.data.frame(new_data)
-  old_data <- as.data.frame(old_data)
+  # Variables: URL, Token, Filters, ...
+  polis_api_root_url <- "https://extranet.who.int/polis/api/v2/"
 
-  for(name in old_names){
+  api_url <- paste0(polis_api_root_url, "$metadata")
 
-    class(new_data[,name]) <- classes_old[name][[1]]
+  # connect to the API and Get data
+  get_result <- httr::GET(api_url, httr::add_headers("authorization-token" = key))
 
-  }
-
-  new_data <- tibble::as_tibble(new_data)
-  old_data <- tibble::as_tibble(old_data)
-
-  return(dplyr::bind_rows(old_data, new_data))
+  # Display the status which should be 200 (OK)
+  return(httr::status_code(get_result) == 200)
 
 }
 
-#' Run diagnostic test on polis connections
-#' @description Run diagnostics
-#' @returns tibble with diagnostic results
-run_diagnostics <- function(){
+#' Call multiple URLs
+#'
+#' @description Call multiple URLs
+#' @param urls
+#' @return tibble with all data
+call_urls <- function(urls){
 
-  tables <- c("virus", "case", "human_specimen", "environmental_sample",
-              "activity", "sub_activity", "lqas", "im")
+  doFuture::registerDoFuture() ## tell foreach to use futures
+  future::plan(future::multisession) ## parallelize over a local PSOCK cluster
+  options(doFuture.rng.onMisuse = "ignore")
+  xs <- 1:length(urls)
 
-  lapply(tables, function(x) run_single_table_diagnostic(.table = x)) |>
-    bind_rows()
+  progressr::handlers("cli")
+
+  progressr::with_progress({
+    p <- progressr::progressor(along = xs)
+    y <- foreach::`%dopar%`(foreach::foreach(x = xs), {
+      # signal a progression update
+      p()
+      # jitter the parallel calls to not overwhelm the server
+      Sys.sleep(1 + rpois(1, 10)/100)
+      call_single_url(urls[x])
+    })
+  })
+
+  y <- dplyr::bind_rows(y)
+  gc()
+  return(y)
+
+}
+
+
+#' Call single URL
+#' @description Call a return the formatted output frome one URL
+#' @param url
+#' @param api_key
+#' @param times
+#' @return tibble
+call_single_url <- function(
+    url,
+    api_key = Sys.getenv("POLIS_API_KEY"),
+    times = 10
+){
+  # disable SSL Mode
+  httr::set_config(httr::config(ssl_verifypeer = 0L))
+
+  #response <- httr::GET(url=url, httr::add_headers("authorization-token" = api_key))
+
+  response <- httr::RETRY(
+    verb = "GET",
+    url = url,
+    config = httr::add_headers("authorization-token" = api_key),
+    times = times,
+    quiet = TRUE,
+    terminate_on_success = TRUE
+  )
+
+  out <- jsonlite::fromJSON(rawToChar(response$content))
+
+  tibble::as_tibble(out$value)
+
+  #Sys.sleep(1.25)
 
 }
 
 #' Run single table diagnostic
+#'
 #' @description Run single table diagnostic
 #' @param .table str: table name
 #' @param key str: POLIS API Key
@@ -578,3 +407,212 @@ run_single_table_diagnostic <- function(.table, key =  Sys.getenv("POLIS_API_Key
 
 
 }
+
+
+#### Logging ####
+
+#' Update local POLIS interaction log
+#'
+#' @description Update the POLIS log
+#' @param log_file str: location of cache file
+#' @param .time dttm: time of update
+#' @param .user double: user who conducted the action
+#' @param .event str: event to be logged
+#' @returns Return true if cache updated
+update_polis_log <- function(
+    log_file = Sys.getenv("POLIS_LOG_FILE"),
+    .time = Sys.time(),
+    .user = Sys.getenv("USERNAME"),
+    .event
+){
+
+  readr::read_rds(log_file) |>
+    tibble::add_row(
+      time = .time,
+      user = .user,
+      event = .event
+    ) |>
+    readr::write_rds(log_file)
+
+}
+
+
+#### Local Cache ####
+
+#' Load local POLIS cache
+#'
+#' @description Pull cache data for a particular table
+#' @param cache_file str: location of cache file
+#' @param table str: table to be loaded
+#' @returns Return tibble with table information
+get_polis_cache <- function(
+    cache_file = Sys.getenv("POLIS_CACHE_FILE"),
+    .table
+){
+  cache <- readr::read_rds(cache_file)
+
+  if(.table %in% dplyr::pull(cache, table)){
+    cache |>
+      dplyr::filter(table == .table)
+  }else{
+    cli::cli_alert_warning(paste0("No entry found in the cache table for: ", .table))
+  }
+
+
+}
+
+
+#' Update local POLIS cache
+#'
+#' @description Update the POLIS cache directory
+#' @param cache_file str: location of cache file
+#' @param table str: table to be updated
+#' @param nrow double: nrow of table to be updated
+#' @returns Return true if cache updated
+update_polis_cache <- function(
+    cache_file = Sys.getenv("POLIS_CACHE_FILE"),
+    .table,
+    .nrow,
+    .update_val
+){
+
+  readr::read_rds(cache_file) |>
+    dplyr::mutate(
+      nrow = ifelse(table == .table, .nrow, nrow),
+      last_sync = ifelse(table == .table, lubridate::as_datetime(Sys.time()), last_sync),
+      last_user = ifelse(table == .table, Sys.getenv("USERNAME"), last_user),
+      polis_update_value = ifelse(table == .table, lubridate::as_datetime(.update_val), polis_update_value),
+      last_sync = lubridate::as_datetime(last_sync),
+      polis_update_value = lubridate::as_datetime(polis_update_value)
+    ) |>
+    readr::write_rds(cache_file)
+
+}
+
+
+#### Misc ####
+
+#' Modified readlines function to simplify user interface
+#'
+#' @description Manage input
+#' @param request str:
+#' @param error_resp str:
+#' @param vals array:
+#' @param max_i int:
+#' @returns val from `vals` or stops output
+request_input <- function(
+    request,
+    vals,
+    error_resp = "Valid input not chosen",
+    max_i = 3
+){
+
+  message(request)
+
+  i <- 1
+
+  vals_str <- paste0("Please choose one of the following [",
+                     paste0(as.character(vals), collapse = "/"),
+                     "]:  \n")
+
+  val <- readline(prompt = vals_str)
+
+  while(!val %in% vals){
+    val <- readline(prompt = vals_str)
+    i <- i + 1
+    if(i == max_i){
+      stop(error_resp)
+    }
+  }
+
+  return(val)
+
+}
+
+
+
+
+
+
+#' Create table URLs
+#'
+#' @description create urls from table size and base url
+#' @url str: base url to be queried
+#' @table_size int: integer of download
+#' @type str: "full" or "partial"
+#' @returns array of urls
+create_table_urls <- function(
+    url,
+    table_size,
+    type
+){
+
+  prior_scipen <- getOption("scipen")
+  options(scipen = 999)
+
+  if(sum(type %in% c("full", "partial", "lab", "lab-partial")) > 0){
+
+    if(type == "full"){
+      urls <- paste0(url, "?$top=2000&$skip=",as.character(seq(0,as.numeric(table_size), by = 2000)))
+    }
+
+    if(type == "partial"){
+      urls <- paste0(url, "&$top=2000&$skip=",seq(0,as.numeric(table_size), by = 2000))
+    }
+
+    if(type == "lab"){
+      urls <- paste0(url, "?$top=1000&$skip=",as.character(seq(0,as.numeric(table_size), by = 1000)))
+    }
+
+    if(type == "lab-partial"){
+      urls <- paste0(url, "&$top=1000&$skip=",seq(0,as.numeric(table_size), by = 1000))
+    }
+
+  }
+  return(urls)
+
+}
+
+
+#' Reconcile classes and bind two tibbles
+#'
+#' @param new tibble: Tibble to be converted and bound
+#' @param old tibble: Tibble to be referenced
+#' @returns tibble: bound tibble
+bind_and_reconcile <- function(new_data, old_data){
+
+  old_names <- names(old_data)
+  classes_old <- sapply(old_data, class)
+  new_data <- as.data.frame(new_data)
+  old_data <- as.data.frame(old_data)
+
+  for(name in old_names){
+
+    class(new_data[,name]) <- classes_old[name][[1]]
+
+  }
+
+  new_data <- tibble::as_tibble(new_data)
+  old_data <- tibble::as_tibble(old_data)
+
+  return(dplyr::bind_rows(old_data, new_data))
+
+}
+
+
+#' Set up local credentials file
+#'
+#' @description Create creds file
+#' @param polis_data_folder str: location of POLIS data folder
+#' @returns boolean for folder creation
+create_cred_file <- function(
+    polis_data_folder
+){
+  list(
+    "polis_api_key" = "",
+    "polis_data_folder" = ""
+  ) |>
+    yaml::write_yaml(file = file.path(polis_data_folder,"creds.yaml"))
+}
+
+
