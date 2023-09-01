@@ -299,12 +299,12 @@ call_urls <- function(urls){
 
   progressr::with_progress({
     p <- progressr::progressor(along = xs)
-    y <- foreach::`%dopar%`(foreach::foreach(x = xs), {
+    y <- foreach::`%dopar%`(foreach::foreach(x = xs, .packages = c("tidypolis", "tibble", "jsonlite", "httr")), {
       # signal a progression update
       p()
       # jitter the parallel calls to not overwhelm the server
-      Sys.sleep(1 + stats::rpois(1, 10)/100)
-      call_single_url(urls[x])
+      #Sys.sleep(1 + stats::rpois(1, 10)/100)
+      tidypolis::call_single_url(urls[x])
     })
   })
 
