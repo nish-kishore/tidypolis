@@ -3,3 +3,4 @@
 .RData
 .Ruserdata
 R/archive/*.*
+R/archive/sandbox.R
