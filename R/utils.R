@@ -304,7 +304,7 @@ call_urls <- function(urls){
       p()
       # jitter the parallel calls to not overwhelm the server
       Sys.sleep(1 + stats::rpois(1, 10)/100)
-      call_single_url(urls[xs])
+      call_single_url(urls[x])
     })
   })
 
