@@ -1,7 +1,8 @@
 #' A function to intitialize a POLIS data folder
 #'
 #' @description Initialize API Key and local data cache for tidypolis. inspiration from
-#' tidycensus process for managing their API
+#' tidycensus process for managing their
+#' @import cli yaml tibble dplyr readr lubridate
 #' @param polis_data_folder str: location of folder where to store all information
 #' @returns Messages on process
 #' @export
@@ -166,6 +167,7 @@ init_tidypolis <- function(
 #' Manager function to get and update POLIS data
 #'
 #' @description This function iterates through all tables and loads POLIS data
+#' @import dplyr
 #' @export
 get_polis_data <- function(){
 
@@ -180,6 +182,7 @@ get_polis_data <- function(){
 #' Run diagnostic test on polis connections
 #'
 #' @description Run diagnostics of API connection with POLIS
+#' @import dplyr
 #' @returns tibble with diagnostic results
 #' @export
 run_diagnostics <- function(){
@@ -188,6 +191,6 @@ run_diagnostics <- function(){
               "activity", "sub_activity", "lqas", "im")
 
   lapply(tables, function(x) run_single_table_diagnostic(.table = x)) |>
-    bind_rows()
+    dplyr::bind_rows()
 
 }

@@ -3,10 +3,9 @@
 #' Request data from single table
 #'
 #' @description Get POLIS table Data
+#' @import cli lubridate dplyr readr
 #' @param api_key API Key
 #' @param .table Table value to retrieve
-#' @param .last_update Time of last update
-#' @param
 #' @returns Tibble with reference data
 get_table_data <- function(
     api_key = Sys.getenv("POLIS_API_Key"),
@@ -165,9 +164,11 @@ get_table_data <- function(
 
 #' Get table size from POLIS
 #'
+#' @import httr jsonlite
 #' @param .table str: Table to be downloaded
 #' @param api_key str: API Key
 #' @param cache_file str: Cache file location
+#' @param extra_filter str: additional filtering parameters
 #' @export
 get_table_size <- function(
     .table,
@@ -216,8 +217,9 @@ get_table_size <- function(
 #' Get Ids
 #'
 #' @description return Ids availalbe in table
+#' @import cli dplyr httr
 #' @param .table str: table
-#' @param id str: id variable
+#' @param .id str: id variable
 #' @param api_key str: POLIS API Key
 #' @return character array of ids
 get_table_ids <- function(.table, .id, api_key = Sys.getenv("POLIS_API_KEY")){
@@ -258,6 +260,7 @@ get_table_ids <- function(.table, .id, api_key = Sys.getenv("POLIS_API_KEY")){
 #' Test out if POLIS key is valid
 #'
 #' @description Test POLIS API Key
+#' @import httr
 #' @param key str: POLIS API Key
 #' @returns boolean
 #' @export
@@ -279,7 +282,11 @@ test_polis_key <- function(key){
 #' Call multiple URLs
 #'
 #' @description Call multiple URLs
-#' @param urls
+#' @import dplyr foreach future doFuture
+#' @importFrom progressr progressor
+#' @importFrom progressr with_progress
+#' @importFrom progressr handlers
+#' @param urls array of url strings
 #' @return tibble with all data
 call_urls <- function(urls){
 
@@ -296,8 +303,8 @@ call_urls <- function(urls){
       # signal a progression update
       p()
       # jitter the parallel calls to not overwhelm the server
-      Sys.sleep(1 + rpois(1, 10)/100)
-      call_single_url(urls[x])
+      Sys.sleep(1 + stats::rpois(1, 10)/100)
+      call_single_url(urls[xs])
     })
   })
 
@@ -310,9 +317,10 @@ call_urls <- function(urls){
 
 #' Call single URL
 #' @description Call a return the formatted output frome one URL
-#' @param url
-#' @param api_key
-#' @param times
+#' @import tibble jsonlite httr
+#' @param url str: single url
+#' @param api_key str: validated API key
+#' @param times int: number of times to attempt connection with API
 #' @return tibble
 call_single_url <- function(
     url,
@@ -344,6 +352,7 @@ call_single_url <- function(
 #' Run single table diagnostic
 #'
 #' @description Run single table diagnostic
+#' @import httr tibble
 #' @param .table str: table name
 #' @param key str: POLIS API Key
 #' @returns tibble with diagnostic data
@@ -399,7 +408,7 @@ run_single_table_diagnostic <- function(.table, key =  Sys.getenv("POLIS_API_Key
   tock <- Sys.time()
   id_time <- tock - tick
 
-  return(tibble("table" = .table,
+  return(tibble::tibble("table" = .table,
                 "data" = ifelse(is.data.frame(data_return), "Success", "Error"),
                 "data_time" = data_time,
                 "id" = ifelse(is.data.frame(id_return), "Success", "Error"),
@@ -414,6 +423,7 @@ run_single_table_diagnostic <- function(.table, key =  Sys.getenv("POLIS_API_Key
 #' Update local POLIS interaction log
 #'
 #' @description Update the POLIS log
+#' @import readr tibble
 #' @param log_file str: location of cache file
 #' @param .time dttm: time of update
 #' @param .user double: user who conducted the action
@@ -442,8 +452,9 @@ update_polis_log <- function(
 #' Load local POLIS cache
 #'
 #' @description Pull cache data for a particular table
+#' @import readr cli dplyr
 #' @param cache_file str: location of cache file
-#' @param table str: table to be loaded
+#' @param .table str: table to be loaded
 #' @returns Return tibble with table information
 get_polis_cache <- function(
     cache_file = Sys.getenv("POLIS_CACHE_FILE"),
@@ -465,9 +476,11 @@ get_polis_cache <- function(
 #' Update local POLIS cache
 #'
 #' @description Update the POLIS cache directory
+#' @import readr dplyr lubridate
 #' @param cache_file str: location of cache file
-#' @param table str: table to be updated
-#' @param nrow double: nrow of table to be updated
+#' @param .table str: table to be updated
+#' @param .nrow double: nrow of table to be updated
+#' @param .update_val str: value to update data
 #' @returns Return true if cache updated
 update_polis_cache <- function(
     cache_file = Sys.getenv("POLIS_CACHE_FILE"),
@@ -537,9 +550,9 @@ request_input <- function(
 #' Create table URLs
 #'
 #' @description create urls from table size and base url
-#' @url str: base url to be queried
-#' @table_size int: integer of download
-#' @type str: "full" or "partial"
+#' @param url str: base url to be queried
+#' @param table_size int: integer of download
+#' @param type str: "full" or "partial"
 #' @returns array of urls
 create_table_urls <- function(
     url,
@@ -576,8 +589,9 @@ create_table_urls <- function(
 
 #' Reconcile classes and bind two tibbles
 #'
-#' @param new tibble: Tibble to be converted and bound
-#' @param old tibble: Tibble to be referenced
+#' @param new_data tibble: Tibble to be converted and bound
+#' @import tibble dplyr
+#' @param old_data tibble: Tibble to be referenced
 #' @returns tibble: bound tibble
 bind_and_reconcile <- function(new_data, old_data){
 
@@ -603,6 +617,7 @@ bind_and_reconcile <- function(new_data, old_data){
 #' Set up local credentials file
 #'
 #' @description Create creds file
+#' @import yaml
 #' @param polis_data_folder str: location of POLIS data folder
 #' @returns boolean for folder creation
 create_cred_file <- function(
