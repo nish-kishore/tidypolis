@@ -16,11 +16,36 @@ get_table_data <- function(
   table_data <- get_polis_cache(.table = .table)
   table_url <- paste0(base_url, table_data$endpoint)
 
+  #check if ID API works
+  api_url <- paste0(base_url, table_data$endpoint, "?$select=", table_data$polis_id)
+
+  if(table_data$table %in% c("human_specimen", "environmental_sample", "activity", "sub_activity", "lqas")){
+    urls <- create_table_urls(url = api_url, table_size = 3000, type = "lab-partial")
+  }else{
+    urls <- create_table_urls(url = api_url, table_size = 3000, type = "partial")
+  }
+
+  id_return <- tryCatch(
+    call_single_url(urls[1], times = 1),
+    error = function(cond){
+      return("Error")
+    }
+  )
+
+  id_error <- is.character(id_return)
+
+  rm(urls)
+  rm(api_url)
+
   cli::cli_h1(paste0("Downloading POLIS Data for: ", table_data$table))
 
-  #If never downloaded before
-  if(is.na(table_data$last_sync) & !is.na(table_data$polis_id)){
-    cli::cli_alert_info(paste0(table_data$endpoint, " has not been downloaded before...checking size..."))
+  #If never downloaded before or if ID API doesn't work
+  if((is.na(table_data$last_sync) & !is.na(table_data$polis_id)) | id_error){
+    if(id_error){
+      cli::cli_alert_info(paste0(table_data$endpoint, " has been downloaded before but the ID API is not functional, downloading all data...checking size..."))
+    }else{
+      cli::cli_alert_info(paste0(table_data$endpoint, " has not been downloaded before...checking size..."))
+    }
     table_size <- get_table_size(.table = table_data$table)
     cli::cli_alert_info(paste0("Getting ready to download ", table_size, " new rows of data!"))
 
