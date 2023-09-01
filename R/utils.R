@@ -304,7 +304,7 @@ call_urls <- function(urls){
       p()
       # jitter the parallel calls to not overwhelm the server
       #Sys.sleep(1 + stats::rpois(1, 10)/100)
-      tidypolis::call_single_url(urls[x])
+      call_single_url(urls[x])
     })
   })
 
@@ -321,6 +321,7 @@ call_urls <- function(urls){
 #' @param url str: single url
 #' @param api_key str: validated API key
 #' @param times int: number of times to attempt connection with API
+#' @export
 #' @return tibble
 call_single_url <- function(
     url,
