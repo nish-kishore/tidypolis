@@ -194,3 +194,31 @@ run_diagnostics <- function(){
     dplyr::bind_rows()
 
 }
+
+#' Build a freeze of POLIS data on a specific date
+#'
+#' @description Zip all POLIS data that is used to work on a specific date
+#' @import cli
+#' @returns Location of zipped and frozen POLIS data
+#' @export
+freeze_polis_data <- function(){
+  time <- Sys.Date()
+  cli::cli_process_start(paste0("Creating new freeze file for ", time))
+  files <- list.files(Sys.getenv("POLIS_DATA_CACHE"))
+  freeze_dir <- paste0(Sys.getenv("POLIS_DATA_FOLDER"),"/freeze")
+  if(!dir.exists(freeze_dir)){
+    dir.create(freeze_dir)
+  }
+  freeze_file <- paste0(freeze_dir, "/", time)
+  if(!dir.exists(freeze_file)){
+    dir.create(freeze_file)
+  }
+  for(file in files){
+    file.copy(
+      from = paste0(Sys.getenv("POLIS_DATA_CACHE"),"/",file),
+      to = paste0(freeze_file,"/",file),
+      overwrite = T
+      )
+  }
+  cli::cli_process_done(msg_done = paste0("Freeze file created in: ", freeze_file))
+}
