@@ -172,7 +172,7 @@ get_table_data <- function(
         cli::cli_process_done()
 
         cli::cli_process_start("Writing data cache")
-        readr::write_rds(out, file = paste0(Sys.getenv("POLIS_DATA_CACHE"),"/",table_data$table,".rds"))
+        readr::write_rds(old_cache, file = paste0(Sys.getenv("POLIS_DATA_CACHE"),"/",table_data$table,".rds"))
         update_polis_log(.event = paste0(table_data$table, " data saved locally"))
         cli::cli_process_done()
 
