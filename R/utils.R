@@ -40,11 +40,15 @@ get_table_data <- function(
   cli::cli_h1(paste0("Downloading POLIS Data for: ", table_data$table))
 
   #If never downloaded before or if ID API doesn't work
-  if((is.na(table_data$last_sync) & !is.na(table_data$polis_id)) | id_error){
+  if((is.na(table_data$last_sync) & !is.na(table_data$polis_id)) | id_error | is.na(table_data$polis_update_id)){
     if(id_error){
       cli::cli_alert_info(paste0(table_data$endpoint, " has been downloaded before but the ID API is not functional, downloading all data...checking size..."))
     }else{
-      cli::cli_alert_info(paste0(table_data$endpoint, " has not been downloaded before...checking size..."))
+      if(is.na(table_data$polis_update_id)){
+        cli::cli_alert_info(paste0(table_data$endpoint, " does not have a unique timestamps for the update, the entire table must be downloaded..."))
+      }else{
+        cli::cli_alert_info(paste0(table_data$endpoint, " has not been downloaded before...checking size..."))
+      }
     }
     table_size <- get_table_size(.table = table_data$table)
     cli::cli_alert_info(paste0("Getting ready to download ", table_size, " new rows of data!"))
@@ -62,12 +66,22 @@ get_table_data <- function(
 
     #update cache information
     cli::cli_process_start("Updating cache")
-    update_polis_cache(
-      cache_file = Sys.getenv("POLIS_CACHE_FILE"),
-      .table = .table,
-      .nrow = nrow(out),
-      .update_val = max(lubridate::as_datetime(dplyr::pull(out[table_data$polis_update_id])))
-    )
+    if(is.na(table_data$polis_update_id)){
+      update_polis_cache(
+        cache_file = Sys.getenv("POLIS_CACHE_FILE"),
+        .table = .table,
+        .nrow = nrow(out),
+        .update_val = NA
+      )
+    }else{
+      update_polis_cache(
+        cache_file = Sys.getenv("POLIS_CACHE_FILE"),
+        .table = .table,
+        .nrow = nrow(out),
+        .update_val = max(lubridate::as_datetime(dplyr::pull(out[table_data$polis_update_id])))
+      )
+    }
+
     cli::cli_process_done()
 
     cli::cli_process_start("Writing data cache")
