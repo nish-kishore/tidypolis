@@ -222,3 +222,31 @@ freeze_polis_data <- function(){
   }
   cli::cli_process_done(msg_done = paste0("Freeze file created in: ", freeze_file))
 }
+
+
+#' Preprocess data retrieved from POLIS
+#'
+#' @description
+#' Create standard analytic datasets from raw POLIS data
+#' @param type str: specify the type of preprocessing to complete
+#' @import cli
+#' @returns Analytic rds files
+#' @export
+preprocess_data <- function(type){
+
+  types <- c("cdc")
+
+  if(!(type %in% types)){
+    cli::cli_abort(message = paste0("'", type, "'", " is not one of the accepted values for 'type'"))
+  }
+
+  #CDC pre-processing steps
+  if(type == "cdc"){
+
+
+
+  }
+
+
+
+}
