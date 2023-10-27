@@ -670,4 +670,320 @@ create_cred_file <- function(
     yaml::write_yaml(file = file.path(polis_data_folder,"creds.yaml"))
 }
 
+#' Rename variables via crosswalk
+#'
+#' @description Rename variables in tibble using crosswalk data
+#' @imoport dplyr
+#' @param api_data tibble: data pulled from api
+#' @param crosswalk tibble: crosswalk file loaded through rio
+#' @param table_name str: name of table to be crosswalked
+#' @returns tibble: renamed table
+rename_via_crosswalk <- function(api_data,
+                                 crosswalk,
+                                 table_name){
+  crosswalk_sub1 <- crosswalk |>
+    dplyr::filter(Table == !!table_name) |>
+    dplyr::filter(!is.na(API_Name))
+  for(i in 1:nrow(crosswalk_sub1)){
+    api_name <- crosswalk_sub1$API_Name[i]
+    web_name <- crosswalk_sub1$Web_Name[i]
+    if(!is.na(web_name) & web_name != ""){
+      api_data <- api_data |>
+        dplyr::rename({{web_name}} := {{api_name}})
+    }
+  }
+  return(api_data)
+}
+
+#### Pre-processing ####
+
+
+#' Preprocess data process data in the CDC style
+#'
+#' @description
+#' Process POLIS data into analytic datasets needed for CDC
+#' @import cli sirfunctions dplyr readr lubridate stringr rio
+#' @param polis_data_folder
+preprocess_cdc <- function(
+    polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")
+  ){
+
+  #Read in the updated API datasets
+  cli::cli_h1("Loading data")
+
+  cli::cli_process_start("Case")
+  api_case_2019_12_01_onward <- readr::read_rds(paste0(polis_data_folder,"/case.rds")) |>
+    dplyr::mutate_all(as.character)
+  cli::cli_process_done()
+
+  cli::cli_process_start("Environmental Samples")
+  api_es_complete <- readr::read_rds(paste0(polis_data_folder,"/environmental_sample.rds")) |>
+    dplyr::mutate_all(as.character)
+  cli::cli_process_done()
+
+  cli::cli_process_start("Sub-activity")
+  api_subactivity_complete <- readr::read_rds(paste0(polis_data_folder,"/sub_activity.rds")) |>
+    dplyr::mutate_all(as.character)
+  cli::cli_process_done()
+
+  cli::cli_process_start("Virus")
+  api_virus_complete <- readr::read_rds(paste0(polis_data_folder,"/virus.rds")) |>
+    dplyr::mutate_all(as.character)
+  cli::cli_process_done()
+
+  cli::cli_process_start("Activity")
+  api_activity_complete <- readr::read_rds(paste0(polis_data_folder,"/activity.rds")) |>
+    dplyr::mutate_all(as.character)
+  cli::cli_process_done()
+
+
+  #Get geodatabase to auto-fill missing GUIDs
+  cli::cli_process_start("Long district spatial file")
+  long.global.dist.01 <- sirfunctions::load_clean_dist_sp(type = "long")
+  cli::cli_process_done()
+
+
+  cli::cli_h1("De-duplicating data")
+
+  cli::cli_process_start("Sub-activity")
+  api_subactivity_sub1 <- api_subactivity_complete |>
+    dplyr::distinct()
+  cli::cli_process_done()
+
+  cli::cli_process_start("Activity")
+  api_activity_sub1 <- api_activity_complete |>
+    dplyr::filter(SIASubActivityCode %in% api_subactivity_sub1$SIASubActivityCode) |>
+    dplyr::distinct()
+  cli::cli_process_done()
+
+  cli::cli_process_start("Environmental Samples")
+  api_es_sub1 <- api_es_complete |>
+    dplyr::distinct()
+  cli::cli_process_done()
+
+  cli::cli_process_start("Case")
+  api_case_sub1 <- api_case_2019_12_01_onward |>
+    dplyr::distinct()
+  cli::cli_process_done()
+
+  cli::cli_process_start("Virus")
+  api_virus_sub1 <- api_virus_complete |>
+    dplyr::distinct()
+  cli::cli_process_done()
+
+  cli::cli_process_start("Processing sub-activity spatial data")
+  api_subactivity_sub2 <- api_subactivity_sub1 |>
+    dplyr::mutate(year = lubridate::year(DateFrom)) |>
+    dplyr::left_join(
+      long.global.dist.01 |>
+        dplyr::select(
+          active.year.01,
+          ADM0_GUID,
+          ADM1_NAME,
+          ADM1_GUID,
+          ADM2_NAME,
+          GUID
+        ) |>
+        dplyr::mutate(
+          ADM0_GUID = tolower(stringr::str_remove_all(ADM0_GUID, "\\{")),
+          ADM0_GUID = stringr::str_remove_all(ADM0_GUID, "\\}"),
+          ADM1_GUID = tolower(stringr::str_remove_all(ADM1_GUID, "\\{")),
+          ADM1_GUID = stringr::str_remove_all(ADM1_GUID, "\\}"),
+          GUID = tolower(stringr::str_remove_all(GUID, "\\{")),
+          GUID = stringr::str_remove_all(GUID, "\\}")
+        ),
+      by = c(
+        "year" = "active.year.01",
+        "Admin0Guid" = "ADM0_GUID",
+        "Admin1Name" = "ADM1_NAME",
+        "Admin2Name" = "ADM2_NAME"
+      ),
+      relationship = "many-to-many"
+    ) |>
+    dplyr::mutate(
+      Admin2Guid = dplyr::case_when(is.na(Admin2Guid) ~ GUID,
+                                    TRUE ~ Admin2Guid),
+      Admin1Guid = dplyr::case_when(is.na(Admin1Guid) ~ ADM1_GUID,
+                                    TRUE ~ Admin1Guid)
+    ) |>
+    dplyr::select(-year, -ADM1_GUID, -GUID)
+  cli::cli_process_done()
+
+  #Import the crosswalk file and use it to rename all data elements in the API-downloaded tables.
+  cli::cli_h1("Crosswalk and rename variables")
+
+  cli::cli_process_start("Import crosswalk")
+  crosswalk <- rio::import("//cdc.gov/project/CGH_GID_Active/PEB/SIR/DATA/Core 2.0/preprocessing/GetPOLIS/api_web_core_crosswalk.xlsx") |>
+    #TrendID removed from export
+    dplyr::filter(!API_Name %in% c("Admin0TrendId", "Admin0Iso2Code"))
+  cli::cli_process_done()
+
+  cli::cli_process_start("Case")
+  api_case_sub2 <- rename_via_crosswalk(api_data = api_case_sub1,
+                                        crosswalk = crosswalk,
+                                        table_name = "Case")
+  cli::cli_process_done()
+
+  cli::cli_process_start("Environmental Samples")
+  api_es_sub2 <- rename_via_crosswalk(api_data = api_es_sub1,
+                                      crosswalk = crosswalk,
+                                      table_name = "EnvSample")
+  cli::cli_process_done()
+
+  cli::cli_process_start("Virus")
+  api_virus_sub2 <- rename_via_crosswalk(api_data = api_virus_sub1,
+                                         crosswalk = crosswalk,
+                                         table_name = "Virus")
+  cli::cli_process_done()
+
+  cli::cli_process_start("Activity")
+  api_activity_sub2 <- rename_via_crosswalk(api_data = api_activity_sub1,
+                                            crosswalk = crosswalk,
+                                            table_name = "Activity") |>
+    dplyr::select(SIASubActivityCode, crosswalk$Web_Name[crosswalk$Table == "Activity"]) |>
+    dplyr::select(-c("Admin 0 Id"))
+  cli::cli_process_done()
+
+  cli::cli_process_start("Sub-activity")
+  api_subactivity_sub3 <- rename_via_crosswalk(api_data = api_subactivity_sub2,
+                                               crosswalk = crosswalk,
+                                               table_name = "SubActivity") |>
+    dplyr::left_join(api_activity_sub2, by=c("SIA Sub-Activity Code" = "SIASubActivityCode"))
+  cli::cli_process_done()
+
+  cli::cli_h1("Modifying and reconciling variable types")
+  #    Modify individual variables in the API files to match the coding in the web-interface downloads,
+  #    and retain only variables from the API files that are present in the web-interface downloads.
+  api_subactivity_sub4 <- api_subactivity_sub3 |>
+    mutate(`IM loaded` = case_when(`IM loaded` == "TRUE" ~ "Yes",
+                                   `IM loaded` == "FALSE" ~ "No",
+                                   TRUE ~ NA_character_)) |>
+    mutate(`LQAS loaded` = case_when(`LQAS loaded` == "TRUE" ~ "Yes",
+                                     `LQAS loaded` == "FALSE" ~ "No",
+                                     TRUE ~ NA_character_)) |>
+    mutate_at(c("Age Group %", "Area Targeted %", "Country Population %"), ~as.numeric(.) * 100) |>
+    mutate(`Area Population` = as.character(format(round(as.numeric(`Area Population`), 1), nsmall=0, big.mark=","))) |>
+    mutate_at(c("Sub-Activity Initial Planned Date", "Last Updated Date"), ~as.character(as.Date(., "%Y-%m-%d"), "%d/%m/%Y")) |>
+    mutate_at(c("Sub-Activity Last Updated Date"), ~as.character(as.POSIXct(., tryFormats = c("%Y-%m-%dT%H:%M:%OS")), "%d/%m/%Y %H:%M")) |>
+    mutate(`Activity Comments` = "") |>
+    mutate(`Targeted Population` = as.character(`Targeted Population`),
+           `Number of Doses` = as.character(`Number of Doses`)) |>
+    mutate_at(c("UNPD Country Population",
+                "Immunized Population",
+                "Admin 2 Targeted Population",
+                "Admin 2 Immunized Population",
+                "Admin2 children inaccessible",
+                "Number of Doses Approved",
+                "Children inaccessible",
+                "Activity parent children inaccessible",
+                "Admin 0 Id",
+                "Admin 1 Id",
+                "Admin 2 Id"),
+              as.numeric) |>
+    select(c(
+      crosswalk$Web_Name[crosswalk$Table %in% c("Activity", "SubActivity") & !is.na(crosswalk$Web_Name)],
+      crosswalk$API_Name[crosswalk$Table %in% c("SubActivity") & is.na(crosswalk$Web_Name) & crosswalk$API_Name != "ActivityAdminCoveragePercentage"])
+    )
+
+  api_case_sub3 <- api_case_sub2 |>
+    mutate(`total.number.of.ipv./.opv.doses` = NA_integer_,
+           Doses =  as.numeric(Doses),
+           `Virus Sequenced` = as.logical(`Virus Sequenced`),
+           `Advanced Notification` = case_when(`Advanced Notification` == TRUE ~ "Yes",
+                                               `Advanced Notification` == FALSE ~ "No",
+                                               TRUE ~ NA_character_),
+           `Dataset Lab` = case_when(`Dataset Lab` == TRUE ~ "Yes",
+                                     `Dataset Lab` == FALSE ~ "No",
+                                     TRUE ~ NA_character_),
+           `Is Breakthrough` = case_when(`Is Breakthrough` == TRUE ~ "Yes",
+                                         `Is Breakthrough` == FALSE ~ "No",
+                                         TRUE ~ NA_character_)) |>
+    select(c(crosswalk$Web_Name[crosswalk$Table %in% c("Case") & !is.na(crosswalk$Web_Name)],
+             crosswalk$API_Name[crosswalk$Table %in% c("Case") & is.na(crosswalk$Web_Name)]))
+
+  api_es_sub3 <- api_es_sub2 |>
+    mutate(Site = paste0(`Site Code`," - ",`Site Name`),
+           `Country Iso2` = NA_character_) |>
+    mutate_at(c("Vaccine 1", "Vaccine 2", "Vaccine 3",
+                "Vdpv 1", "Vdpv 2", "Vdpv 3",
+                "Wild 1", "Wild 2", "Wild 3",
+                "nVaccine 2","nVDPV 2",
+                "PV 1", "PV 2", "PV 3", "Is Suspected", "NPEV"), ~case_when(. == "TRUE" ~ "Yes",
+                                                                            . == "FALSE" ~ "No",
+                                                                            TRUE ~ NA_character_)) |>
+
+    mutate_at(c("Is Breakthrough",
+                "Under Process",
+                "Advanced Notification",
+                "Mixture"), ~case_when(. == "TRUE" ~ "Yes",
+                                       . == "FALSE" ~ "No",
+                                       TRUE ~ NA_character_)) |>
+    mutate_at(c("Date Final Culture Result",
+                "Date Final Combined Result",
+                "Date Final Results Reported",
+                "Date Isol Sent Seq2",
+                "Date Isol Rec Seq2",
+                "Date Final Seq Result",
+                "Date Res Sent Out VDPV2",
+                "Date Res Sent Out VACCINE2",
+                "Date Isol Rec Seq1",
+                "Collection Date",
+                "Date F1 ref ITD",
+                "Date F2 ref ITD",
+                "Date F3 ref ITD",
+                "Date F4 ref ITD",
+                "Date F5 ref ITD",
+                "Date F6 ref ITD",
+                "Date Notification To HQ",
+                "Date received in lab",
+                "Date Shipped To Ref Lab",
+                "Publish Date",
+                "Uploaded Date"), ~as.character(format(as.Date(., format="%Y-%m-%d"), format="%d/%m/%Y"))) |>
+    mutate_at(c("Created Date",
+                "Updated Date"), ~as.character(format(as.Date(., format="%Y-%m-%d"), format="%d-%m-%Y"))) |>
+    mutate(`Sample Id` = as.character(`Sample Id`)) |>
+    select(c(crosswalk$Web_Name[crosswalk$Table %in% c("EnvSample") & !is.na(crosswalk$Web_Name)],
+             crosswalk$API_Name[crosswalk$Table %in% c("EnvSample") & is.na(crosswalk$Web_Name)]))
+
+  api_virus_sub3 <- api_virus_sub2 |>
+    mutate(location = paste(toupper(Admin0OfficialName), toupper(Admin1OfficialName), toupper(Admin2OfficialName), sep=", ")) |>
+    mutate(location = str_squish(str_replace_all(location, ", NA,", ", "))) |>
+    mutate(location = case_when(str_sub(location, -4) == ", NA" ~ substr(location, 1, nchar(location)-4),
+                                TRUE ~ location)) |>
+    mutate(location = str_replace_all(location, "ISLAMIC REPUBLIC OF IRAN", "IRAN (ISLAMIC REPUBLIC OF)")) |>
+    mutate(location = str_replace_all(location, "UNITED KINGDOM OF GREAT BRITAIN AND NORTHERN IRELAND", "THE UNITED KINGDOM")) |>
+
+    mutate(`Virus Type(s)` = str_replace_all(`Virus Type(s)`, "NVACCINE", "nVACCINE")) |>
+
+    mutate(`Nt Changes` = case_when(grepl("VDPV", `VirusTypeName`) & !is.na(`Nt Changes`) ~ `Nt Changes`,
+                                    grepl("VACCINE", VirusTypeName) & !is.na(VaccineNtChangesFromSabin) ~ VaccineNtChangesFromSabin,
+                                    TRUE ~ NA_character_)) |>
+    mutate_at(c("Virus Date"), ~as.character(as.Date(., "%Y-%m-%d"), "%d/%m/%Y")) |>
+    mutate_at(c("Is Breakthrough"), ~case_when(. == "TRUE" ~ "Yes",
+                                               . == "FALSE" ~ "No",
+                                               TRUE ~ NA_character_)) |>
+    select(c(crosswalk$Web_Name[crosswalk$Table %in% c("Virus") & !is.na(crosswalk$Web_Name)],
+             crosswalk$API_Name[crosswalk$Table %in% c("Virus") & is.na(crosswalk$Web_Name)])) |>
+    mutate(nt.changes.neighbor = case_when(!is.na(VdpvNtChangesClosestMatch) ~VdpvNtChangesClosestMatch,
+                                           TRUE ~ NA_character_))
+
+  #Remove empty columns
+  pull_empty_columns <- function(dataframe){
+    return(dataframe[, colSums(is.na(dataframe) | dataframe == "") == nrow(dataframe)])
+  }
+  api_case_sub3 <- api_case_sub3 |>
+    select(-c(colnames(pull_empty_columns(api_case_sub3))))
+  api_subactivity_sub4 <- api_subactivity_sub4 |>
+    select(-c(colnames(pull_empty_columns(api_subactivity_sub4))))
+  api_es_sub3 <- api_es_sub3 |>
+    select(-c(colnames(pull_empty_columns(api_es_sub3))))
+  api_virus_sub3 <- api_virus_sub3 |>
+    select(-c(colnames(pull_empty_columns(api_virus_sub3))))
+
+
+  #13. Export csv files that match the web download, and create archive and change log
+  #14. Remove temporary files from working environment, and set scientific notation back to whatever it was originally
+
+
+}
 
