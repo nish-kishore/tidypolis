@@ -7,27 +7,38 @@
 #' @param api_key API Key
 #' @param .table Table value to retrieve
 #' @returns Tibble with reference data
-get_table_data <- function(
-    api_key = Sys.getenv("POLIS_API_Key"),
-    .table
-){
-
+get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
+                           .table) {
   base_url <- "https://extranet.who.int/polis/api/v2/"
   table_data <- get_polis_cache(.table = .table)
   table_url <- paste0(base_url, table_data$endpoint)
 
   #check if ID API works
-  api_url <- paste0(base_url, table_data$endpoint, "?$select=", table_data$polis_id)
+  api_url <-
+    paste0(base_url,
+           table_data$endpoint,
+           "?$select=",
+           table_data$polis_id)
 
-  if(table_data$table %in% c("human_specimen", "environmental_sample", "activity", "sub_activity", "lqas")){
-    urls <- create_table_urls(url = api_url, table_size = 3000, type = "lab-partial")
-  }else{
-    urls <- create_table_urls(url = api_url, table_size = 3000, type = "partial")
+  if (table_data$table %in% c("human_specimen",
+                              "environmental_sample",
+                              "activity",
+                              "sub_activity",
+                              "lqas")) {
+    urls <-
+      create_table_urls(url = api_url,
+                        table_size = 3000,
+                        type = "lab-partial")
+  } else{
+    urls <-
+      create_table_urls(url = api_url,
+                        table_size = 3000,
+                        type = "partial")
   }
 
   id_return <- tryCatch(
     call_single_url(urls[1], times = 1),
-    error = function(cond){
+    error = function(cond) {
       return("Error")
     }
   )
@@ -40,40 +51,73 @@ get_table_data <- function(
   cli::cli_h1(paste0("Downloading POLIS Data for: ", table_data$table))
 
   #If never downloaded before or if ID API doesn't work
-  if((is.na(table_data$last_sync) & !is.na(table_data$polis_id)) | id_error | is.na(table_data$polis_update_id)){
-    if(id_error){
-      cli::cli_alert_info(paste0(table_data$endpoint, " has been downloaded before but the ID API is not functional, downloading all data...checking size..."))
-    }else{
-      if(is.na(table_data$polis_update_id)){
-        cli::cli_alert_info(paste0(table_data$endpoint, " does not have a unique timestamps for the update, the entire table must be downloaded..."))
-      }else{
-        cli::cli_alert_info(paste0(table_data$endpoint, " has not been downloaded before...checking size..."))
+  if ((is.na(table_data$last_sync) &
+       !is.na(table_data$polis_id)) |
+      id_error | is.na(table_data$polis_update_id)) {
+    if (id_error) {
+      cli::cli_alert_info(
+        paste0(
+          table_data$endpoint,
+          " has been downloaded before but the ID API is not functional, downloading all data...checking size..."
+        )
+      )
+    } else{
+      if (is.na(table_data$polis_update_id)) {
+        cli::cli_alert_info(
+          paste0(
+            table_data$endpoint,
+            " does not have a unique timestamps for the update, the entire table must be downloaded..."
+          )
+        )
+      } else{
+        cli::cli_alert_info(
+          paste0(
+            table_data$endpoint,
+            " has not been downloaded before...checking size..."
+          )
+        )
       }
     }
     table_size <- get_table_size(.table = table_data$table)
     cli::cli_alert_info(paste0("Getting ready to download ", table_size, " new rows of data!"))
 
-    if(table_data$table %in% c("human_specimen", "environmental_sample", "activity", "sub_activity", "lqas")){
-      urls <- create_table_urls(url = table_url, table_size = table_size, type = "lab")
-    }else{
-      urls <- create_table_urls(url = table_url, table_size = table_size, type = "full")
+    if (table_data$table %in% c("human_specimen",
+                                "environmental_sample",
+                                "activity",
+                                "sub_activity",
+                                "lqas")) {
+      urls <-
+        create_table_urls(url = table_url,
+                          table_size = table_size,
+                          type = "lab")
+    } else{
+      urls <-
+        create_table_urls(url = table_url,
+                          table_size = table_size,
+                          type = "full")
     }
 
     cli::cli_process_start("Downloading data")
     out <- call_urls(urls)
-    update_polis_log(.event = paste0("Downloaded ", table_size, " rows of ", table_data$table, " data"))
+    update_polis_log(.event = paste0(
+      "Downloaded ",
+      table_size,
+      " rows of ",
+      table_data$table,
+      " data"
+    ))
     cli::cli_process_done()
 
     #update cache information
     cli::cli_process_start("Updating cache")
-    if(is.na(table_data$polis_update_id)){
+    if (is.na(table_data$polis_update_id)) {
       update_polis_cache(
         cache_file = Sys.getenv("POLIS_CACHE_FILE"),
         .table = .table,
         .nrow = nrow(out),
         .update_val = NA
       )
-    }else{
+    } else{
       update_polis_cache(
         cache_file = Sys.getenv("POLIS_CACHE_FILE"),
         .table = .table,
@@ -85,16 +129,19 @@ get_table_data <- function(
     cli::cli_process_done()
 
     cli::cli_process_start("Writing data cache")
-    readr::write_rds(out, file = paste0(Sys.getenv("POLIS_DATA_CACHE"),"/",table_data$table,".rds"))
+    readr::write_rds(out, file = paste0(
+      Sys.getenv("POLIS_DATA_CACHE"),
+      "/",
+      table_data$table,
+      ".rds"
+    ))
     update_polis_log(.event = paste0(table_data$table, " data saved locally"))
     cli::cli_process_done()
 
     gc()
 
-  }else{
-
-    if(!is.na(table_data$last_sync)){
-
+  } else{
+    if (!is.na(table_data$last_sync)) {
       #pull updated data
       #create new table url
 
@@ -106,14 +153,27 @@ get_table_data <- function(
         "'"
       )
 
-      time_modifier <- gsub(" ", "+", time_modifier, )
+      time_modifier <- gsub(" ", "+", time_modifier,)
 
-      table_size <- get_table_size(.table = table_data$table, extra_filter = time_modifier)
+      table_size <-
+        get_table_size(.table = table_data$table, extra_filter = time_modifier)
 
-      cli::cli_alert_success(paste0(table_data$table, ": ", table_size, " new or updated records identified!"))
-      update_polis_log(.event = paste0(table_data$table, ": ", table_size, " new or updated records identified!"))
+      cli::cli_alert_success(paste0(
+        table_data$table,
+        ": ",
+        table_size,
+        " new or updated records identified!"
+      ))
+      update_polis_log(
+        .event = paste0(
+          table_data$table,
+          ": ",
+          table_size,
+          " new or updated records identified!"
+        )
+      )
 
-      if(table_size > 0){
+      if (table_size > 0) {
         table_url <- paste0(
           table_url,
           "?$filter=",
@@ -123,56 +183,99 @@ get_table_data <- function(
           "'"
         )
 
-        table_url <- gsub(" ", "+", table_url, )
+        table_url <- gsub(" ", "+", table_url,)
 
-        if(table_data$table %in% c("human_specimen", "environmental_sample", "activity", "sub_activity", "lqas")){
-          urls <- create_table_urls(url = table_url, table_size = table_size, type = "lab-partial")
-        }else{
-          urls <- create_table_urls(url = table_url, table_size = table_size, type = "partial")
+        if (table_data$table %in% c(
+          "human_specimen",
+          "environmental_sample",
+          "activity",
+          "sub_activity",
+          "lqas"
+        )) {
+          urls <-
+            create_table_urls(url = table_url,
+                              table_size = table_size,
+                              type = "lab-partial")
+        } else{
+          urls <-
+            create_table_urls(url = table_url,
+                              table_size = table_size,
+                              type = "partial")
         }
 
         cli::cli_process_start("Downloading data")
         out <- call_urls(urls)
-        update_polis_log(.event = paste0("Downloaded ", table_size, "rows of ", table_data$table, " data"))
+        update_polis_log(.event = paste0(
+          "Downloaded ",
+          table_size,
+          "rows of ",
+          table_data$table,
+          " data"
+        ))
         cli::cli_process_done()
 
         #check ids and make list of ids to be deleted
         cli::cli_process_start("Getting table Ids")
-        ids <- get_table_ids(.table = table_data$table, .id = table_data$polis_id)
+        ids <-
+          get_table_ids(.table = table_data$table, .id = table_data$polis_id)
         cli::cli_process_done()
 
         #load in cache
         cli::cli_process_start("Loading existing cache")
-        old_cache <- readr::read_rds(paste0(Sys.getenv("POLIS_DATA_CACHE"),"/",table_data$table,".rds"))
+        old_cache <-
+          readr::read_rds(paste0(
+            Sys.getenv("POLIS_DATA_CACHE"),
+            "/",
+            table_data$table,
+            ".rds"
+          ))
         cli::cli_process_done()
         old_cache_n <- nrow(old_cache)
-        new_data_ids_in_old_cache <- sum(dplyr::pull(out[table_data$polis_id]) %in% dplyr::pull(old_cache[table_data$polis_id]))
-        new_data_ids <- table_size-new_data_ids_in_old_cache
-        deleted_ids <- dplyr::pull(old_cache[table_data$polis_id])[!dplyr::pull(old_cache[table_data$polis_id]) %in% ids]
+        new_data_ids_in_old_cache <-
+          sum(dplyr::pull(out[table_data$polis_id]) %in% dplyr::pull(old_cache[table_data$polis_id]))
+        new_data_ids <- table_size - new_data_ids_in_old_cache
+        deleted_ids <-
+          dplyr::pull(old_cache[table_data$polis_id])[!dplyr::pull(old_cache[table_data$polis_id]) %in% ids]
         #old_data_ids_in_new <- dplyr::pull(old_cache[table_data$polis_id])[dplyr::pull(old_cache[table_data$polis_id]) %in% dplyr::pull(out[table_data$polis_id])]
 
-        cli::cli_h3(paste0("'",table_data$table,"'", " table data"))
-        cli::cli_bullets(
-          c(
-            "*" = paste0(table_size, " new rows of data downloaded"),
-            "*" = paste0(old_cache_n, " rows of data available in old cache"),
-            "*" = paste0(new_data_ids, " new ", table_data$polis_id, "s identified"),
-            "*" = paste0(new_data_ids_in_old_cache, " rows of data being updated"),
-            "*" = paste0(length(deleted_ids), " rows of data were deleted")
+        cli::cli_h3(paste0("'", table_data$table, "'", " table data"))
+        cli::cli_bullets(c(
+          "*" = paste0(table_size, " new rows of data downloaded"),
+          "*" = paste0(old_cache_n, " rows of data available in old cache"),
+          "*" = paste0(
+            new_data_ids,
+            " new ",
+            table_data$polis_id,
+            "s identified"
+          ),
+          "*" = paste0(new_data_ids_in_old_cache, " rows of data being updated"),
+          "*" = paste0(length(deleted_ids), " rows of data were deleted")
+        ))
+
+        update_polis_log(
+          .event = paste0(
+            table_data$table,
+            " - update - ",
+            table_size,
+            " new rows of data downloaded; ",
+            old_cache_n,
+            " rows of data available in old cache; ",
+            new_data_ids,
+            " new ",
+            table_data$polis_id,
+            "s identified; ",
+            new_data_ids_in_old_cache,
+            " rows of data being updated;",
+            paste0(length(deleted_ids), " rows of data were deleted - "),
+            paste0(deleted_ids, collapse = ", ")
           )
         )
 
-        update_polis_log(.event = paste0(table_data$table, " - update - ",
-                                         table_size, " new rows of data downloaded; ",
-                                         old_cache_n, " rows of data available in old cache; ",
-                                         new_data_ids, " new ", table_data$polis_id, "s identified; ",
-                                         new_data_ids_in_old_cache, " rows of data being updated;",
-                                         paste0(length(deleted_ids), " rows of data were deleted - "),
-                                         paste0(deleted_ids, collapse = ", ")))
-
         #update cache
-        old_cache <- old_cache |> dplyr::filter(!get(table_data$polis_id) %in% dplyr::pull(out[table_data$polis_id]))
-        old_cache <- bind_and_reconcile(new_data = out, old_data = old_cache)
+        old_cache <-
+          old_cache |> dplyr::filter(!get(table_data$polis_id) %in% dplyr::pull(out[table_data$polis_id]))
+        old_cache <-
+          bind_and_reconcile(new_data = out, old_data = old_cache)
 
         #write cache
 
@@ -186,7 +289,13 @@ get_table_data <- function(
         cli::cli_process_done()
 
         cli::cli_process_start("Writing data cache")
-        readr::write_rds(old_cache, file = paste0(Sys.getenv("POLIS_DATA_CACHE"),"/",table_data$table,".rds"))
+        readr::write_rds(old_cache,
+                         file = paste0(
+                           Sys.getenv("POLIS_DATA_CACHE"),
+                           "/",
+                           table_data$table,
+                           ".rds"
+                         ))
         update_polis_log(.event = paste0(table_data$table, " data saved locally"))
         cli::cli_process_done()
 
@@ -209,13 +318,10 @@ get_table_data <- function(
 #' @param cache_file str: Cache file location
 #' @param extra_filter str: additional filtering parameters
 #' @export
-get_table_size <- function(
-    .table,
-    api_key = Sys.getenv("POLIS_API_KEY"),
-    cache_file = Sys.getenv("POLIS_CACHE_FILE"),
-    extra_filter = ""
-){
-
+get_table_size <- function(.table,
+                           api_key = Sys.getenv("POLIS_API_KEY"),
+                           cache_file = Sys.getenv("POLIS_CACHE_FILE"),
+                           extra_filter = "") {
   table_data <- get_polis_cache(.table = .table)
 
   # disable SSL Mode
@@ -224,7 +330,13 @@ get_table_size <- function(
   # Variables: URL, Token, Filters, ...
   polis_api_root_url <- "https://extranet.who.int/polis/api/v2/"
 
-  api_url <- paste0(polis_api_root_url, table_data$endpoint, "?$inlinecount=allpages&$top=0", extra_filter)
+  api_url <-
+    paste0(
+      polis_api_root_url,
+      table_data$endpoint,
+      "?$inlinecount=allpages&$top=0",
+      extra_filter
+    )
 
   #response <- httr::GET(url=api_url, httr::add_headers("authorization-token" = api_key))
 
@@ -244,7 +356,7 @@ get_table_size <- function(
 
 
   table_size <- response |>
-    httr::content(type='text',encoding = 'UTF-8') |>
+    httr::content(type = 'text', encoding = 'UTF-8') |>
     jsonlite::fromJSON()
 
   table_size <- as.integer(table_size$odata.count)
@@ -261,38 +373,52 @@ get_table_size <- function(
 #' @param .id str: id variable
 #' @param api_key str: POLIS API Key
 #' @return character array of ids
-get_table_ids <- function(.table, .id, api_key = Sys.getenv("POLIS_API_KEY")){
+get_table_ids <-
+  function(.table, .id, api_key = Sys.getenv("POLIS_API_KEY")) {
+    cli::cli_process_start(paste0("Downloading ", .table, " table IDs"))
 
-  cli::cli_process_start(paste0("Downloading ", .table, " table IDs"))
+    table_data <- get_polis_cache(.table = .table)
 
-  table_data <- get_polis_cache(.table = .table)
+    # disable SSL Mode
+    httr::set_config(httr::config(ssl_verifypeer = 0L))
 
-  # disable SSL Mode
-  httr::set_config(httr::config(ssl_verifypeer = 0L))
+    # Variables: URL, Token, Filters, ...
+    polis_api_root_url <- "https://extranet.who.int/polis/api/v2/"
 
-  # Variables: URL, Token, Filters, ...
-  polis_api_root_url <- "https://extranet.who.int/polis/api/v2/"
+    api_url <-
+      paste0(polis_api_root_url,
+             table_data$endpoint,
+             "?$select=",
+             table_data$polis_id)
 
-  api_url <- paste0(polis_api_root_url, table_data$endpoint, "?$select=", table_data$polis_id)
+    table_size <- get_table_size(.table = .table)
 
-  table_size <- get_table_size(.table = .table)
+    if (table_data$table %in% c("human_specimen",
+                                "environmental_sample",
+                                "activity",
+                                "sub_activity",
+                                "lqas")) {
+      urls <-
+        create_table_urls(url = api_url,
+                          table_size = table_size,
+                          type = "lab-partial")
+    } else{
+      urls <-
+        create_table_urls(url = api_url,
+                          table_size = table_size,
+                          type = "partial")
+    }
 
-  if(table_data$table %in% c("human_specimen", "environmental_sample", "activity", "sub_activity", "lqas")){
-    urls <- create_table_urls(url = api_url, table_size = table_size, type = "lab-partial")
-  }else{
-    urls <- create_table_urls(url = api_url, table_size = table_size, type = "partial")
+    ids <- call_urls(urls) |>
+      dplyr::pull(table_data$polis_id)
+
+    gc()
+
+    cli::cli_process_done()
+
+    return(ids)
+
   }
-
-  ids <- call_urls(urls) |>
-    dplyr::pull(table_data$polis_id)
-
-  gc()
-
-  cli::cli_process_done()
-
-  return(ids)
-
-}
 
 #### POLIS API ####
 
@@ -303,15 +429,15 @@ get_table_ids <- function(.table, .id, api_key = Sys.getenv("POLIS_API_KEY")){
 #' @param key str: POLIS API Key
 #' @returns boolean
 #' @export
-test_polis_key <- function(key){
-
+test_polis_key <- function(key) {
   # Variables: URL, Token, Filters, ...
   polis_api_root_url <- "https://extranet.who.int/polis/api/v2/"
 
   api_url <- paste0(polis_api_root_url, "$metadata")
 
   # connect to the API and Get data
-  get_result <- httr::GET(api_url, httr::add_headers("authorization-token" = key))
+  get_result <-
+    httr::GET(api_url, httr::add_headers("authorization-token" = key))
 
   # Display the status which should be 200 (OK)
   return(httr::status_code(get_result) == 200)
@@ -327,8 +453,7 @@ test_polis_key <- function(key){
 #' @importFrom progressr handlers
 #' @param urls array of url strings
 #' @return tibble with all data
-call_urls <- function(urls){
-
+call_urls <- function(urls) {
   doFuture::registerDoFuture() ## tell foreach to use futures
   future::plan(future::multisession) ## parallelize over a local PSOCK cluster
   options(doFuture.rng.onMisuse = "ignore")
@@ -338,13 +463,17 @@ call_urls <- function(urls){
 
   progressr::with_progress({
     p <- progressr::progressor(along = xs)
-    y <- foreach::`%dopar%`(foreach::foreach(x = xs, .packages = c("tidypolis", "tibble", "jsonlite", "httr")), {
-      # signal a progression update
-      p()
-      # jitter the parallel calls to not overwhelm the server
-      #Sys.sleep(1 + stats::rpois(1, 10)/100)
-      call_single_url(urls[x])
-    })
+    y <-
+      foreach::`%dopar%`(foreach::foreach(
+        x = xs,
+        .packages = c("tidypolis", "tibble", "jsonlite", "httr")
+      ), {
+        # signal a progression update
+        p()
+        # jitter the parallel calls to not overwhelm the server
+        #Sys.sleep(1 + stats::rpois(1, 10)/100)
+        call_single_url(urls[x])
+      })
   })
 
   y <- dplyr::bind_rows(y)
@@ -362,11 +491,9 @@ call_urls <- function(urls){
 #' @param times int: number of times to attempt connection with API
 #' @export
 #' @return tibble
-call_single_url <- function(
-    url,
-    api_key = Sys.getenv("POLIS_API_KEY"),
-    times = 10
-){
+call_single_url <- function(url,
+                            api_key = Sys.getenv("POLIS_API_KEY"),
+                            times = 10) {
   # disable SSL Mode
   httr::set_config(httr::config(ssl_verifypeer = 0L))
 
@@ -396,66 +523,94 @@ call_single_url <- function(
 #' @param .table str: table name
 #' @param key str: POLIS API Key
 #' @returns tibble with diagnostic data
-run_single_table_diagnostic <- function(.table, key =  Sys.getenv("POLIS_API_Key")){
+run_single_table_diagnostic <-
+  function(.table, key =  Sys.getenv("POLIS_API_Key")) {
+    base_url <- "https://extranet.who.int/polis/api/v2/"
+    table_data <- get_polis_cache(.table = .table)
+    table_url <- paste0(base_url, table_data$endpoint)
+    table_size <- get_table_size(.table = .table)
 
-  base_url <- "https://extranet.who.int/polis/api/v2/"
-  table_data <- get_polis_cache(.table = .table)
-  table_url <- paste0(base_url, table_data$endpoint)
-  table_size <- get_table_size(.table = .table)
-
-  if(table_data$table %in% c("human_specimen", "environmental_sample", "activity", "sub_activity", "lqas")){
-    urls <- create_table_urls(url = table_url, table_size = table_size, type = "lab")
-  }else{
-    urls <- create_table_urls(url = table_url, table_size = table_size, type = "full")
-  }
-
-  data_url <- urls[1]
-
-
-  # disable SSL Mode
-  httr::set_config(httr::config(ssl_verifypeer = 0L))
-
-  # Variables: URL, Token, Filters, ...
-  polis_api_root_url <- "https://extranet.who.int/polis/api/v2/"
-
-  api_url <- paste0(polis_api_root_url, table_data$endpoint, "?$select=", table_data$polis_id)
-
-  if(table_data$table %in% c("human_specimen", "environmental_sample", "activity", "sub_activity", "lqas")){
-    urls <- create_table_urls(url = api_url, table_size = table_size, type = "lab-partial")
-  }else{
-    urls <- create_table_urls(url = api_url, table_size = table_size, type = "partial")
-  }
-
-  id_url <- urls[1]
-
-  tick <- Sys.time()
-  data_return <- tryCatch(
-    call_single_url(data_url, times = 1),
-    error = function(cond){
-      return("Error")
+    if (table_data$table %in% c("human_specimen",
+                                "environmental_sample",
+                                "activity",
+                                "sub_activity",
+                                "lqas")) {
+      urls <-
+        create_table_urls(url = table_url,
+                          table_size = table_size,
+                          type = "lab")
+    } else{
+      urls <-
+        create_table_urls(url = table_url,
+                          table_size = table_size,
+                          type = "full")
     }
-  )
-  tock <- Sys.time()
-  data_time <- tock - tick
 
-  tick <- Sys.time()
-  id_return <- tryCatch(
-    call_single_url(id_url, times = 1),
-    error = function(cond){
-      return("Error")
+    data_url <- urls[1]
+
+
+    # disable SSL Mode
+    httr::set_config(httr::config(ssl_verifypeer = 0L))
+
+    # Variables: URL, Token, Filters, ...
+    polis_api_root_url <- "https://extranet.who.int/polis/api/v2/"
+
+    api_url <-
+      paste0(polis_api_root_url,
+             table_data$endpoint,
+             "?$select=",
+             table_data$polis_id)
+
+    if (table_data$table %in% c("human_specimen",
+                                "environmental_sample",
+                                "activity",
+                                "sub_activity",
+                                "lqas")) {
+      urls <-
+        create_table_urls(url = api_url,
+                          table_size = table_size,
+                          type = "lab-partial")
+    } else{
+      urls <-
+        create_table_urls(url = api_url,
+                          table_size = table_size,
+                          type = "partial")
     }
-  )
-  tock <- Sys.time()
-  id_time <- tock - tick
 
-  return(tibble::tibble("table" = .table,
-                "data" = ifelse(is.data.frame(data_return), "Success", "Error"),
-                "data_time" = data_time,
-                "id" = ifelse(is.data.frame(id_return), "Success", "Error"),
-                "id_time" = id_time))
+    id_url <- urls[1]
+
+    tick <- Sys.time()
+    data_return <- tryCatch(
+      call_single_url(data_url, times = 1),
+      error = function(cond) {
+        return("Error")
+      }
+    )
+    tock <- Sys.time()
+    data_time <- tock - tick
+
+    tick <- Sys.time()
+    id_return <- tryCatch(
+      call_single_url(id_url, times = 1),
+      error = function(cond) {
+        return("Error")
+      }
+    )
+    tock <- Sys.time()
+    id_time <- tock - tick
+
+    return(
+      tibble::tibble(
+        "table" = .table,
+        "data" = ifelse(is.data.frame(data_return), "Success", "Error"),
+        "data_time" = data_time,
+        "id" = ifelse(is.data.frame(id_return), "Success", "Error"),
+        "id_time" = id_time
+      )
+    )
 
 
-}
+  }
 
 
 #### Logging ####
@@ -469,19 +624,14 @@ run_single_table_diagnostic <- function(.table, key =  Sys.getenv("POLIS_API_Key
 #' @param .user double: user who conducted the action
 #' @param .event str: event to be logged
 #' @returns Return true if cache updated
-update_polis_log <- function(
-    log_file = Sys.getenv("POLIS_LOG_FILE"),
-    .time = Sys.time(),
-    .user = Sys.getenv("USERNAME"),
-    .event
-){
-
+update_polis_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
+                             .time = Sys.time(),
+                             .user = Sys.getenv("USERNAME"),
+                             .event) {
   readr::read_rds(log_file) |>
-    tibble::add_row(
-      time = .time,
-      user = .user,
-      event = .event
-    ) |>
+    tibble::add_row(time = .time,
+                    user = .user,
+                    event = .event) |>
     readr::write_rds(log_file)
 
 }
@@ -496,16 +646,14 @@ update_polis_log <- function(
 #' @param cache_file str: location of cache file
 #' @param .table str: table to be loaded
 #' @returns Return tibble with table information
-get_polis_cache <- function(
-    cache_file = Sys.getenv("POLIS_CACHE_FILE"),
-    .table
-){
+get_polis_cache <- function(cache_file = Sys.getenv("POLIS_CACHE_FILE"),
+                            .table) {
   cache <- readr::read_rds(cache_file)
 
-  if(.table %in% dplyr::pull(cache, table)){
+  if (.table %in% dplyr::pull(cache, table)) {
     cache |>
       dplyr::filter(table == .table)
-  }else{
+  } else{
     cli::cli_alert_warning(paste0("No entry found in the cache table for: ", .table))
   }
 
@@ -522,19 +670,24 @@ get_polis_cache <- function(
 #' @param .nrow double: nrow of table to be updated
 #' @param .update_val str: value to update data
 #' @returns Return true if cache updated
-update_polis_cache <- function(
-    cache_file = Sys.getenv("POLIS_CACHE_FILE"),
-    .table,
-    .nrow,
-    .update_val
-){
-
+update_polis_cache <- function(cache_file = Sys.getenv("POLIS_CACHE_FILE"),
+                               .table,
+                               .nrow,
+                               .update_val) {
   readr::read_rds(cache_file) |>
     dplyr::mutate(
       nrow = ifelse(table == .table, .nrow, nrow),
-      last_sync = ifelse(table == .table, lubridate::as_datetime(Sys.time()), last_sync),
+      last_sync = ifelse(
+        table == .table,
+        lubridate::as_datetime(Sys.time()),
+        last_sync
+      ),
       last_user = ifelse(table == .table, Sys.getenv("USERNAME"), last_user),
-      polis_update_value = ifelse(table == .table, lubridate::as_datetime(.update_val), polis_update_value),
+      polis_update_value = ifelse(
+        table == .table,
+        lubridate::as_datetime(.update_val),
+        polis_update_value
+      ),
       last_sync = lubridate::as_datetime(last_sync),
       polis_update_value = lubridate::as_datetime(polis_update_value)
     ) |>
@@ -553,13 +706,10 @@ update_polis_cache <- function(
 #' @param vals array:
 #' @param max_i int:
 #' @returns val from `vals` or stops output
-request_input <- function(
-    request,
-    vals,
-    error_resp = "Valid input not chosen",
-    max_i = 3
-){
-
+request_input <- function(request,
+                          vals,
+                          error_resp = "Valid input not chosen",
+                          max_i = 3) {
   message(request)
 
   i <- 1
@@ -570,10 +720,10 @@ request_input <- function(
 
   val <- readline(prompt = vals_str)
 
-  while(!val %in% vals){
+  while (!val %in% vals) {
     val <- readline(prompt = vals_str)
     i <- i + 1
-    if(i == max_i){
+    if (i == max_i) {
       stop(error_resp)
     }
   }
@@ -594,31 +744,31 @@ request_input <- function(
 #' @param table_size int: integer of download
 #' @param type str: "full" or "partial"
 #' @returns array of urls
-create_table_urls <- function(
-    url,
-    table_size,
-    type
-){
-
+create_table_urls <- function(url,
+                              table_size,
+                              type) {
   prior_scipen <- getOption("scipen")
   options(scipen = 999)
 
-  if(sum(type %in% c("full", "partial", "lab", "lab-partial")) > 0){
-
-    if(type == "full"){
-      urls <- paste0(url, "?$top=2000&$skip=",as.character(seq(0,as.numeric(table_size), by = 2000)))
+  if (sum(type %in% c("full", "partial", "lab", "lab-partial")) > 0) {
+    if (type == "full") {
+      urls <-
+        paste0(url, "?$top=2000&$skip=", as.character(seq(0, as.numeric(table_size), by = 2000)))
     }
 
-    if(type == "partial"){
-      urls <- paste0(url, "&$top=2000&$skip=",seq(0,as.numeric(table_size), by = 2000))
+    if (type == "partial") {
+      urls <-
+        paste0(url, "&$top=2000&$skip=", seq(0, as.numeric(table_size), by = 2000))
     }
 
-    if(type == "lab"){
-      urls <- paste0(url, "?$top=1000&$skip=",as.character(seq(0,as.numeric(table_size), by = 1000)))
+    if (type == "lab") {
+      urls <-
+        paste0(url, "?$top=1000&$skip=", as.character(seq(0, as.numeric(table_size), by = 1000)))
     }
 
-    if(type == "lab-partial"){
-      urls <- paste0(url, "&$top=1000&$skip=",seq(0,as.numeric(table_size), by = 1000))
+    if (type == "lab-partial") {
+      urls <-
+        paste0(url, "&$top=1000&$skip=", seq(0, as.numeric(table_size), by = 1000))
     }
 
   }
@@ -633,16 +783,14 @@ create_table_urls <- function(
 #' @import tibble dplyr
 #' @param old_data tibble: Tibble to be referenced
 #' @returns tibble: bound tibble
-bind_and_reconcile <- function(new_data, old_data){
-
+bind_and_reconcile <- function(new_data, old_data) {
   old_names <- names(old_data)
   classes_old <- sapply(old_data, class)
   new_data <- as.data.frame(new_data)
   old_data <- as.data.frame(old_data)
 
-  for(name in old_names){
-
-    class(new_data[,name]) <- classes_old[name][[1]]
+  for (name in old_names) {
+    class(new_data[, name]) <- classes_old[name][[1]]
 
   }
 
@@ -660,14 +808,10 @@ bind_and_reconcile <- function(new_data, old_data){
 #' @import yaml
 #' @param polis_data_folder str: location of POLIS data folder
 #' @returns boolean for folder creation
-create_cred_file <- function(
-    polis_data_folder
-){
-  list(
-    "polis_api_key" = "",
-    "polis_data_folder" = ""
-  ) |>
-    yaml::write_yaml(file = file.path(polis_data_folder,"creds.yaml"))
+create_cred_file <- function(polis_data_folder) {
+  list("polis_api_key" = "",
+       "polis_data_folder" = "") |>
+    yaml::write_yaml(file = file.path(polis_data_folder, "creds.yaml"))
 }
 
 #' Rename variables via crosswalk
@@ -680,20 +824,59 @@ create_cred_file <- function(
 #' @returns tibble: renamed table
 rename_via_crosswalk <- function(api_data,
                                  crosswalk,
-                                 table_name){
+                                 table_name) {
   crosswalk_sub1 <- crosswalk |>
     dplyr::filter(Table == !!table_name) |>
     dplyr::filter(!is.na(API_Name))
-  for(i in 1:nrow(crosswalk_sub1)){
+  for (i in 1:nrow(crosswalk_sub1)) {
     api_name <- crosswalk_sub1$API_Name[i]
     web_name <- crosswalk_sub1$Web_Name[i]
-    if(!is.na(web_name) & web_name != ""){
+    if (!is.na(web_name) & web_name != "") {
       api_data <- api_data |>
-        dplyr::rename({{web_name}} := {{api_name}})
+        dplyr::rename({
+          {
+            web_name
+          }
+        } := {
+          {
+            api_name
+          }
+        })
     }
   }
   return(api_data)
 }
+
+#' Remove empty columns
+#'
+#' @description Utility function to remove empty columns
+#' @param dataframe tibble: df
+#' @returns tibble: without empty columns
+pull_empty_columns <- function(dataframe) {
+  return(dataframe[, colSums(is.na(dataframe) |
+                               dataframe == "") == nrow(dataframe)])
+}
+
+
+#' Get crosswalk data
+#'
+#' @description
+#' Get all data from crosswalk location
+#' @param file_loc str: location of crosswalk file
+#' @import dplyr cli
+#' @return tibble: crosswalk data
+get_crosswalk_data <- function(
+    file_loc = "//cdc.gov/project/CGH_GID_Active/PEB/SIR/DATA/Core 2.0/preprocessing/GetPOLIS/api_web_core_crosswalk.xlsx"
+  ){
+  cli::cli_process_start("Import crosswalk")
+  crosswalk <-
+    rio::import(file_loc) |>
+    #TrendID removed from export
+    dplyr::filter(!API_Name %in% c("Admin0TrendId", "Admin0Iso2Code"))
+  cli::cli_process_done()
+  return(crosswalk)
+}
+
 
 #### Pre-processing ####
 
@@ -704,42 +887,45 @@ rename_via_crosswalk <- function(api_data,
 #' Process POLIS data into analytic datasets needed for CDC
 #' @import cli sirfunctions dplyr readr lubridate stringr rio
 #' @param polis_data_folder
-preprocess_cdc <- function(
-    polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")
-  ){
-
+preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   #Read in the updated API datasets
   cli::cli_h1("Loading data")
 
   cli::cli_process_start("Case")
-  api_case_2019_12_01_onward <- readr::read_rds(paste0(polis_data_folder,"/case.rds")) |>
+  api_case_2019_12_01_onward <-
+    readr::read_rds(paste0(polis_data_folder, "/case.rds")) |>
     dplyr::mutate_all(as.character)
   cli::cli_process_done()
 
   cli::cli_process_start("Environmental Samples")
-  api_es_complete <- readr::read_rds(paste0(polis_data_folder,"/environmental_sample.rds")) |>
+  api_es_complete <-
+    readr::read_rds(paste0(polis_data_folder, "/environmental_sample.rds")) |>
     dplyr::mutate_all(as.character)
   cli::cli_process_done()
 
   cli::cli_process_start("Sub-activity")
-  api_subactivity_complete <- readr::read_rds(paste0(polis_data_folder,"/sub_activity.rds")) |>
+  api_subactivity_complete <-
+    readr::read_rds(paste0(polis_data_folder, "/sub_activity.rds")) |>
     dplyr::mutate_all(as.character)
   cli::cli_process_done()
 
   cli::cli_process_start("Virus")
-  api_virus_complete <- readr::read_rds(paste0(polis_data_folder,"/virus.rds")) |>
+  api_virus_complete <-
+    readr::read_rds(paste0(polis_data_folder, "/virus.rds")) |>
     dplyr::mutate_all(as.character)
   cli::cli_process_done()
 
   cli::cli_process_start("Activity")
-  api_activity_complete <- readr::read_rds(paste0(polis_data_folder,"/activity.rds")) |>
+  api_activity_complete <-
+    readr::read_rds(paste0(polis_data_folder, "/activity.rds")) |>
     dplyr::mutate_all(as.character)
   cli::cli_process_done()
 
 
   #Get geodatabase to auto-fill missing GUIDs
   cli::cli_process_start("Long district spatial file")
-  long.global.dist.01 <- sirfunctions::load_clean_dist_sp(type = "long")
+  long.global.dist.01 <-
+    sirfunctions::load_clean_dist_sp(type = "long")
   cli::cli_process_done()
 
 
@@ -769,6 +955,12 @@ preprocess_cdc <- function(
   cli::cli_process_start("Virus")
   api_virus_sub1 <- api_virus_complete |>
     dplyr::distinct()
+  cli::cli_process_done()
+
+  cli::cli_process_start("Clearing memory")
+  rm("api_subactivity_complete", "api_activity_complete", "api_es_complete",
+     "api_case_2019_12_01_onward", "api_virus_complete")
+  gc()
   cli::cli_process_done()
 
   cli::cli_process_start("Processing sub-activity spatial data")
@@ -806,17 +998,18 @@ preprocess_cdc <- function(
       Admin1Guid = dplyr::case_when(is.na(Admin1Guid) ~ ADM1_GUID,
                                     TRUE ~ Admin1Guid)
     ) |>
-    dplyr::select(-year, -ADM1_GUID, -GUID)
+    dplyr::select(-year,-ADM1_GUID,-GUID)
+  cli::cli_process_done()
+
+  cli::cli_process_start("Clearing memory")
+  rm("api_subactivity_sub1")
+  gc()
   cli::cli_process_done()
 
   #Import the crosswalk file and use it to rename all data elements in the API-downloaded tables.
   cli::cli_h1("Crosswalk and rename variables")
 
-  cli::cli_process_start("Import crosswalk")
-  crosswalk <- rio::import("//cdc.gov/project/CGH_GID_Active/PEB/SIR/DATA/Core 2.0/preprocessing/GetPOLIS/api_web_core_crosswalk.xlsx") |>
-    #TrendID removed from export
-    dplyr::filter(!API_Name %in% c("Admin0TrendId", "Admin0Iso2Code"))
-  cli::cli_process_done()
+  crosswalk <- get_crosswalk_data()
 
   cli::cli_process_start("Case")
   api_case_sub2 <- rename_via_crosswalk(api_data = api_case_sub1,
@@ -837,153 +1030,265 @@ preprocess_cdc <- function(
   cli::cli_process_done()
 
   cli::cli_process_start("Activity")
-  api_activity_sub2 <- rename_via_crosswalk(api_data = api_activity_sub1,
-                                            crosswalk = crosswalk,
-                                            table_name = "Activity") |>
+  api_activity_sub2 <-
+    rename_via_crosswalk(api_data = api_activity_sub1,
+                         crosswalk = crosswalk,
+                         table_name = "Activity") |>
     dplyr::select(SIASubActivityCode, crosswalk$Web_Name[crosswalk$Table == "Activity"]) |>
     dplyr::select(-c("Admin 0 Id"))
   cli::cli_process_done()
 
   cli::cli_process_start("Sub-activity")
-  api_subactivity_sub3 <- rename_via_crosswalk(api_data = api_subactivity_sub2,
-                                               crosswalk = crosswalk,
-                                               table_name = "SubActivity") |>
-    dplyr::left_join(api_activity_sub2, by=c("SIA Sub-Activity Code" = "SIASubActivityCode"))
+  api_subactivity_sub3 <-
+    rename_via_crosswalk(api_data = api_subactivity_sub2,
+                         crosswalk = crosswalk,
+                         table_name = "SubActivity") |>
+    dplyr::left_join(api_activity_sub2,
+                     by = c("SIA Sub-Activity Code" = "SIASubActivityCode"))
+  cli::cli_process_done()
+
+  cli::cli_process_start("Clearing memory")
+  rm("api_activity_sub1", "api_case_sub1", "api_es_sub1", "api_subactivity_sub2",
+     "api_virus_sub1")
+
   cli::cli_process_done()
 
   cli::cli_h1("Modifying and reconciling variable types")
   #    Modify individual variables in the API files to match the coding in the web-interface downloads,
   #    and retain only variables from the API files that are present in the web-interface downloads.
+  cli::cli_process_start("Step 1")
   api_subactivity_sub4 <- api_subactivity_sub3 |>
-    mutate(`IM loaded` = case_when(`IM loaded` == "TRUE" ~ "Yes",
-                                   `IM loaded` == "FALSE" ~ "No",
-                                   TRUE ~ NA_character_)) |>
-    mutate(`LQAS loaded` = case_when(`LQAS loaded` == "TRUE" ~ "Yes",
-                                     `LQAS loaded` == "FALSE" ~ "No",
-                                     TRUE ~ NA_character_)) |>
-    mutate_at(c("Age Group %", "Area Targeted %", "Country Population %"), ~as.numeric(.) * 100) |>
-    mutate(`Area Population` = as.character(format(round(as.numeric(`Area Population`), 1), nsmall=0, big.mark=","))) |>
-    mutate_at(c("Sub-Activity Initial Planned Date", "Last Updated Date"), ~as.character(as.Date(., "%Y-%m-%d"), "%d/%m/%Y")) |>
-    mutate_at(c("Sub-Activity Last Updated Date"), ~as.character(as.POSIXct(., tryFormats = c("%Y-%m-%dT%H:%M:%OS")), "%d/%m/%Y %H:%M")) |>
-    mutate(`Activity Comments` = "") |>
-    mutate(`Targeted Population` = as.character(`Targeted Population`),
-           `Number of Doses` = as.character(`Number of Doses`)) |>
-    mutate_at(c("UNPD Country Population",
-                "Immunized Population",
-                "Admin 2 Targeted Population",
-                "Admin 2 Immunized Population",
-                "Admin2 children inaccessible",
-                "Number of Doses Approved",
-                "Children inaccessible",
-                "Activity parent children inaccessible",
-                "Admin 0 Id",
-                "Admin 1 Id",
-                "Admin 2 Id"),
-              as.numeric) |>
-    select(c(
-      crosswalk$Web_Name[crosswalk$Table %in% c("Activity", "SubActivity") & !is.na(crosswalk$Web_Name)],
-      crosswalk$API_Name[crosswalk$Table %in% c("SubActivity") & is.na(crosswalk$Web_Name) & crosswalk$API_Name != "ActivityAdminCoveragePercentage"])
-    )
+    dplyr::mutate(
+      `IM loaded` = dplyr::case_when(
+        `IM loaded` == "TRUE" ~ "Yes",
+        `IM loaded` == "FALSE" ~ "No",
+        TRUE ~ NA_character_
+      )
+    ) |>
+    dplyr::mutate(
+      `LQAS loaded` = dplyr::case_when(
+        `LQAS loaded` == "TRUE" ~ "Yes",
+        `LQAS loaded` == "FALSE" ~ "No",
+        TRUE ~ NA_character_
+      )
+    ) |>
+    dplyr::mutate_at(c("Age Group %", "Area Targeted %", "Country Population %"),
+                     ~ as.numeric(.) * 100) |>
+    dplyr::mutate(`Area Population` = as.character(format(
+      round(as.numeric(`Area Population`), 1),
+      nsmall = 0,
+      big.mark = ","
+    ))) |>
+    dplyr::mutate_at(
+      c("Sub-Activity Initial Planned Date", "Last Updated Date"),
+      ~ lubridate::as_datetime(.)
+    ) |>
+    dplyr::mutate(`Activity Comments` = "") |>
+    dplyr::mutate(
+      `Targeted Population` = as.character(`Targeted Population`),
+      `Number of Doses` = as.character(`Number of Doses`)
+    ) |>
+    dplyr::mutate_at(
+      c(
+        "UNPD Country Population",
+        "Immunized Population",
+        "Admin 2 Targeted Population",
+        "Admin 2 Immunized Population",
+        "Admin2 children inaccessible",
+        "Number of Doses Approved",
+        "Children inaccessible",
+        "Activity parent children inaccessible",
+        "Admin 0 Id",
+        "Admin 1 Id",
+        "Admin 2 Id"
+      ),
+      as.numeric
+    ) |>
+    dplyr::select(c(crosswalk$Web_Name[crosswalk$Table %in% c("Activity", "SubActivity") &
+                                         !is.na(crosswalk$Web_Name)],
+                    crosswalk$API_Name[crosswalk$Table %in% c("SubActivity") &
+                                         is.na(crosswalk$Web_Name) &
+                                         crosswalk$API_Name != "ActivityAdminCoveragePercentage"]))
+  cli::cli_process_done()
 
+
+  cli::cli_process_start("Step 2")
   api_case_sub3 <- api_case_sub2 |>
-    mutate(`total.number.of.ipv./.opv.doses` = NA_integer_,
-           Doses =  as.numeric(Doses),
-           `Virus Sequenced` = as.logical(`Virus Sequenced`),
-           `Advanced Notification` = case_when(`Advanced Notification` == TRUE ~ "Yes",
-                                               `Advanced Notification` == FALSE ~ "No",
-                                               TRUE ~ NA_character_),
-           `Dataset Lab` = case_when(`Dataset Lab` == TRUE ~ "Yes",
-                                     `Dataset Lab` == FALSE ~ "No",
-                                     TRUE ~ NA_character_),
-           `Is Breakthrough` = case_when(`Is Breakthrough` == TRUE ~ "Yes",
-                                         `Is Breakthrough` == FALSE ~ "No",
-                                         TRUE ~ NA_character_)) |>
-    select(c(crosswalk$Web_Name[crosswalk$Table %in% c("Case") & !is.na(crosswalk$Web_Name)],
-             crosswalk$API_Name[crosswalk$Table %in% c("Case") & is.na(crosswalk$Web_Name)]))
+    dplyr::mutate(
+      `total.number.of.ipv./.opv.doses` = NA_integer_,
+      Doses =  as.numeric(Doses),
+      `Virus Sequenced` = as.logical(`Virus Sequenced`),
+      `Advanced Notification` = dplyr::case_when(
+        `Advanced Notification` == TRUE ~ "Yes",
+        `Advanced Notification` == FALSE ~ "No",
+        TRUE ~ NA_character_
+      ),
+      `Dataset Lab` = dplyr::case_when(
+        `Dataset Lab` == TRUE ~ "Yes",
+        `Dataset Lab` == FALSE ~ "No",
+        TRUE ~ NA_character_
+      ),
+      `Is Breakthrough` = dplyr::case_when(
+        `Is Breakthrough` == TRUE ~ "Yes",
+        `Is Breakthrough` == FALSE ~ "No",
+        TRUE ~ NA_character_
+      )
+    ) |>
+    dplyr::select(c(crosswalk$Web_Name[crosswalk$Table %in% c("Case") &
+                                         !is.na(crosswalk$Web_Name)],
+                    crosswalk$API_Name[crosswalk$Table %in% c("Case") &
+                                         is.na(crosswalk$Web_Name)]))
+  cli::cli_process_done()
 
+  cli::cli_process_start("Step 3")
   api_es_sub3 <- api_es_sub2 |>
-    mutate(Site = paste0(`Site Code`," - ",`Site Name`),
-           `Country Iso2` = NA_character_) |>
-    mutate_at(c("Vaccine 1", "Vaccine 2", "Vaccine 3",
-                "Vdpv 1", "Vdpv 2", "Vdpv 3",
-                "Wild 1", "Wild 2", "Wild 3",
-                "nVaccine 2","nVDPV 2",
-                "PV 1", "PV 2", "PV 3", "Is Suspected", "NPEV"), ~case_when(. == "TRUE" ~ "Yes",
-                                                                            . == "FALSE" ~ "No",
-                                                                            TRUE ~ NA_character_)) |>
+    dplyr::mutate(Site = paste0(`Site Code`, " - ", `Site Name`),
+                  `Country Iso2` = NA_character_) |>
+    dplyr::mutate_at(
+      c(
+        "Vaccine 1",
+        "Vaccine 2",
+        "Vaccine 3",
+        "Vdpv 1",
+        "Vdpv 2",
+        "Vdpv 3",
+        "Wild 1",
+        "Wild 2",
+        "Wild 3",
+        "nVaccine 2",
+        "nVDPV 2",
+        "PV 1",
+        "PV 2",
+        "PV 3",
+        "Is Suspected",
+        "NPEV"
+      ),
+      ~ dplyr::case_when(. == "TRUE" ~ "Yes",
+                  . == "FALSE" ~ "No",
+                  TRUE ~ NA_character_)
+    ) |>
 
-    mutate_at(c("Is Breakthrough",
-                "Under Process",
-                "Advanced Notification",
-                "Mixture"), ~case_when(. == "TRUE" ~ "Yes",
-                                       . == "FALSE" ~ "No",
-                                       TRUE ~ NA_character_)) |>
-    mutate_at(c("Date Final Culture Result",
-                "Date Final Combined Result",
-                "Date Final Results Reported",
-                "Date Isol Sent Seq2",
-                "Date Isol Rec Seq2",
-                "Date Final Seq Result",
-                "Date Res Sent Out VDPV2",
-                "Date Res Sent Out VACCINE2",
-                "Date Isol Rec Seq1",
-                "Collection Date",
-                "Date F1 ref ITD",
-                "Date F2 ref ITD",
-                "Date F3 ref ITD",
-                "Date F4 ref ITD",
-                "Date F5 ref ITD",
-                "Date F6 ref ITD",
-                "Date Notification To HQ",
-                "Date received in lab",
-                "Date Shipped To Ref Lab",
-                "Publish Date",
-                "Uploaded Date"), ~as.character(format(as.Date(., format="%Y-%m-%d"), format="%d/%m/%Y"))) |>
-    mutate_at(c("Created Date",
-                "Updated Date"), ~as.character(format(as.Date(., format="%Y-%m-%d"), format="%d-%m-%Y"))) |>
-    mutate(`Sample Id` = as.character(`Sample Id`)) |>
-    select(c(crosswalk$Web_Name[crosswalk$Table %in% c("EnvSample") & !is.na(crosswalk$Web_Name)],
-             crosswalk$API_Name[crosswalk$Table %in% c("EnvSample") & is.na(crosswalk$Web_Name)]))
+    dplyr::mutate_at(
+      c(
+        "Is Breakthrough",
+        "Under Process",
+        "Advanced Notification",
+        "Mixture"
+      ),
+      ~ dplyr::case_when(. == "TRUE" ~ "Yes",
+                  . == "FALSE" ~ "No",
+                  TRUE ~ NA_character_)
+    ) |>
+    dplyr::mutate_at(
+      c(
+        "Date Final Culture Result",
+        "Date Final Combined Result",
+        "Date Final Results Reported",
+        "Date Isol Sent Seq2",
+        "Date Isol Rec Seq2",
+        "Date Final Seq Result",
+        "Date Res Sent Out VDPV2",
+        "Date Res Sent Out VACCINE2",
+        "Date Isol Rec Seq1",
+        "Collection Date",
+        "Date F1 ref ITD",
+        "Date F2 ref ITD",
+        "Date F3 ref ITD",
+        "Date F4 ref ITD",
+        "Date F5 ref ITD",
+        "Date F6 ref ITD",
+        "Date Notification To HQ",
+        "Date received in lab",
+        "Date Shipped To Ref Lab",
+        "Publish Date",
+        "Uploaded Date"
+      ),
+      ~ as.character(format(as.Date(., format = "%Y-%m-%d"), format = "%d/%m/%Y"))
+    ) |>
+    dplyr::mutate_at(c("Created Date",
+                "Updated Date"), ~ as.character(format(as.Date(., format =
+                                                                 "%Y-%m-%d"), format = "%d-%m-%Y"))) |>
+    dplyr::mutate(`Sample Id` = as.character(`Sample Id`)) |>
+    dplyr::select(c(crosswalk$Web_Name[crosswalk$Table %in% c("EnvSample") &
+                                  !is.na(crosswalk$Web_Name)],
+             crosswalk$API_Name[crosswalk$Table %in% c("EnvSample") &
+                                  is.na(crosswalk$Web_Name)]))
+  cli::cli_process_done()
 
+  cli::cli_process_start("Step 4")
   api_virus_sub3 <- api_virus_sub2 |>
-    mutate(location = paste(toupper(Admin0OfficialName), toupper(Admin1OfficialName), toupper(Admin2OfficialName), sep=", ")) |>
-    mutate(location = str_squish(str_replace_all(location, ", NA,", ", "))) |>
-    mutate(location = case_when(str_sub(location, -4) == ", NA" ~ substr(location, 1, nchar(location)-4),
-                                TRUE ~ location)) |>
-    mutate(location = str_replace_all(location, "ISLAMIC REPUBLIC OF IRAN", "IRAN (ISLAMIC REPUBLIC OF)")) |>
-    mutate(location = str_replace_all(location, "UNITED KINGDOM OF GREAT BRITAIN AND NORTHERN IRELAND", "THE UNITED KINGDOM")) |>
+    dplyr::mutate(location = paste(
+      toupper(Admin0OfficialName),
+      toupper(Admin1OfficialName),
+      toupper(Admin2OfficialName),
+      sep = ", "
+    )) |>
+    dplyr::mutate(location = stringr::str_squish(stringr::str_replace_all(location, ", NA,", ", "))) |>
+    dplyr::mutate(location = dplyr::case_when(
+      stringr::str_sub(location,-4) == ", NA" ~ substr(location, 1, nchar(location) - 4),
+      TRUE ~ location
+    )) |>
+    dplyr::mutate(location = stringr::str_replace_all(
+      location,
+      "ISLAMIC REPUBLIC OF IRAN",
+      "IRAN (ISLAMIC REPUBLIC OF)"
+    )) |>
+    dplyr::mutate(
+      location = stringr::str_replace_all(
+        location,
+        "UNITED KINGDOM OF GREAT BRITAIN AND NORTHERN IRELAND",
+        "THE UNITED KINGDOM"
+      )
+    ) |>
 
-    mutate(`Virus Type(s)` = str_replace_all(`Virus Type(s)`, "NVACCINE", "nVACCINE")) |>
+    dplyr::mutate(`Virus Type(s)` = stringr::str_replace_all(`Virus Type(s)`, "NVACCINE", "nVACCINE")) |>
 
-    mutate(`Nt Changes` = case_when(grepl("VDPV", `VirusTypeName`) & !is.na(`Nt Changes`) ~ `Nt Changes`,
-                                    grepl("VACCINE", VirusTypeName) & !is.na(VaccineNtChangesFromSabin) ~ VaccineNtChangesFromSabin,
-                                    TRUE ~ NA_character_)) |>
-    mutate_at(c("Virus Date"), ~as.character(as.Date(., "%Y-%m-%d"), "%d/%m/%Y")) |>
-    mutate_at(c("Is Breakthrough"), ~case_when(. == "TRUE" ~ "Yes",
-                                               . == "FALSE" ~ "No",
-                                               TRUE ~ NA_character_)) |>
-    select(c(crosswalk$Web_Name[crosswalk$Table %in% c("Virus") & !is.na(crosswalk$Web_Name)],
-             crosswalk$API_Name[crosswalk$Table %in% c("Virus") & is.na(crosswalk$Web_Name)])) |>
-    mutate(nt.changes.neighbor = case_when(!is.na(VdpvNtChangesClosestMatch) ~VdpvNtChangesClosestMatch,
-                                           TRUE ~ NA_character_))
+    dplyr::mutate(
+      `Nt Changes` = dplyr::case_when(
+        grepl("VDPV", `VirusTypeName`) &
+          !is.na(`Nt Changes`) ~ `Nt Changes`,
+        grepl("VACCINE", VirusTypeName) &
+          !is.na(VaccineNtChangesFromSabin) ~ VaccineNtChangesFromSabin,
+        TRUE ~ NA_character_
+      )
+    ) |>
+    dplyr::mutate_at(c("Virus Date"), ~ lubridate::as_date(.)) |>
+    dplyr::mutate_at(
+      c("Is Breakthrough"),
+      ~ dplyr::case_when(. == "TRUE" ~ "Yes",
+                  . == "FALSE" ~ "No",
+                  TRUE ~ NA_character_)
+    ) |>
+    dplyr::select(c(crosswalk$Web_Name[crosswalk$Table %in% c("Virus") &
+                                  !is.na(crosswalk$Web_Name)],
+             crosswalk$API_Name[crosswalk$Table %in% c("Virus") &
+                                  is.na(crosswalk$Web_Name)])) |>
+    dplyr::mutate(nt.changes.neighbor = dplyr::case_when(
+      !is.na(VdpvNtChangesClosestMatch) ~ VdpvNtChangesClosestMatch,
+      TRUE ~ NA_character_
+    ))
+  cli::cli_process_done()
 
-  #Remove empty columns
-  pull_empty_columns <- function(dataframe){
-    return(dataframe[, colSums(is.na(dataframe) | dataframe == "") == nrow(dataframe)])
-  }
+  cli::cli_process_start("Step 5")
+
   api_case_sub3 <- api_case_sub3 |>
-    select(-c(colnames(pull_empty_columns(api_case_sub3))))
-  api_subactivity_sub4 <- api_subactivity_sub4 |>
-    select(-c(colnames(pull_empty_columns(api_subactivity_sub4))))
-  api_es_sub3 <- api_es_sub3 |>
-    select(-c(colnames(pull_empty_columns(api_es_sub3))))
-  api_virus_sub3 <- api_virus_sub3 |>
-    select(-c(colnames(pull_empty_columns(api_virus_sub3))))
+    dplyr::select(-c(colnames(pull_empty_columns(api_case_sub3))))
 
+  api_subactivity_sub4 <- api_subactivity_sub4 |>
+    dplyr::select(-c(colnames(
+      pull_empty_columns(api_subactivity_sub4)
+    )))
+
+  api_es_sub3 <- api_es_sub3 |>
+    dplyr::select(-c(colnames(pull_empty_columns(api_es_sub3))))
+
+  api_virus_sub3 <- api_virus_sub3 |>
+    dplyr::select(-c(colnames(pull_empty_columns(api_virus_sub3))))
+
+  cli::cli_process_done()
 
   #13. Export csv files that match the web download, and create archive and change log
   #14. Remove temporary files from working environment, and set scientific notation back to whatever it was originally
 
 
 }
-
