@@ -849,12 +849,29 @@ rename_via_crosswalk <- function(api_data,
 
 #' Remove empty columns
 #'
-#' @description Utility function to remove empty columns
+#' @description Utility function to return tibble without empty columns
 #' @param dataframe tibble: df
-#' @returns tibble: without empty columns
-pull_empty_columns <- function(dataframe) {
-  return(dataframe[, colSums(is.na(dataframe) |
-                               dataframe == "") == nrow(dataframe)])
+#' @import dplyr cli
+#' @returns tibble: without any empty columns
+remove_empty_columns <- function(dataframe) {
+
+  original_df <- dataframe
+
+  dataframe <- dataframe |>
+    mutate(across(everything(), as.character))
+
+  empty_cols <- colnames(dataframe)[colSums(is.na(dataframe) | dataframe == "") == nrow(dataframe)]
+
+  if(length(empty_cols) > 0 ){
+    cli::cli_alert_info(paste0("The following variables had empty columns: ", paste0(empty_cols, collapse = ", ")))
+  }else{
+    cli::cli_alert_info("No empty columns were detected")
+  }
+  return(
+    original_df |>
+      dplyr::select(-empty_cols)
+  )
+
 }
 
 
@@ -1111,6 +1128,10 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
                                          crosswalk$API_Name != "ActivityAdminCoveragePercentage"]))
   cli::cli_process_done()
 
+  cli::cli_process_start("Clearing memory")
+  rm("api_subactivity_sub3")
+  gc()
+  cli::cli_process_done()
 
   cli::cli_process_start("Step 2")
   api_case_sub3 <- api_case_sub2 |>
@@ -1138,6 +1159,11 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
                                          !is.na(crosswalk$Web_Name)],
                     crosswalk$API_Name[crosswalk$Table %in% c("Case") &
                                          is.na(crosswalk$Web_Name)]))
+  cli::cli_process_done()
+
+  cli::cli_process_start("Clearing memory")
+  rm("api_case_sub2")
+  gc()
   cli::cli_process_done()
 
   cli::cli_process_start("Step 3")
@@ -1215,6 +1241,11 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
                                   is.na(crosswalk$Web_Name)]))
   cli::cli_process_done()
 
+  cli::cli_process_start("Clearing memory")
+  rm("api_es_sub2")
+  gc()
+  cli::cli_process_done()
+
   cli::cli_process_start("Step 4")
   api_virus_sub3 <- api_virus_sub2 |>
     dplyr::mutate(location = paste(
@@ -1269,21 +1300,20 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     ))
   cli::cli_process_done()
 
+  cli::cli_process_start("Clearing memory")
+  rm("api_virus_sub2")
+  gc()
+  cli::cli_process_done()
+
   cli::cli_process_start("Step 5")
 
-  api_case_sub3 <- api_case_sub3 |>
-    dplyr::select(-c(colnames(pull_empty_columns(api_case_sub3))))
+  api_case_sub3 <- remove_empty_columns(api_case_sub3)
 
-  api_subactivity_sub4 <- api_subactivity_sub4 |>
-    dplyr::select(-c(colnames(
-      pull_empty_columns(api_subactivity_sub4)
-    )))
+  api_subactivity_sub4 <- remove_empty_columns(api_subactivity_sub4)
 
-  api_es_sub3 <- api_es_sub3 |>
-    dplyr::select(-c(colnames(pull_empty_columns(api_es_sub3))))
+  api_es_sub3 <- remove_empty_columns(api_es_sub3)
 
-  api_virus_sub3 <- api_virus_sub3 |>
-    dplyr::select(-c(colnames(pull_empty_columns(api_virus_sub3))))
+  api_virus_sub3 <- remove_empty_columns(api_virus_sub3)
 
   cli::cli_process_done()
 
