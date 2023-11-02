@@ -243,7 +243,7 @@ preprocess_data <- function(type){
   #CDC pre-processing steps
   if(type == "cdc"){
 
-
+    preprocess_cdc()
 
   }
 

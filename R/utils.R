@@ -902,7 +902,7 @@ get_crosswalk_data <- function(
 #'
 #' @description
 #' Process POLIS data into analytic datasets needed for CDC
-#' @import cli sirfunctions dplyr readr lubridate stringr rio
+#' @import cli sirfunctions dplyr readr lubridate stringr rio tidyr
 #' @param polis_data_folder
 preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   #Read in the updated API datasets
@@ -1307,17 +1307,178 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   cli::cli_process_start("Step 5")
 
+  cli::cli_h3("Case")
   api_case_sub3 <- remove_empty_columns(api_case_sub3)
 
+  cli::cli_h3("Sub-activity")
   api_subactivity_sub4 <- remove_empty_columns(api_subactivity_sub4)
 
+  cli::cli_h3("ES")
   api_es_sub3 <- remove_empty_columns(api_es_sub3)
 
+  cli::cli_h3("Virus")
   api_virus_sub3 <- remove_empty_columns(api_virus_sub3)
 
   cli::cli_process_done()
 
   #13. Export csv files that match the web download, and create archive and change log
+  cli::cli_h1("Creating change log and exporting data")
+
+  cli::cli_process_start("Checking on requisite file structure")
+  ts <- Sys.time()
+  timestamp <- paste0(lubridate::date(ts),"_",lubridate::hour(ts),"-",lubridate::minute(ts),"-",round(lubridate::second(ts), 0))
+
+  #create directory
+  if(dir.exists(file.path(polis_data_folder, "Core_Ready_Files")) == FALSE){
+    dir.create(file.path(polis_data_folder, "Core_Ready_Files"))
+  }
+  if(dir.exists(file.path(polis_data_folder, "Core_Ready_Files", "Archive")) == FALSE){
+    dir.create(file.path(polis_data_folder, "Core_Ready_Files", "Archive"))
+  }
+  if(dir.exists(file.path(polis_data_folder, "Core_Ready_Files", "Archive", timestamp)) == FALSE){
+    dir.create(file.path(polis_data_folder, "Core_Ready_Files", "Archive", timestamp))
+  }
+  if(dir.exists(file.path(polis_data_folder, "Core_Ready_Files", "Change Log")) == FALSE){
+    dir.create(file.path(polis_data_folder, "Core_Ready_Files", "Change Log"))
+  }
+  if(dir.exists(file.path(polis_data_folder, "Core_Ready_Files", "Change Log", timestamp)) == FALSE){
+    dir.create(file.path(polis_data_folder, "Core_Ready_Files", "Change Log", timestamp))
+  }
+  cli::cli_process_done()
+  #Get list of most recent files
+  most_recent_files <- list.files(file.path(polis_data_folder, "Core_Ready_Files"))[grepl(".rds", list.files(file.path(polis_data_folder, "Core_Ready_Files")))]
+
+  if(length(most_recent_files)>0){
+
+    for(i in 1:length(most_recent_files)){
+      cli::cli_process_start(paste0("Processing data for: ", most_recent_files[i]))
+      #compare current dataset to most recent and save summary to change_log
+      old <- rio::import(file.path(polis_data_folder, "Core_Ready_Files", most_recent_files[i])) |>
+        dplyr::mutate_all(as.character)
+
+      if(grepl("EnvSamples", most_recent_files[i])){
+
+        new <- api_es_sub3 |>
+          dplyr::mutate(Id = `Env Sample Manual Edit Id`) |>
+          dplyr::mutate_all(as.character)
+
+        old <- old |>
+          dplyr::mutate(Id = `Env Sample Manual Edit Id`)
+      }
+
+      if(grepl("Viruses", most_recent_files[i])){
+
+        new <- api_virus_sub3 |>
+          dplyr::mutate(Id = `Virus ID`) |>
+          dplyr::mutate_all(as.character)
+
+        old <- old |>
+          dplyr::mutate(Id = `Virus ID`)
+
+      }
+
+      if(grepl("Human_Detailed", most_recent_files[i])){
+
+        new <- api_case_sub3 |>
+          dplyr::mutate(Id = `EPID`) |>
+          dplyr::mutate_all(as.character)
+
+        old <- old |>
+          dplyr::mutate(Id = `EPID`)
+
+      }
+
+      if(grepl("Activity", most_recent_files[i])){
+
+        new <- api_subactivity_sub4 |>
+          dplyr::mutate(Id = paste0(`SIA Sub-Activity Code`, "_",`Admin 2 Guid`)) |>
+          dplyr::mutate_all(as.character)
+
+        old <- old |>
+          dplyr::mutate(Id = paste0(`SIA Sub-Activity Code`, "_",`Admin 2 Guid`))
+
+      }
+
+      potential_duplicates_new <- new |>
+        dplyr::group_by(Id) |>
+        dplyr::summarise(count = n()) |>
+        dplyr::ungroup() |>
+        dplyr::filter(count >= 2)
+
+      potential_duplicates_old <- old |>
+        dplyr::group_by(Id) |>
+        dplyr::summarise(count = n()) |>
+        dplyr::ungroup() |>
+        dplyr::filter(count >= 2)
+
+      new <- new |>
+        dplyr::filter(!(Id %in% potential_duplicates_new$Id) & !(Id %in% potential_duplicates_old$Id))
+
+      old <- old |>
+        dplyr::filter(!(Id %in% potential_duplicates_new$Id) & !(Id %in% potential_duplicates_old$Id))
+
+      in_new_not_old <- new |>
+        filter(!(Id %in% old$Id))
+
+      in_old_not_new <- old |>
+        filter(!(Id %in% new$Id))
+
+      in_new_and_old_but_modified <- new |>
+        dplyr::filter(Id %in% old$Id) |>
+        dplyr::select(-c(setdiff(colnames(new), colnames(old))))
+
+      in_new_and_old_but_modified <- setdiff(in_new_and_old_but_modified, old |>
+                  dplyr::select(-c(setdiff(colnames(old), colnames(new)))))
+
+      x <- old |>
+        dplyr::filter(Id %in% new$Id) |>
+        dplyr::select(-c(setdiff(colnames(old), colnames(new))))
+
+      in_new_and_old_but_modified <- dplyr::inner_join(in_new_and_old_but_modified, setdiff(x, new |>
+                               dplyr::select(-c(setdiff(colnames(new), colnames(old))))), by="Id") |>
+        #wide_to_long
+        tidyr::pivot_longer(cols=-Id) |>
+        dplyr::mutate(source = ifelse(stringr::str_sub(name, -2) == ".x", "new", "old")) |>
+        dplyr::mutate(name = stringr::str_sub(name, 1, -3)) |>
+        #long_to_wide
+        tidyr::pivot_wider(names_from=source, values_from=value)
+
+      if(nrow(in_new_and_old_but_modified) >= 1){
+
+        in_new_and_old_but_modified <- in_new_and_old_but_modified |>
+          dplyr::filter(new != old)
+      }
+
+      cli::cli_process_done()
+      cli::cli_process_start(paste0("Creating change log for: ", most_recent_files[i]))
+      n_added = nrow(in_new_not_old)
+      n_edited = length(unique(in_new_and_old_but_modified$Id))
+      n_deleted = nrow(in_old_not_new)
+      vars_added = setdiff(colnames(new), colnames(old))
+      vars_dropped = setdiff(colnames(old), colnames(new))
+      change_summary <- list(n_added = n_added,
+                             n_edited = n_edited,
+                             n_deleted = n_deleted,
+                             vars_added = vars_added,
+                             vars_dropped = vars_dropped,
+                             obs_added = in_new_not_old,
+                             obs_edited = in_new_and_old_but_modified,
+                             obs_deleted = in_old_not_new)
+      readr::write_rds(change_summary, file.path(polis_data_folder, "Core_Ready_Files", "Change Log", timestamp, paste0(substr(most_recent_files[i],1,nchar(most_recent_files[i])-4), ".rds")))
+      #Move most recent to archive
+      rio::export(rio::import(file.path(polis_data_folder, "Core_Ready_Files", most_recent_files[i])), file.path(polis_data_folder, "Core_Ready_Files", "Archive", timestamp, most_recent_files[i]))
+      unlink(file.path(polis_data_folder, "Core_Ready_files", most_recent_files[i]))
+    }
+  }
+
+  cli::cli_process_start("Writing all final Core Ready files")
+  #Export files (as csv) to be used as pre-processing starting points
+  readr::write_rds(api_case_sub3, file.path(polis_data_folder, "Core_Ready_Files", paste0("Human_Detailed_Dataset_",timestamp,"_from_01_Dec_2019_to_",format(ts, "%d_%b_%Y"),".rds")))
+  readr::write_rds(api_subactivity_sub4, file.path(polis_data_folder, "Core_Ready_Files", paste0("Activity_Data_with_All_Sub-Activities_(1_district_per_row)_",timestamp,"_from_01_Jan_2020_to_",format(Sys.Date()+365/2, "%d_%b_%Y"),".rds")))
+  readr::write_rds(api_es_sub3, file.path(polis_data_folder, "Core_Ready_Files", paste0("EnvSamples_Detailed_Dataset_",timestamp,"_from_01_Jan_2000_to_",format(ts, "%d_%b_%Y"),".rds")))
+  readr::write_rds(api_virus_sub3, file.path(polis_data_folder, "Core_Ready_Files", paste0("Viruses_Detailed_Dataset_",timestamp,"_from_01_Dec_1999_to_",format(ts, "%d_%b_%Y"),".rds")))
+  cli::cli_process_done()
+
   #14. Remove temporary files from working environment, and set scientific notation back to whatever it was originally
 
 
