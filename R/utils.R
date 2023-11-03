@@ -817,7 +817,7 @@ create_cred_file <- function(polis_data_folder) {
 #' Rename variables via crosswalk
 #'
 #' @description Rename variables in tibble using crosswalk data
-#' @imoport dplyr
+#' @import dplyr
 #' @param api_data tibble: data pulled from api
 #' @param crosswalk tibble: crosswalk file loaded through rio
 #' @param table_name str: name of table to be crosswalked
@@ -833,15 +833,8 @@ rename_via_crosswalk <- function(api_data,
     web_name <- crosswalk_sub1$Web_Name[i]
     if (!is.na(web_name) & web_name != "") {
       api_data <- api_data |>
-        dplyr::rename({
-          {
-            web_name
-          }
-        } := {
-          {
-            api_name
-          }
-        })
+        dplyr::rename({{web_name}}:={{api_name}})
+
     }
   }
   return(api_data)
@@ -883,7 +876,9 @@ remove_empty_columns <- function(dataframe) {
 #' @import dplyr cli
 #' @return tibble: crosswalk data
 get_crosswalk_data <- function(
-    file_loc = "//cdc.gov/project/CGH_GID_Active/PEB/SIR/DATA/Core 2.0/preprocessing/GetPOLIS/api_web_core_crosswalk.xlsx"
+    file_loc = file.path("","", "cdc.gov/project/CGH_GID_Active/PEB/SIR/",
+                         "DATA/Core 2.0/preprocessing/GetPOLIS",
+                         "api_web_core_crosswalk.xlsx")
   ){
   cli::cli_process_start("Import crosswalk")
   crosswalk <-
@@ -903,7 +898,8 @@ get_crosswalk_data <- function(
 #' @description
 #' Process POLIS data into analytic datasets needed for CDC
 #' @import cli sirfunctions dplyr readr lubridate stringr rio tidyr
-#' @param polis_data_folder
+#' @param polis_data_folder str: location of the POLIS data folder
+#' @return Outputs intermediary core ready files
 preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   #Read in the updated API datasets
   cli::cli_h1("Loading data")
