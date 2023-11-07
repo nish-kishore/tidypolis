@@ -7,7 +7,10 @@
 preprocess_cdc(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"))
 }
 \arguments{
-\item{polis_data_folder}{str: location of polis data folder}
+\item{polis_data_folder}{str: location of the POLIS data folder}
+}
+\value{
+Outputs intermediary core ready files
 }
 \description{
 Process POLIS data into analytic datasets needed for CDC

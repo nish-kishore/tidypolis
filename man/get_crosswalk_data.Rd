@@ -5,8 +5,8 @@
 \title{Get crosswalk data}
 \usage{
 get_crosswalk_data(
-  file_loc =
-    "//cdc.gov/project/CGH_GID_Active/PEB/SIR/DATA/Core 2.0/preprocessing/GetPOLIS/api_web_core_crosswalk.xlsx"
+  file_loc = file.path("", "", "cdc.gov/project/CGH_GID_Active/PEB/SIR/",
+    "DATA/Core 2.0/preprocessing/GetPOLIS", "api_web_core_crosswalk.xlsx")
 )
 }
 \arguments{
