@@ -894,6 +894,330 @@ get_crosswalk_data <- function(
   return(crosswalk)
 }
 
+#' Check if sets of columns are the same and stop if not
+#'
+#' @description
+#' Check if sets of names are the same and return stop error if not
+#' @import cli
+#' @param old str/array: array of character column names
+#' @param new str/array: array of character colunm names
+#' @returns str: Stop error or continue
+f.compare.dataframe.cols <- function(old, new) {
+  cli::cli_process_start("Checking column names")
+  if (length(setdiff(colnames(new), colnames(old))) >= 1 | length(setdiff(colnames(old), colnames(new))) >= 1) {
+    cli::cli_alert_danger(msg = "WARNING there is a new column in the data. Please investigate this new column")
+    stop()
+  } else {cli::cli_alert_info("No differences found in column names")}
+}
+
+#' Compare downloaded data
+#' @description Compared downloade data
+#' @import dplyr purrr
+#' @param old.download tibble
+#' @param new.download tibble
+#' @returns tibble: variables that are new or unaccounted for
+f.download.compare.01 <- function(old.download, new.download) {
+
+  # Create dataframe from old download
+  old.01 <- old.download |>
+    dplyr::mutate_all( ~ as.character(.)) |>
+    dplyr::mutate_all( ~ stringr::str_trim(., side = "both")) |>
+    dplyr::mutate_all(~ dplyr::na_if(., "")) |>
+    # below would strip data by column find distinct values by column
+    # then rbind. So variables become rows. Makes it easier to read
+    purrr::map_df(~ (data.frame(old.distinct.01 = n_distinct(.x))),
+           .id = "variable"
+    )
+
+  # Create dataframe from combining old and new data
+  combine.01 <- dplyr::bind_rows(old.download, new.download) |>
+    dplyr::mutate_all(as.character) |>
+    dplyr::mutate_all(~ stringr::str_trim(., side = "both")) |>
+    dplyr::mutate_all(~ dplyr::na_if(., "")) |>
+    # below would strip data by column find distinct values by column
+    # then rbind. So variables become rows. Makes it easier to read
+    purrr::map_df(~ (data.frame(combine.distinct.01 = dplyr::n_distinct(.x))),
+           .id = "variable"
+    )
+
+  # This would give the total variables including new
+  # and number of distinct values in each download
+  compare.01 <- dplyr::full_join(combine.01, old.01, by = "variable")
+
+  rm(combine.01, old.01)
+
+  # Now compare across the two downloads keeping
+  # only new variables or variables in which distinct values have changed
+
+  new.var.or.new.distinct.char.01 <- compare.01 |>
+    dplyr::mutate(diff.distinct.01 = combine.distinct.01 - old.distinct.01) |>
+    dplyr::filter(diff.distinct.01 > 0 | is.na(old.distinct.01))
+
+  rm(compare.01)
+
+  return(new.var.or.new.distinct.char.01)
+}
+
+#' THIS FUNCTION WOULD LIST OUT THE DISTINCT VALUES BY VARIABLE
+#' ALL VALUES FOR NEW VARIABLE AND NEW VALUES FOR EXISTING
+#' @description List out distinct values that are not the same by variable
+#' @import dplyr
+#' @param df.from.f.download.compare.01 tibble: output from f.download.compare.01
+#' @param old.download tibble
+#' @param new.download tibble
+#' @returns tibble of variables to compare
+f.download.compare.02 <- function(df.from.f.download.compare.01, old.download, new.download) {
+
+  # dataframe of new values of existing variables
+  new.distinct <- df.from.f.download.compare.01 |>
+    dplyr::filter(diff.distinct.01 > 0)
+
+  # dataframe of new variables
+  new.var.01 <- df.from.f.download.compare.01 |>
+    dplyr::filter(is.na(old.distinct.01))
+
+  x <- new.distinct |>
+    dplyr::pull(variable)
+
+  y <- new.var.01 |>
+    dplyr::pull(variable)
+
+  old.download <- old.download  |>
+    dplyr::mutate_all(as.character)
+
+  new.download <- new.download |>
+    dplyr::mutate_all(as.character)
+
+  # identify the names of the variables which were
+  # existing before but have new values. Use the names as indicator list to
+  # strip old and combined data by column. Do merge by those two columns
+  # and make a list of dataframes. The size of list is equal to number of variables
+  # with new distinct values
+
+  new.distinct.value.01 <- purrr::map(x,
+                                      ~ dplyr::anti_join(
+                                        (
+                                          dplyr::bind_rows(old.download, new.download) |> dplyr::select(x) |> dplyr::distinct()
+                                        ),
+                                        (old.download |> dplyr::select(x) |> dplyr::distinct())
+                                      ) |> dplyr::mutate(id = dplyr::row_number()))
+
+  # Make a dataframe from list of dataframe
+  new.distinct.value.01.df <- purrr::reduce(new.distinct.value.01, full_join)
+
+  # Identify distinct values of new variable
+  new.distinct.var.01 <- dplyr::bind_rows(old.download, new.download) |>
+    dplyr::select(y) |>
+    dplyr::distinct() |>
+    dplyr::mutate(id = dplyr::row_number())
+
+  # final dataframe with all levels of new variable and new distinct values of existing
+  # variable
+  final.df.01 <- dplyr::full_join(new.distinct.value.01.df, new.distinct.var.01) |>
+    dplyr::select(-id)
+
+  return(final.df.01)
+}
+
+#' Sample points for missing lat/lon
+#' @description Create random samples of points for missing GPS data
+#' @import dplyr sf tidyr tibble
+#' @param df01 tibble: table of afp data
+#' @param long.global.dist.01 sf: spatial file of all locations
+f.pre.stsample.01 <- function(df01, global.dist.01) {
+
+  df01.noshape <- dplyr::anti_join(df01, global.dist.01, by=c("Admin2GUID"="GUID"))
+
+  df01.shape <- dplyr::right_join(global.dist.01, df01 |> dplyr::filter(!is.na(Admin2GUID)), by=c("GUID"="Admin2GUID"))
+
+  df01.shape$empty.01 <- sf::st_is_empty(df01.shape)
+  df01.shape <- dplyr::filter(df01.shape, !empty.01)
+
+  df02.ref <- df01.shape |>
+    tibble::as_tibble() |>
+    dplyr::group_by(GUID) |>
+    dplyr::summarise(nperarm = dplyr::n()) |>
+    dplyr::arrange(GUID) |>
+    dplyr::mutate(id = dplyr::row_number()) |>
+    dplyr::ungroup()
+
+  df02 <- global.dist.01 |>
+    dplyr::select(GUID) |>
+    dplyr::filter(GUID %in% df02.ref$GUID) |>
+    dplyr::left_join(df02.ref, by = "GUID")
+
+  cli::cli_process_start("Placing random points")
+  pt01 <- suppressMessages(sf::st_sample(df02, df02$nperarm,
+                                         exact = T, progress = T))
+  cli::cli_process_done()
+
+  pt01_sf <- sf::st_sf(pt01)
+
+  pt01_joined <- dplyr::bind_cols(
+    pt01_sf,
+    df02 |>
+      tibble::as_tibble() |>
+      dplyr::select(GUID, nperarm) |>
+      tidyr::uncount(nperarm)
+  ) |>
+    dplyr::left_join(tibble::as_tibble(df02) |> dplyr::select(-SHAPE), by = "GUID")
+
+
+
+  pt01_joined <- sf::st_join(pt01_sf, df02)
+
+  pt01_joined <- dplyr::bind_cols(
+    tibble::as_tibble(pt01_joined),
+    sf::st_coordinates(pt01_joined) |>
+      tibble::as_tibble() |>
+      dplyr::rename("lon" = "X", "lat" = "Y")
+  )
+
+  df03 <- pt01_joined |>
+    tibble::as_tibble() |>
+    dplyr::select(-nperarm, -id) |>
+    dplyr::group_by(GUID)|>
+    dplyr::arrange(GUID, .by_group = TRUE) |>
+    dplyr::mutate(id = dplyr::row_number()) |>
+    as.data.frame()
+
+  df04 <- df01.shape |>
+    dplyr::group_by(GUID)|>
+    dplyr::arrange(GUID, .by_group = TRUE) |>
+    dplyr::mutate(id = dplyr::row_number())
+
+  df05 <- dplyr::full_join(df04, df03, by = c("GUID", "id"))
+
+  sf::st_geometry(df05) <- NULL
+
+  df06 <- dplyr::bind_rows(df05, df01.noshape)
+
+  return(df06)
+}
+
+
+#' Function for data qa check in AFP line list cleaning
+#' @description function creates a new variable when combined with a mutate statement in R code
+#' @imports dplyr
+#' @param date1 date 1 is the date to be checked against date2
+#' @param date2 date 2 is the date of onset such that the date should be after onset
+#' @returns quality controlled date variable
+f.datecheck.onset <- function(date1, date2) {
+  date1.qa <-
+    case_when(
+      is.na(date1) == T ~ "date missing",
+      is.na(date2) == T ~ "date onset missing",
+      abs(date1 - date2) > 365 ~ "data entry error",
+      date1 < date2 ~ "date before onset",
+      (date1 - date2) <= 365 ~ "useable date"
+    )
+
+
+  return(date1.qa)
+}
+
+#' Compare meta data outputs between two datasets
+#' @desciprtion compare meta data outputs between two datasets
+#' @import dplyr
+#' @param new_table_metadata tibble
+#' @param old_table_metadata tibble
+#' @returns meta data comparisons
+f.compare.metadata <- function(new_table_metadata, old_table_metadata){
+  #compare to old metadata
+  compare_metadata <- new_table_metadata |>
+    dplyr::full_join(old_table_metadata, by=c("var_name"))
+
+  new_vars <- (compare_metadata |>
+                 dplyr::filter(is.na(var_class.y)))$var_name
+
+  if(length(new_vars) != 0){
+    new_vars <- new_vars
+    warning(print("There are new variables in the POLIS table\ncompared to when it was last retrieved\nReview in 'new_vars'"))
+  }
+
+  lost_vars <- (compare_metadata |>
+                  filter(is.na(var_class.x)))$var_name
+
+  if(length(lost_vars) != 0){
+    lost_vars <- lost_vars
+    warning(print("There are missing variables in the POLIS table\ncompared to when it was last retrieved\nReview in 'lost_vars'"))
+  }
+
+  class_changed_vars <- compare_metadata |>
+    dplyr::filter(!(var_name %in% lost_vars) &
+             !(var_name %in% new_vars) &
+             (var_class.x != var_class.y &
+                !is.null(var_class.x) & !is.null(var_class.y))) |>
+    dplyr::select(-c(categorical_response_set.x, categorical_response_set.y)) |>
+    dplyr::rename(old_var_class = var_class.y,
+           new_var_class = var_class.x)
+
+  if(nrow(class_changed_vars) != 0){
+    class_changed_vars <- class_changed_vars
+    warning(print("There are variables in the POLIS table with different classes\ncompared to when it was last retrieved\nReview in 'class_changed_vars'"))
+  }
+
+  #Check for new responses in categorical variables (excluding new variables and class changed variables that have been previously shown)
+  new_response <- compare_metadata |>
+    dplyr::filter(!(var_name %in% lost_vars) &
+             !(var_name %in% new_vars) &
+             !(var_name %in% class_changed_vars$var_name) &
+             as.character(categorical_response_set.x) != "NULL" &
+             as.character(categorical_response_set.y) != "NULL") |>
+    dplyr::rowwise() |>
+    dplyr::mutate(same = toString(intersect(categorical_response_set.x, categorical_response_set.y)),
+           in_old_not_new = toString(setdiff(categorical_response_set.y, categorical_response_set.x)),
+           in_new_not_old = toString(setdiff(categorical_response_set.x, categorical_response_set.y))) |>
+    dplyr::filter(in_new_not_old != "") |>
+    dplyr::rename(old_categorical_response_set = categorical_response_set.x,
+           new_categorical_response_set = categorical_response_set.y) |>
+    dplyr::select(var_name, old_categorical_response_set, new_categorical_response_set, same, in_old_not_new, in_new_not_old)
+
+  if(nrow(new_response) != 0){
+    new_response <- new_response
+    warning(print("There are categorical responses in the new table\nthat were not seen when it was last retrieved\nReview in 'new_response'"))
+  }
+
+  change_summary <- list(new_response = new_response, class_changed_vars = class_changed_vars, lost_vars = lost_vars, new_vars = new_vars)
+  return(change_summary)
+}
+
+#' Summarize metadata from a tibble
+#' @description Summarize metadata from tibble
+#' @param dataframe tibble
+#' @param categorical_max int: maximum number of categories considered
+#' @returns tibble: metadata
+f.summarise.metadata <- function(dataframe, categorical_max = 10){
+  #ungroup dataframe
+  dataframe <- dataframe |>
+    dplyr::ungroup()
+
+  #summarise var names and classes
+  var_name_class <- skimr::skim(dataframe) |>
+    dplyr::select(skim_type, skim_variable, character.n_unique)
+
+  var_name_class <- tibble::tibble(
+    "var_name" = var_name_class$skim_variable,
+    "var_class" = var_name_class$skim_type,
+    "character.n_unique" = var_name_class$character.n_unique
+  )
+
+  #categorical sets: for categorical variables with <= n unique values, get a list of unique values
+  categorical_vars <- dataframe |>
+    dplyr::select(var_name_class$var_name[var_name_class$character.n_unique <= categorical_max  & !is.na(var_name_class$character.n_unique)]) |>
+    tidyr::pivot_longer(cols=tidyselect::everything(), names_to="var_name", values_to = "response") |>
+    unique() |>
+    tidyr::pivot_wider(names_from=var_name, values_from=response) |>
+    tidyr::pivot_longer(cols=tidyselect::everything(), names_to="var_name", values_to="categorical_response_set")
+
+  #Combine var names/classes/categorical-sets into a 'metadata table'
+  table_metadata <- var_name_class |>
+    dplyr::select(-character.n_unique) |>
+    dplyr::left_join(categorical_vars, by=c("var_name"))
+
+  return(table_metadata)
+}
+
 
 #### Pre-processing ####
 
@@ -902,11 +1226,13 @@ get_crosswalk_data <- function(
 #'
 #' @description
 #' Process POLIS data into analytic datasets needed for CDC
-#' @import cli sirfunctions dplyr readr lubridate stringr rio tidyr
+#' @import cli sirfunctions dplyr readr lubridate stringr rio tidyr purrr sf
 #' @param polis_data_folder
 preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
+  #Step 1 - Basic cleaning and crosswalk ======
+  cli::cli_h1("Step 1/5: Basic cleaning and crosswalk across datasets")
   #Read in the updated API datasets
-  cli::cli_h1("Loading data")
+  cli::cli_h2("Loading data")
 
   cli::cli_process_start("Case")
   api_case_2019_12_01_onward <-
@@ -946,7 +1272,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_done()
 
 
-  cli::cli_h1("De-duplicating data")
+  cli::cli_h2("De-duplicating data")
 
   cli::cli_process_start("Sub-activity")
   api_subactivity_sub1 <- api_subactivity_complete |>
@@ -1024,7 +1350,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_done()
 
   #Import the crosswalk file and use it to rename all data elements in the API-downloaded tables.
-  cli::cli_h1("Crosswalk and rename variables")
+  cli::cli_h2("Crosswalk and rename variables")
 
   crosswalk <- get_crosswalk_data()
 
@@ -1070,10 +1396,10 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   cli::cli_process_done()
 
-  cli::cli_h1("Modifying and reconciling variable types")
+  cli::cli_h2("Modifying and reconciling variable types")
   #    Modify individual variables in the API files to match the coding in the web-interface downloads,
   #    and retain only variables from the API files that are present in the web-interface downloads.
-  cli::cli_process_start("Step 1")
+  cli::cli_process_start("Reconciling activity and subactivity variables")
   api_subactivity_sub4 <- api_subactivity_sub3 |>
     dplyr::mutate(
       `IM loaded` = dplyr::case_when(
@@ -1133,7 +1459,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   gc()
   cli::cli_process_done()
 
-  cli::cli_process_start("Step 2")
+  cli::cli_process_start("Cleaning IPV/OPV variables")
   api_case_sub3 <- api_case_sub2 |>
     dplyr::mutate(
       `total.number.of.ipv./.opv.doses` = NA_integer_,
@@ -1166,7 +1492,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   gc()
   cli::cli_process_done()
 
-  cli::cli_process_start("Step 3")
+  cli::cli_process_start("Cleaning site and location variables")
   api_es_sub3 <- api_es_sub2 |>
     dplyr::mutate(Site = paste0(`Site Code`, " - ", `Site Name`),
                   `Country Iso2` = NA_character_) |>
@@ -1246,7 +1572,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   gc()
   cli::cli_process_done()
 
-  cli::cli_process_start("Step 4")
+  cli::cli_process_start("Cleaning irregular location names")
   api_virus_sub3 <- api_virus_sub2 |>
     dplyr::mutate(location = paste(
       toupper(Admin0OfficialName),
@@ -1305,7 +1631,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   gc()
   cli::cli_process_done()
 
-  cli::cli_process_start("Step 5")
+  cli::cli_process_start("Removing empty columns")
 
   cli::cli_h3("Case")
   api_case_sub3 <- remove_empty_columns(api_case_sub3)
@@ -1322,7 +1648,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_done()
 
   #13. Export csv files that match the web download, and create archive and change log
-  cli::cli_h1("Creating change log and exporting data")
+  cli::cli_h2("Creating change log and exporting data")
 
   cli::cli_process_start("Checking on requisite file structure")
   ts <- Sys.time()
@@ -1468,6 +1794,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
       #Move most recent to archive
       rio::export(rio::import(file.path(polis_data_folder, "Core_Ready_Files", most_recent_files[i])), file.path(polis_data_folder, "Core_Ready_Files", "Archive", timestamp, most_recent_files[i]))
       unlink(file.path(polis_data_folder, "Core_Ready_files", most_recent_files[i]))
+      cli::cli_process_done()
     }
   }
 
@@ -1480,6 +1807,889 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_done()
 
   #14. Remove temporary files from working environment, and set scientific notation back to whatever it was originally
+  cli::cli_process_start("Clearing memory from first step")
+  rm("change_summary", "crosswalk", "in_new_and_old_but_modified", "in_new_not_old",
+     "in_old_not_new", "new", "old", "potential_duplicates_new", "potential_duplicates_old",
+     "x", "i", "most_recent_files", "n_added", "n_deleted", "n_edited", "vars_added", "vars_dropped",
+     "api_activity_sub2", "api_case_sub3", "api_es_sub3", "api_virus_sub3", "long.global.dist.01",
+     "api_subactivity_sub4")
+  gc()
+  cli::cli_process_done()
+
+  #Step 2 - Creating AFP and EPI datasets ====
+  cli::cli_h1("Step 2/5 - Creating AFP and Epi analytic datasets")
+
+  # Step 1: Read in "old" data file (System to find "Old" data file)
+  latest_folder_in_archive <- list.files(paste0(polis_data_folder, "/Core_Ready_Files/Archive"), full.names = T) |>
+    file.info() |>
+    dplyr::filter(ctime == max(ctime)) |>
+    row.names()
+
+  x <- list.files(latest_folder_in_archive, full.names = T)
+
+  y <- list.files(paste0(polis_data_folder, "/Core_Ready_Files"), full.names = T)
+
+  cli::cli_process_start("Loading old human dataset")
+  afp.raw.old <- readr::read_rds(x[grepl("Human", x)]) |>
+    dplyr::mutate_all(as.character) |>
+    dplyr::rename_all(function(x) gsub(" ", ".", x)) |>
+    dplyr::mutate_all(list(~na_if(.,"")))
+  cli::cli_process_done()
+
+
+  # Step 2: Read in "new" data file
+  cli::cli_process_start("Loading new human dataset")
+  afp.raw.new <- readr::read_rds(y[grepl("Human", y)]) |>
+    dplyr::mutate_all(as.character) |>
+    dplyr::rename_all(function(x) gsub(" ", ".", x)) |>
+    dplyr::mutate_all(list(~na_if(.,"")))
+  cli::cli_process_done()
+
+  cli::cli_process_start("Managing memory load")
+  gc()
+  cli::cli_process_done()
+
+
+  names(afp.raw.old) <- stringr::str_to_lower(names(afp.raw.old))
+
+  names(afp.raw.new) <- stringr::str_to_lower(names(afp.raw.new))
+
+
+  # variables in old dataframe
+  var.names <- afp.raw.old |>
+    purrr::map_df(~ (data.frame(class = class(.x))),
+           .id = "variable"
+    )
+
+  var.names.01 <- var.names |>
+    filter(variable != "virus.type(s)" &
+             variable != "specdatereceivedbynatlab" &
+             variable != "vdpv.classification(s)" &
+             variable != "classification" &
+             variable != "surveillance.type" &
+             variable != "stool.1.condition" &
+             variable != "stool.2.condition" &  # list of variables we want evaluated in 2nd QC function
+             !(variable %in% c("afp.reporting.week", "last.updated.by", "total.number.of.ipv./.opv.doses", "npev", "nvaccine.1", "nvaccine.3", "nvdpv.1", "nvdpv.3", "exact.longitude", "exact.latitude", "place.nearest.facility", "source.ri.vaccination.information", "virus.genotypes",
+                               "event.name", "virus.origin", "event.direct.importation", "virus.sequenced", "virus.source.linked.to",
+                               "event.immediate.source", "virus.homology.percent", "virus.is.orphan", "event.comments", "wild.2",
+                               "nvdpv.2", "pv.1", "pv.2", "pv.3", 'pons_patient', 'pons_seqregion', 'pons_reference',
+                               'pons_referencename', 'pons_genotype2', 'pons_serotype2', 'pons_wildclustername')))
+
+  var.list.01 <- as.character(var.names.01$variable)
+
+  afp.raw.old.comp <- afp.raw.old |>
+    dplyr::select(-dplyr::all_of(var.list.01))
+
+  afp.raw.new.comp <- afp.raw.new |>
+    dplyr::select(-dplyr::all_of(var.list.01))
+
+  f.compare.dataframe.cols(afp.raw.old.comp, afp.raw.new.comp)
+
+  new.var.afp.01 <- f.download.compare.01(afp.raw.old.comp, afp.raw.new.comp)
+
+  new.df <- new.var.afp.01 |>
+    dplyr::filter(is.na(old.distinct.01) | diff.distinct.01 >= 1)
+
+  if (nrow(new.df) >= 1) {
+    cli::cli_alert_danger("There is either a new variable in the AFP data or new value of an existing variable.
+       Please run f.download.compare.02 to see what it is. Preprocessing can not continue until this is adressed. Note, function
+       should fail everytime. Check to make sure that only new surveillancetypename=Community and NA and only new poliovirus types are VACCINE 3, VDPV 1 and VACCINE 1, VACCINE 3, VDPV 1")
+    stop()
+  } else {
+    cli::cli_alert_info("New AFP download is comparable to old AFP download")
+  }
+
+  # Step 4: Apply compare variables function
+
+  if(nrow(new.df) >= 1){
+    new.value.or.var.01 <- f.download.compare.02(new.var.afp.01, afp.raw.old.comp, afp.raw.new.comp)
+  }
+
+  #Find out if there are duplicate epids.
+  cli::cli_process_start("Checking for duplicated EPIDs")
+  afp.raw.dup <- afp.raw.new |>
+    dplyr::mutate(dateonset = as.Date(date.onset, format="%Y-%m-%d"),
+           yronset = lubridate::year(dateonset)) |>
+    dplyr::select(epid, date.onset, yronset, place.admin.0, yronset, `virus.type(s)`, classification,
+           stool.1.collection.date, stool.2.collection.date, stool.1.condition, stool.2.condition) |>
+    dplyr::group_by(epid, date.onset, place.admin.0) |>
+    dplyr::mutate(afp_dup =n()) |>
+    dplyr::filter(afp_dup>=2) |>
+    dplyr::select(epid, date.onset, place.admin.0, yronset, `virus.type(s)`, classification,
+           stool.1.collection.date, stool.2.collection.date, stool.1.condition, stool.2.condition)
+
+  # Script below will stop further execution if there is a duplicate epid
+  if (nrow(afp.raw.dup) >= 1) {
+    # Export duplicate afp cases in the CSV file:
+    write.csv(afp.raw.dup, paste0(polis_data_folder,"/Core_Ready_Files/", paste("duplicate_AFPcases_Polis",
+                                                          min(afp.raw.dup$yronset, na.rm = T),
+                                                          max(afp.raw.dup$yronset, na.rm = T),
+                                                          sep = "_"), ".csv", sep = "")
+    )
+    cli::cli_alert_info("Duplicate AFP case. Check the data for duplicate records. If they are exact same, then contact Ashley")
+    stop()
+  } else {
+    cli::cli_process_done(msg_done = "No duplicate EPIDs found, okay to proceed")
+  }
+
+  cli::cli_process_start("Fixing all dates from character to ymd format and fix character variables ")
+
+  afp.raw.01 <- afp.raw.new |>
+    dplyr::rename(poliovirustypes = `virus.type(s)`,
+           classificationvdpv = `vdpv.classification(s)`,
+           surveillancetypename = surveillance.type,
+           whoregion = who.region,
+           admin0guid = admin.0.guid,
+           admin1guid = admin.1.guid,
+           admin2guid = admin.2.guid) |>
+
+    dplyr::mutate(
+      dateonset = lubridate::ymd(as.Date(date.onset, "%Y-%m-%dT%H:%M:%S")),
+      yronset = lubridate::year(dateonset)
+    )  |>
+    dplyr::mutate(
+      datenotify = lubridate::ymd(as.Date(notification.date, "%Y-%m-%dT%H:%M:%S")),
+      dateinvest = lubridate::ymd(as.Date(investigation.date, "%Y-%m-%dT%H:%M:%S")),
+      datestool1 = lubridate::ymd(as.Date(stool.1.collection.date, "%Y-%m-%dT%H:%M:%S")),
+      datestool2 = lubridate::ymd(as.Date(stool.2.collection.date, "%Y-%m-%dT%H:%M:%S")),
+      ontostool2 = as.numeric(datestool2 - dateonset),
+      ontostool1 = as.numeric(datestool1 - dateonset),
+      age.months = as.numeric(`calculated.age.(months)`),
+      ontonot = as.numeric(datenotify - dateonset),
+      ontoinvest = as.numeric(dateinvest - dateonset),
+      nottoinvest = as.numeric(dateinvest - datenotify),
+      investtostool1 = as.numeric(datestool1 - dateinvest),
+      stool1tostool2 = (datestool2 - datestool1),
+      stooltolabdate = lubridate::ymd(as.Date(stool.date.sent.to.lab, "%Y-%m-%dT%H:%M:%S")),
+      stooltoiclabdate = lubridate::ymd(as.Date(stool.date.sent.to.ic.lab, "%Y-%m-%dT%H:%M:%S")),
+      clinicadmitdate = lubridate::ymd(as.Date(clinical.admitted.date, "%Y-%m-%dT%H:%M:%S")),
+      followup.date = lubridate::ymd(as.Date(followup.date, "%Y-%m-%dT%H:%M:%S")),
+      poliovirustypes = stringr::str_replace_all(poliovirustypes, "  ", " "))
+
+  cli::cli_process_done()
+
+  cli::cli_process_start("Classification of cases using lab data")
+  # this uses the laboratory data "poliovirustypes" to assign virus type (WPV1 WPV3 and vdpv1,2,2)
+  # vtype assigns the polioviruses found in stool excluding sabin
+
+  endyr <- year(format(Sys.time()))
+  startyr <- 2020
+
+  afp.raw.01 <- afp.raw.01 |>
+  dplyr::mutate(vtype = ifelse(stringr::str_detect(poliovirustypes, "WILD1"), "WILD 1", "none"),
+      vtype = ifelse(stringr::str_detect(poliovirustypes, "WILD2"), "WILD 2", vtype),
+      vtype = ifelse(stringr::str_detect(poliovirustypes, "WILD3"), "WILD 3", vtype),
+      vtype = ifelse(stringr::str_detect(poliovirustypes, "WILD1, WILD3"), "WILD1andWILD3", vtype),
+      vtype = ifelse(stringr::str_detect(poliovirustypes, "VDPV1"), "VDPV 1", vtype),
+      vtype = ifelse(stringr::str_detect(poliovirustypes, "VDPV2"), "VDPV 2", vtype),
+      vtype = ifelse(stringr::str_detect(poliovirustypes, "VDPV3"), "VDPV 3", vtype),
+      vtype = ifelse(stringr::str_detect(poliovirustypes, "VDPV1") &
+                       stringr::str_detect(poliovirustypes, "VDPV2"), "VDPV1andVDPV2", vtype),
+      vtype = ifelse(stringr::str_detect(poliovirustypes, "VDPV 1") &
+                       stringr::str_detect(poliovirustypes, "VDPV3"), "VDPV1andVDPV3", vtype),
+      vtype = ifelse(stringr::str_detect(poliovirustypes, "VDPV2") &
+                       stringr::str_detect(poliovirustypes, "VDPV3"), "VDPV2andVDPV3", vtype),
+      vtype = ifelse(stringr::str_detect(poliovirustypes, "VDPV1") &
+                       stringr::str_detect(poliovirustypes, "VDPV2")
+                     & stringr::str_detect(poliovirustypes, "VDPV3"), "VDPV12and3", vtype),
+      vtype = ifelse(stringr::str_detect(poliovirustypes, "WILD") & stringr::str_detect(poliovirustypes, "VDPV"),
+                     paste0("CombinationWild1-", vtype), vtype
+      ),
+
+      # now using classificationvdpv to add in c, i, and a
+      # this would make combination isolation of multiple vdpv types as c/a/i for the first
+      # listed virus type. this is not accurate as we dont know which type is c/a/i
+
+      classificationvdpv = ifelse(is.na(classificationvdpv), "", classificationvdpv),
+      vtype = ifelse(classificationvdpv == "Ambiguous" & !is.na(vtype), paste0("a", vtype), vtype),
+      vtype = ifelse(stringr::str_detect(classificationvdpv, "Circulating") & !is.na(vtype), paste0("c", vtype), vtype),
+      vtype = ifelse(classificationvdpv == "Immune Deficient" & !is.na(vtype), paste0("i", vtype), vtype),
+
+      # cleaning up cnone =none, and inone= none and may need additional fixes if more weird things happen
+
+      vtype = ifelse(vtype == "cnone", "none", vtype),
+      vtype = ifelse(vtype == "inone", "none", vtype),
+      vtype = ifelse(vtype == "anone", "none", vtype),
+      vtype = ifelse(vtype == "cCombinationWild1-VDPV 2", "CombinationWild1-cVDPV 2", vtype),
+      vtype = ifelse(vtype == "cCombinationWild1-VDPV 3", "CombinationWild1-cVDPV 3", vtype),
+      vtype = ifelse(vtype == "cCombinationWild1-VDPV 1", "CombinationWild1-cVDPV 1", vtype),
+      vtype = ifelse(vtype == "cVDPV2andVDPV3", "cVDPV2andcVDPV3", vtype),
+
+      # creating vtype.fixed that hard codes a fix for Congo 2010 WPV1 cases that were not tested by lab
+
+      vtype.fixed = ifelse((classification == "Confirmed (wild)" & place.admin.0 == "CONGO" & yronset == "2010"),
+                           "WILD 1", vtype
+      ),
+
+      # hard coding a fix for a Nigeria case that is WPV1 but missing from the lab data
+      vtype.fixed = ifelse((is.na(vtype) == T & place.admin.0 == "NIGERIA" & yronset == "2011" & classification == "Confirmed (wild)"),
+                           "WILD 1", vtype.fixed
+      ),
+
+      # NEW hard coding to deal with WPV1 cases from before 2010 that have no lab data assuming these are WPV 1
+
+      vtype.fixed = ifelse((is.na(vtype) == T & yronset < "2010" & classification == "Confirmed (wild)"), "WILD 1", vtype.fixed),
+
+      # note POLIS data undercounts the total WPV1 cases in 2011, in 2012 we have one extra WPV3 and one less WPV1
+
+      #hard fix for Yemen case (YEM-SAD-2021-457-33) where classified as vdpv1andvdpv2 instead of cvdpv2
+      vtype.fixed = ifelse(vtype == "cVDPV1andVDPV2" & stringr::str_detect(poliovirustypes, "cVDPV2"), "VDPV1andcVDPV2", vtype.fixed),
+
+      #further fixing classification for cases with multiple vdpvs
+      vtype.fixed = ifelse(vtype == "cVDPV1andVDPV2" & (stringr::str_detect(poliovirustypes, "cVDPV2") & stringr::str_detect(poliovirustypes, "cVDPV1")), "cVDPV1andcVDPV2", vtype.fixed),
+
+      # now creating cdc.classification.all categories includes non-AFP, NPAFP, all vtypes and polio compatibles, pending, etc
+      # CDC.classification is based first on lab, then on epi data. If the epi data and lab data disagree, we default to lab classification
+
+      cdc.classification.all = vtype.fixed,
+      cdc.classification.all = ifelse((vtype.fixed == "none" | is.na(vtype.fixed)) & classification == "Compatible",
+                                      "COMPATIBLE", cdc.classification.all
+      ),
+      cdc.classification.all = ifelse((vtype.fixed == "none" | is.na(vtype.fixed)) & classification == "Discarded",
+                                      "NPAFP", cdc.classification.all
+      ),
+      cdc.classification.all = ifelse((vtype.fixed == "none" | is.na(vtype.fixed)) & classification == "Not an AFP",
+                                      "NOT-AFP", cdc.classification.all
+      ),
+      cdc.classification.all = ifelse((vtype.fixed == "none" | is.na(vtype.fixed)) & classification == "Pending",
+                                      "PENDING", cdc.classification.all
+      ),
+      cdc.classification.all = ifelse((vtype.fixed == "none" | is.na(vtype.fixed)) & classification == "VAPP", "VAPP",
+                                      cdc.classification.all
+      ),
+      cdc.classification.all = ifelse((vtype.fixed == "none" | is.na(vtype.fixed)) &
+                                        (classification == "Not Applicable" | classification == "Others" | classification == "VDPV"),
+                                      "UNKNOWN", cdc.classification.all
+      ),
+
+      cdc.classification.all = ifelse(
+        final.cell.culture.result == "Not received in lab" &
+          cdc.classification.all == "PENDING",
+        "LAB PENDING",
+        cdc.classification.all
+      ),
+      hot.case = ifelse(
+        paralysis.asymmetric == "Yes" &
+          paralysis.onset.fever == "Yes" &
+          paralysis.rapid.progress == "Yes",
+        1,
+        0
+      ),
+      hot.case = ifelse(is.na(hot.case), 99, hot.case),
+
+      # now dealing with Sabin viruses- creating indicators for detection of Sabin1, Sabin2 and Sabin3
+      # note an AFP case can by NPAFP AND have Sabin virus isolated
+      sabin1 = ifelse(stringr::str_detect(poliovirustypes, "VACCINE1"), 1, 0),
+      sabin2 = ifelse(stringr::str_detect(poliovirustypes, "VACCINE2"), 1, 0),
+      sabin3 = ifelse(stringr::str_detect(poliovirustypes, "VACCINE3"), 1, 0)
+    ) |>
+    dplyr::mutate(place.admin.0 = ifelse(stringr::str_detect(place.admin.0, "IVOIRE"),"COTE D IVOIRE",place.admin.0)) |>
+    dplyr::distinct() |>
+    dplyr::mutate(yronset=ifelse(is.na(yronset)==T, lubridate::year(datestool1), yronset),
+           yronset = ifelse(is.na(datestool1) == T & is.na(yronset)==T, lubridate::year(datenotify), yronset)) |> #adding year onset correction for nonAFP
+    dplyr::filter(dplyr::between(yronset, startyr, endyr))
+
+  cli::cli_process_done()
+
+  cli::cli_process_start("Verified that classifications in data line up with poliovirustypes and classification")
+  #manual check for incorrect cdc.classifications
+  #manually check to make sure the poliovirustypes and cdc.classification.all match up
+  vtype.tocheck <- c("VDPV1andVDPV2", "VDPV1andVDPV3", "VDPV2andVDPV3", "VDPV12and3", "cVDPV1andVDPV2")
+  virus.tocheck <- c("cVDPV1, VACCINE1, VDPV1")
+  classification.tocheck <- c("Circulating, Pending")
+  cdc.classification.tocheck <- c("none")
+  tocheck <- afp.raw.01 |>
+    dplyr::filter(vtype %in% vtype.tocheck |
+             cdc.classification.all %in% cdc.classification.tocheck |
+             poliovirustypes %in% virus.tocheck |
+             classificationvdpv %in% classification.tocheck |
+             is.na(cdc.classification.all)) |>
+    dplyr::select(epid, poliovirustypes, classification, classificationvdpv, nt.changes, vtype, vtype.fixed, cdc.classification.all)
+
+  if(nrow(tocheck |> dplyr::filter(cdc.classification.all == "none")) > 0){
+    epids <- tocheck |> dplyr::filter(cdc.classification.all == "none") |> pull(epid)
+
+    flagged_to_polis <- c("MOZ-TET-TSA-22-006")
+
+    epids <- epids[!epids %in% flagged_to_polis]
+
+    if(length(epids) > 0){
+      cli::cli_alert_danger("There is a 'none' classification, flag for POLIS and get guidance on proper classification")
+      stop()
+    }
+  }
+
+  cli::cli_process_done()
+
+  afp.raw.01 <- afp.raw.01 |>
+    filter(cdc.classification.all != "none")
+
+  cli::cli_process_start("Clearing memory")
+  rm("vtype.tocheck", "virus.tocheck", "classification.tocheck", "cdc.classification.tocheck", "tocheck",
+     "afp.raw.dup", "afp.raw.new", "afp.raw.new.comp", "afp.raw.old", "afp.raw.old.comp", "new.df",
+     "new.var.afp.01", "var.names", "var.names.01", "var.list.01", "x", "y", "epids", "flagged_to_polis")
+  gc()
+  cli::cli_process_done()
+
+  cli::cli_process_start("Pulling long district spatial file")
+  long.global.dist.01 <-sirfunctions::load_clean_dist_sp(type = "long")
+  cli::cli_process_done()
+
+  cli::cli_process_start("Checking GUIDs")
+
+
+  afp.linelist.01 <- afp.raw.01 |>
+    dplyr::mutate(
+      Admin2GUID = paste0("{", toupper(admin2guid), "}"),
+      Admin1GUID = paste0("{", toupper(admin1guid), "}"),
+      Admin0GUID = paste0("{", toupper(admin0guid), "}")
+    )
+
+
+  shapes <- long.global.dist.01 |>
+    tibble::as_tibble() |>
+    dplyr::select(ADM0_GUID, ADM1_GUID, active.year.01) |>
+    dplyr::distinct()
+
+  shapenames <- long.global.dist.01 |>
+    tibble::as_tibble() |>
+    dplyr::filter(!(ADM0_NAME=="SUDAN" & yr.st == 2000 & active.year.01==2011)) |>
+    dplyr::select(ADM0_NAME, ADM1_NAME, ADM1_GUID, active.year.01) |>
+    dplyr::distinct()
+
+  # add dummy variable which will appear as missing if no match in area is found
+  shapes$match <- 1
+  shapenames$match01 <- 1
+
+
+
+  # matching by guid and marking unmatched provinces
+
+  afp.linelist.fixed <- dplyr::left_join(afp.linelist.01, shapes, by = c("Admin0GUID" = "ADM0_GUID", "Admin1GUID" = "ADM1_GUID", "yronset" = "active.year.01"))
+  afp.linelist.fixed <- afp.linelist.fixed |>
+    dplyr::mutate(wrongAdmin1GUID = ifelse(is.na(match) & !(is.na(admin1guid)), "yes", "no"))
+
+  # matching by name and fixing incorrect Admin1 guids which can be matched by name
+
+  afp.linelist.fixed <- afp.linelist.fixed |> dplyr::left_join(shapenames, by = c("place.admin.0" = "ADM0_NAME", "place.admin.1" = "ADM1_NAME", "yronset" = "active.year.01"),
+                                                               relationship = "many-to-many")
+  afp.linelist.fixed <- afp.linelist.fixed |>
+    dplyr::mutate(Admin1GUID = ifelse(wrongAdmin1GUID == "yes" & !is.na(match01), ADM1_GUID, Admin1GUID))
+
+
+  afp.linelist.fixed <- afp.linelist.fixed |> dplyr::select(-match, -match01)
+
+  shapes <- long.global.dist.01 |>
+    tibble::as_tibble() |>
+    dplyr::select(ADM0_GUID, ADM1_GUID, GUID, active.year.01) |>
+    dplyr::distinct()
+
+  shapenames <- long.global.dist.01 |>
+    tibble::as_tibble() |>
+    dplyr::filter(!(ADM0_NAME=="SUDAN" & yr.st == 2000 & active.year.01==2011)) |>
+    dplyr::select(ADM0_NAME, ADM1_NAME, ADM2_NAME, GUID, active.year.01) |>
+    dplyr::distinct()
+
+  # add dummy variable which will appear as missing if no match in area is found
+  shapes$match <- 1
+  shapenames$match01 <- 1
+
+
+  # matching by guid and marking districts which could not be matched
+  afp.linelist.fixed.02 <- dplyr::left_join(afp.linelist.fixed, shapes, by = c("Admin0GUID" = "ADM0_GUID", "Admin1GUID" = "ADM1_GUID", "Admin2GUID" = "GUID", "yronset" = "active.year.01"))
+  afp.linelist.fixed.02 <- afp.linelist.fixed.02 |>
+    dplyr::mutate(wrongAdmin2GUID = ifelse(is.na(match) & !(is.na(admin2guid)), "yes", "no"))
+
+
+
+  # matching by name and fixing incorrect Admin2 guids which can be matched by name
+
+  afp.linelist.fixed.02 <- afp.linelist.fixed.02 |> dplyr::left_join(shapenames, by = c("place.admin.0" = "ADM0_NAME", "place.admin.1" = "ADM1_NAME", "place.admin.2" = "ADM2_NAME", "yronset" = "active.year.01"),
+                                                                     relationship = "many-to-many")
+  afp.linelist.fixed.02 <- afp.linelist.fixed.02 |>
+    dplyr::mutate(Admin2GUID = ifelse(wrongAdmin2GUID == "yes" & !is.na(match01), GUID, Admin2GUID))
+
+
+  afp.linelist.fixed.02 <- afp.linelist.fixed.02 |> dplyr::select(-match, -match01, -ADM1_GUID, -GUID)
+
+  # Now afp.linelist.fixed.02 is identical to afp.linelist.01 but with incorrect guids fixed at
+  # the district and province level. There are also two new columns added to indicate wether
+  # the province level of district level guid was incorrect.
+
+
+  # some info about number of errors
+  #table(afp.linelist.fixed.02$wrongAdmin1GUID)
+  #table(afp.linelist.fixed.02$wrongAdmin2GUID)
+
+  issuesbyyear <- afp.linelist.fixed.02 |>
+    dplyr::group_by(yronset) |>
+    summarise(
+      numNAprovince = sum(is.na(place.admin.1)),
+      numNAdist = sum(is.na(place.admin.2)),
+      wrongProvGUID = sum(wrongAdmin1GUID == "yes"),
+      wrongdistGUID = sum(wrongAdmin2GUID == "yes"),
+      wrongbothGUID = sum(wrongAdmin1GUID == "yes" & wrongAdmin2GUID == "yes")
+    )
+
+
+  issuesbyCtry <- afp.linelist.fixed.02 |>
+    dplyr::filter(is.na(place.admin.1) | is.na(place.admin.2) | wrongAdmin1GUID == "yes" | wrongAdmin2GUID == "yes") |>
+    dplyr::group_by(place.admin.0) |>
+    dplyr::summarise(
+      numNAprovince = sum(is.na(place.admin.1)),
+      numNAdist = sum(is.na(place.admin.2)),
+      wrongProvGUID = sum(wrongAdmin1GUID == "yes"),
+      wrongdistGUID = sum(wrongAdmin2GUID == "yes"),
+      wrongbothGUID = sum(wrongAdmin1GUID == "yes" & wrongAdmin2GUID == "yes")
+    )
+
+
+
+  rm("long.global.dist.01", "afp.linelist.01", "afp.linelist.fixed", "shapes", "shapenames", "afp.raw.01")
+
+  cli::cli_process_done()
+
+  cli::cli_process_start("Fixing missing GPS locations (this may take a while)")
+
+  afp.linelist.fixed.03 <- afp.linelist.fixed.02 |>
+    dplyr::rename(polis.latitude = y,
+           polis.longitude = x) |>
+    dplyr::distinct()
+
+  rm("afp.linelist.fixed.02")
+  gc()
+
+
+  global.dist.01 <- sirfunctions::load_clean_dist_sp()
+  col.afp.raw.01 <- colnames(afp.raw.01)
+  rm("afp.raw.01")
+  gc()
+  # Function to create lat & long for AFP cases
+  sf::sf_use_s2(F)
+  afp.linelist.fixed.04 <- f.pre.stsample.01(afp.linelist.fixed.03, global.dist.01)
+  sf::sf_use_s2(T)
+  rm("afp.linelist.fixed.03")
+
+  cli::cli_process_done()
+
+  cli::cli_process_start("Creating key AFP variables")
+
+  afp.linelist.01 <- afp.linelist.fixed.04 |>
+    dplyr::mutate(
+      bad.onset = dplyr::case_when(
+        is.na(dateonset) == T ~ "Missing",
+        is.na(datenotify) == T | is.na(dateinvest) == T ~ "Invest or Notify date missing",
+        ontonot < 0 & ontoinvest < 0 & is.na(dateonset) == F ~ "Onset after Notif and Invest",
+        ontonot < 0 & is.na(dateonset) == F ~ "Onset after Notification",
+        ontoinvest < 0 & is.na(dateonset) == F ~ "Onset after Investigation",
+        ontonot >= 0 & ontoinvest >= 0 & is.na(dateonset) == F ~ "Good Date"
+      ),
+
+      # applying data qa check function which compares date to date of onset
+      bad.notify = f.datecheck.onset(datenotify, dateonset),
+      bad.invest = f.datecheck.onset(dateinvest, dateonset),
+      bad.stool1 = f.datecheck.onset(datestool1, dateonset),
+      bad.stool2 = f.datecheck.onset(datestool2, dateonset),
+      bad.followup = f.datecheck.onset(followup.date, dateonset),
+
+      # Step 5 Create stool timeliness variable
+      # variables exclude bad dates as 77 or Unable to Assess
+      # Missing dates treated as absence of collection of stool as there is no variable
+      # that specifies stool was not collected
+
+      timeliness.01 =
+        dplyr::case_when(
+          bad.stool1 == "data entry error" | bad.stool1 == "date before onset" | bad.stool1 == "date onset missing" ~ "Unable to Assess",
+          bad.stool2 == "data entry error" | bad.stool2 == "date before onset" | bad.stool2 == "date onset missing" ~ "Unable to Assess",
+          ontostool1 <= 13 & ontostool1 >= 0 & ontostool2 <= 14 & ontostool2 >= 1 & stool1tostool2 >= 1 ~ "Timely",
+          is.na(datestool1) == T | is.na(datestool2) == T ~ "Not Timely",
+          ontostool1 > 13 | ontostool1 < 0 | ontostool2 > 14 | ontostool2 < 1 | stool1tostool2 < 1 ~ "Not Timely"
+        ),
+
+      # Step 6 Create stool adequacy variable
+      ## note this is creating three adequacy variables: one assigns missing as "Bad" quality, one excludes missing,
+      ## and one assumes missing means "Good" quality (POLIS method)
+
+      # this is assigning all missing as "Bad"
+      adequacy.01 =
+        dplyr::case_when(
+          bad.stool1 == "data entry error" | bad.stool1 == "date before onset" | bad.stool1 == "date onset missing" ~ 77,
+          bad.stool2 == "data entry error" | bad.stool2 == "date before onset" | bad.stool2 == "date onset missing" ~ 77,
+          ontostool1 <= 13 & ontostool1 >= 0 & ontostool2 <= 14 & ontostool2 >= 1 & stool1tostool2 >= 1 & is.na(stool1tostool2) == F
+          & stool.1.condition == "Good" & stool.2.condition == "Good" ~ 1,
+          ontostool1 > 13 | ontostool1 < 0 | ontostool2 > 14 | ontostool2 < 1 | stool1tostool2 < 1 | is.na(stool1tostool2) == T
+          | stool.1.condition != "Good" | stool.2.condition != "Good" | is.na(stool.1.condition) == T | is.na(stool.2.condition) == T ~ 0
+        ),
+
+      # this is assigning all missing as 99
+      adequacy.02 =
+        dplyr::case_when(
+          bad.stool1 == "data entry error" | bad.stool1 == "date before onset" | bad.stool1 == "date onset missing" ~ 77,
+          bad.stool2 == "data entry error" | bad.stool2 == "date before onset" | bad.stool2 == "date onset missing" ~ 77,
+          ontostool1 > 13 | ontostool1 < 0 | is.na(stool1tostool2) == T |
+            ontostool2 > 14 | ontostool2 < 1 | stool1tostool2 < 1
+          | stool.1.condition == "Poor" | stool.2.condition == "Poor" ~ 0,
+          is.na(stool.1.condition) == T | is.na(stool.2.condition) == T | stool.1.condition == "Unknown" | stool.2.condition == "Unknown" ~ 99,
+          ontostool1 <= 13 & ontostool1 >= 0 & ontostool2 <= 14 & ontostool2 >= 1 & stool1tostool2 >= 1
+          & stool.1.condition == "Good" & stool.2.condition == "Good" ~ 1
+        ),
+
+      # this is assuming samples missing condition are "Good" (method used by POLIS to deal with missing condition)
+      adequacy.03 =
+        dplyr::case_when(
+          bad.stool1 == "data entry error" | bad.stool1 == "date before onset" | bad.stool1 == "date onset missing" ~ 77,
+          bad.stool2 == "data entry error" | bad.stool2 == "date before onset" | bad.stool2 == "date onset missing" ~ 77,
+          ontostool1 <= 13 & ontostool1 >= 0 & ontostool2 <= 14 & ontostool2 >= 1 & stool1tostool2 >= 1 & is.na(stool1tostool2) == F
+          & (stool.1.condition =="Good" | is.na(stool.1.condition)) & (stool.2.condition =="Good" | is.na(stool.2.condition)) ~ 1,
+          ontostool1 > 13 | ontostool1 < 0 | ontostool2 > 14 | ontostool2 < 1 | stool1tostool2 < 1 | is.na(stool1tostool2) == T
+          | stool.1.condition == "Poor" | stool.2.condition == "Poor" ~ 0
+        ),
+
+      # above categorizes missing as 99 meaning that they would be a Yes but do NOT have stool condition
+      # 77 means that the dates are usuable and can't assess
+
+
+      # Step 7 create variables need for flags and 60 day follow-up variable
+      # based on old CORE code, but can be combined with bad.invest etc. to limit to only those with interpetable dates
+
+      stool2missing = ifelse(is.na(datestool2) == T, 1, 0),
+      stool1missing = ifelse(is.na(datestool1) == T, 1, 0),
+      stoolmissing = ifelse(is.na(datestool1) == T & is.na(datestool2) == T, 1, 0),
+
+
+      ontostool2.03 = NA,
+      ontostool2.03 = ifelse(ontostool2 > 14, ">14", ontostool2.03),
+      ontostool2.03 = ifelse(ontostool2 <= 14, "<=14", ontostool2.03),
+
+
+      ontonot.60 = NA,
+      ontonot.60 = ifelse(ontonot > 60, ">60", ontonot.60),
+      ontonot.60 = ifelse(ontonot <= 60, "<=60", ontonot.60),
+
+
+      ontonot.14 = NA,
+      ontonot.14 = ifelse(ontonot > 14, ">14", ontonot.14),
+      ontonot.14 = ifelse(ontonot <= 14, "<=14", ontonot.14),
+
+      # 60 day followup
+      need60day = ifelse(timeliness.01 == "Not Timely", 1, 0), # using timeliness only to pull people that need 60 day reviews
+      got60day =
+        dplyr::case_when(
+          need60day == 1 & is.na(followup.date) == F ~ 1,
+          need60day == 1 & is.na(followup.date) == T ~ 0,
+          need60day == 0 ~ 99
+        ),
+
+      timeto60day = followup.date - dateonset,
+
+      ontime.60day =
+        dplyr::case_when(
+          need60day == 0 ~ 99, # excluded timely cases
+          need60day == 1 & timeto60day >= 60 & timeto60day <= 90 ~ 1,
+          (need60day == 1 & timeto60day < 60 | timeto60day > 90 | is.na(timeto60day) == T) ~ 0
+        ),
+
+      adm0guid = paste("{", stringr::str_to_upper(admin0guid), "}", sep = ""),
+      adm0guid = ifelse(adm0guid == "{}" | adm0guid == "{NA}", NA, adm0guid),
+      adm1guid = paste("{", stringr::str_to_upper(admin1guid), "}", sep = ""),
+      adm1guid = ifelse(adm1guid == "{}" | adm1guid == "{NA}", NA, adm1guid),
+      adm2guid = paste("{", stringr::str_to_upper(admin2guid), "}", sep = ""),
+      adm2guid = ifelse(adm2guid == "{}" | adm2guid == "{NA}", NA, adm2guid),
+    ) |>
+
+    # need to decide range for 60 day reviews completed
+
+    # Step 9 select only variables needed for analyses
+
+  # limited only to raw variables we still use (i,e geography) and created/cleaned variables
+  # dropping clinical and RI variables we don't use
+  # code below depends on data structure staying the same
+  # update if data structure changes
+
+  # renaming POLIS original variables to match the variables in afp line list for CORE analysis
+  dplyr::rename(adequate.stool = stool.adequacy,
+         datenotificationtohq = date.notification.to.hq,
+         datasetlab = dataset.lab,
+         doses.total = doses,
+         # totalnumberofdosesipvopv = `total.number.of.ipv./.opv.doses`,
+         virus.cluster = `virus.cluster(s)`,
+         emergence.group = `emergence.group(s)`
+  )
+
+  rm("afp.linelist.fixed.03", "afp.linelist.fixed.04")
+  gc()
+  cli::cli_process_done()
+
+
+  afp.linelist.02 <- afp.linelist.01 |>
+    dplyr::filter(surveillancetypename == "AFP") |>
+    dplyr::distinct()# this gives us an AFP line list
+
+  #identify duplicate EPIDs with differing place and onsets
+  dup.epid <- afp.linelist.02 |>
+    dplyr::group_by(epid) |>
+    dplyr::mutate(dup_epid = dplyr::n()) |>
+    dplyr::filter(dup_epid > 1) |>
+    dplyr::ungroup() |>
+    dplyr::select(epid, date.onset, yronset, diagnosis.final, classification, classificationvdpv,
+           final.cell.culture.result, poliovirustypes, person.sex, place.admin.0,
+           place.admin.1, place.admin.2) |>
+    dplyr::distinct() |>
+    dplyr::arrange(epid)
+
+  openxlsx::write.xlsx(dup.epid, paste(polis_data_folder, "/Core_Ready_Files/", paste("duplicate_AFP_epids_Polis",
+                                                      min(dup.epid$yronset, na.rm = T),
+                                                      max(dup.epid$yronset, na.rm = T),
+                                                      sep = "_"), ".xlsx", sep = "")
+  )
+
+  # remove duplicates in afp linelist
+  afp.linelist.02 <- afp.linelist.02[!duplicated(afp.linelist.02$epid), ]
+
+
+  not.afp <- afp.linelist.01 |>
+    dplyr::filter(surveillancetypename != "AFP") # this gives us non-AFP line list
+
+  # remove duplicates in non-afp linelist
+  not.afp <- not.afp[!duplicated(not.afp$epid), ]
+
+  unknown.afp <- afp.linelist.01 |>
+    dplyr::filter(is.na(surveillancetypename) == T) # this gives us unknown surveillance type line list
+
+
+  # Step 10: Create excel files showing AFP cases with unmatched guids by country and year
+  afp.missing.01 <- afp.linelist.02 |>
+    dplyr::filter(is.na(admin1guid) == T | is.na(admin2guid) == T) |>
+    dplyr::group_by(place.admin.0, yronset) |>
+    dplyr::summarise(case.miss.guid = dplyr::n()) |>
+    tidyr::pivot_wider(names_from = yronset, values_from = case.miss.guid)
+
+  afp.missing.02 <- afp.linelist.02 |>
+    dplyr::filter(is.na(admin1guid) == T | is.na(admin2guid) == T) |>
+    dplyr::select(polis.case.id, epid, place.admin.0, place.admin.1, place.admin.2,
+           date.onset, yronset, adm0guid, adm1guid, admin2guid)
+
+  write.csv(afp.missing.01, paste(polis_data_folder, "/Core_Ready_Files/",
+                                  paste("afp_missing_guid_count", min(afp.linelist.01$dateonset, na.rm = T), max(afp.linelist.01$dateonset, na.rm = T), sep = "_"),
+                                  ".csv",
+                                  sep = ""
+  ))
+
+  write.csv(afp.missing.02, paste(polis_data_folder, "/Core_Ready_Files/",
+                                  paste("afp_missing_guid_epids", min(afp.linelist.01$dateonset, na.rm = T), max(afp.linelist.01$dateonset, na.rm = T), sep = "_"),
+                                  ".csv",
+                                  sep = ""
+  ))
+
+  afp.linelist.02 <- afp.linelist.02 |>
+    dplyr::mutate(polis.latitude = as.character(polis.latitude),
+           polis.longitude = as.character(polis.longitude),
+           doses.total = as.numeric(doses.total),
+           # virus.sequenced = as.logical(virus.sequenced),
+           datenotificationtohq = as.character(as.Date(datenotificationtohq, format="%Y-%m-%d"), format="%d/%m/%Y"),
+           results.seq.date.to.program = as.character(as.Date(results.seq.date.to.program, format="%Y-%m-%d"), format="%d/%m/%Y")
+    )
+
+  latest_folder_in_archive <- list.files(paste0(polis_data_folder, "/Core_Ready_Files/Archive"), full.names = T) |>
+    file.info() |>
+    dplyr::arrange(desc(ctime)) |>
+    dplyr::slice(2) |>
+    row.names()
+
+  x <- list.files(latest_folder_in_archive, full.names = T)
+
+  old.file <- x[grepl("afp", x)]
+
+  old <- readr::read_rds(old.file) |>
+    dplyr::mutate(epid = stringr::str_squish(epid)) |>
+    dplyr::mutate_all(as.character)
+
+  old <- old |>
+    dplyr::mutate(yronset = as.numeric(yronset)) |>
+    dplyr::filter(dplyr::between(yronset, startyr, endyr)) |>
+    dplyr::mutate_all(as.character)
+
+  afp.linelist.02 <- afp.linelist.02 |>
+    dplyr::select(-c(setdiff(setdiff(colnames(afp.linelist.02), col.afp.raw.01), colnames(old))))
+
+  # Step 11 write R datafiles for use in analyses
+  #Compare the final file to last week's final file to identify any differences in var_names, var_classes, or categorical responses
+  new_table_metadata <- f.summarise.metadata(head(afp.linelist.02, 1000))
+  old_table_metadata <- f.summarise.metadata(head(readr::read_rds(old.file), 1000))
+  afp_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata)
+
+  #compare obs
+  new <- afp.linelist.02 |>
+    dplyr::mutate(epid = stringr::str_squish(epid)) |>
+    dplyr::mutate_all(as.character)
+
+  in_new_not_old <- new[!(new$epid %in% old$epid),]
+
+  in_old_not_new <- old[!(old$epid %in% new$epid),]
+
+  in_new_and_old_but_modified <- ungroup(new) |>
+    dplyr::filter(epid %in% old$epid) |>
+    dplyr::select(-c(setdiff(colnames(new), colnames(old))))
+
+
+  in_new_and_old_but_modified <- setdiff(in_new_and_old_but_modified, old |>
+              dplyr::select(-c(setdiff(colnames(old), colnames(new)))))
+
+  if(nrow(in_new_and_old_but_modified) > 0){
+    in_new_and_old_but_modified <- in_new_and_old_but_modified |>
+      dplyr::inner_join(old |>
+                          dplyr::filter(epid %in% in_new_and_old_but_modified$epid) |>
+                          dplyr::select(-c(setdiff(colnames(old), colnames(new)))) |>
+                          setdiff(new |>
+                                    select(-c(setdiff(colnames(new), colnames(old))))), by="epid") |>
+      #wide_to_long
+      tidyr::pivot_longer(cols=-epid) |>
+      dplyr::mutate(source = ifelse(stringr::str_sub(name, -2) == ".x", "new", "old")) |>
+      dplyr::mutate(name = stringr::str_sub(name, 1, -3)) |>
+      #long_to_wide
+      tidyr::pivot_wider(names_from=source, values_from=value) |>
+      dplyr::filter(new != old)
+  }
+
+  readr::write_rds(afp.linelist.02, paste(polis_data_folder, "/Core_Ready_Files/",
+                                   paste("afp_linelist", min(afp.linelist.02$dateonset, na.rm = T), max(afp.linelist.02$dateonset, na.rm = T), sep = "_"),
+                                   ".rds",
+                                   sep = ""
+  ))
+
+  readr::write_rds(afp.linelist.02, paste(polis_data_folder, "/Core_Ready_Files/Archive/",timestamp,"/",
+                                          paste("afp_linelist", min(afp.linelist.02$dateonset, na.rm = T), max(afp.linelist.02$dateonset, na.rm = T), sep = "_"),
+                                          ".rds",
+                                          sep = ""
+  ))
+
+  # note above is keeping the cases with missing date of onset and creating a giant new data dataet
+
+  # Step 12 write.csv for AFP cases for Lat and long
+
+  afp.linelist.latlong <- afp.linelist.01 |>
+    dplyr::select(epid, dateonset, place.admin.0, place.admin.1, place.admin.2, adm0guid, adm1guid, adm2guid, cdc.classification.all, lat, lon)
+
+  write.csv(afp.linelist.latlong, paste(polis_data_folder, "/Core_Ready_Files/",
+                                        paste("afp_lat_long", min(afp.linelist.latlong$dateonset, na.rm = T), max(afp.linelist.latlong$dateonset, na.rm = T), sep = "_"),
+                                        ".csv",
+                                        sep = ""
+  ))
+
+
+  # Step 13 write.rds file for non AFP type cases
+  not.afp.01 <- rbind(not.afp, unknown.afp)
+  not.afp.01 <- not.afp.01 |>
+    dplyr::mutate(polis.latitude = as.character(polis.latitude),
+           polis.longitude = as.character(polis.longitude),
+           doses.total = as.numeric(doses.total),
+           datenotificationtohq = as.character(as.Date(datenotificationtohq, format="%Y-%m-%d"), format="%Y-%m-%d"),
+           results.seq.date.to.program = as.character(as.Date(results.seq.date.to.program, format="%Y-%m-%d"), format="%Y-%m-%d")
+    )
+
+  latest_folder_in_archive <- list.files(paste0(polis_data_folder, "/Core_Ready_Files/Archive"), full.names = T) |>
+    file.info() |>
+    dplyr::arrange(desc(ctime)) |>
+    dplyr::slice(2) |>
+    row.names()
+
+  x <- list.files(latest_folder_in_archive, full.names = T)
+
+  old.file <- x[grepl("other_", x)]
+
+  old <- readr::read_rds(old.file) |>
+    dplyr::mutate(epid = stringr::str_squish(epid)) |>
+    dplyr::mutate_all(as.character)
+
+  not.afp.01 <- not.afp.01 |>
+    select(-c(setdiff(setdiff(colnames(not.afp.01), col.afp.raw.01), colnames(old))))
+
+
+  #Compare the final file to last week's final file to identify any differences in var_names, var_classes, or categorical responses
+  new_table_metadata <- f.summarise.metadata(not.afp.01)
+  old_table_metadata <- f.summarise.metadata(readr::read_rds(old.file))
+  not_afp_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata)
+  #compare obs
+  new <- not.afp.01 |>
+    dplyr::mutate(epid = stringr::str_squish(epid)) |>
+    dplyr::mutate_all(as.character)
+
+  in_new_not_old <- new |>
+    filter(!(epid %in% old$epid))
+
+  in_old_not_new <- old |>
+    filter(!(epid %in% new$epid))
+
+  in_new_and_old_but_modified <- new |>
+    filter(epid %in% old$epid) |>
+    select(-c(setdiff(colnames(new), colnames(old)))) |>
+    setdiff(., old |>
+              select(-c(setdiff(colnames(old), colnames(new))))) |>
+    inner_join(old |>
+                 filter(epid %in% new$epid) |>
+                 select(-c(setdiff(colnames(old), colnames(new)))) |>
+                 setdiff(., new |>
+                           select(-c(setdiff(colnames(new), colnames(old))))), by="epid") |>
+    #wide_to_long
+    pivot_longer(cols=-epid) |>
+    mutate(source = ifelse(str_sub(name, -2) == ".x", "new", "old")) |>
+    mutate(name = str_sub(name, 1, -3)) |>
+    #long_to_wide
+    pivot_wider(names_from=source, values_from=value) |>
+    filter(new != old)
+
+  readr::write_rds(not.afp.01, paste(polis_data_folder, "/Core_Ready_Files/Archive/", timestamp, "/",
+                              paste("other_surveillance_type_linelist", min(not.afp.01$yronset, na.rm = T), max(not.afp.01$yronset, na.rm = T), sep = "_"),
+                              ".rds",
+                              sep = ""
+  ))
+
+  readr::write_rds(not.afp.01, paste(polis_data_folder, "/Core_Ready_Files/",
+                              paste("other_surveillance_type_linelist", min(not.afp.01$yronset, na.rm = T), max(not.afp.01$yronset, na.rm = T), sep = "_"),
+                              ".rds",
+                              sep = ""
+  ))
+
+
+  # AFP cases with EPIDs ("14070210003" "50023710003" "Per 011-21"  "53060210001") got removed from original POLIS download "Cases_30-04-2020_20-15-38_from_01_Jan_2000_to_31_Dec_2018.csv"
+
+  #move newly created linelists to the "core datafiles to combine" folder within core 2.0
+
+  # read AFP surveillance type linelist and combine to make one AFP-linlelist
+  afp.files.01 <- list.files(path=paste0(polis_data_folder, "/Core_Ready_Files"), pattern="^.*(afp_linelist).*(.rds)$", full.names=TRUE)
+  afp.clean.01 <- purrr::map_df(afp.files.01 , ~readr::read_rds(.x))
+
+  write_rds(afp.clean.01, paste(polis_data_folder, "/Core_Ready_Files/",
+                                paste("afp_linelist", min(afp.clean.01$dateonset, na.rm = T),
+                                      max(afp.clean.01$dateonset, na.rm = T),
+                                      sep = "_"
+                                ),".rds",
+                                sep = ""
+  ))
+
+  #outputting lighter file for WHO
+  afp.clean.light <- afp.clean.01 |>
+    dplyr::filter(yronset >= 2019)
+
+  readr::write_rds(afp.clean.light, paste(polis_data_folder, "/Core_Ready_Files/",
+                                   paste("afp_linelist", min(afp.clean.light$dateonset, na.rm = T),
+                                         max(afp.clean.light$dateonset, na.rm = T),
+                                         sep = "_"
+                                   ),".rds",
+                                   sep = ""
+  ))
+
+  #other surveillance linelist combine
+  non.afp.files.01 <- list.files(path=paste0(polis_data_folder, "/Core_Ready_Files"), pattern="^.*(other_surveillance_type_linelist).*(.rds)$", full.names=TRUE)
+  non.afp.clean.01 <- purrr::map_df(non.afp.files.01 , ~readr::read_rds(.x))
+  readr::write_rds(non.afp.clean.01, paste(polis_data_folder, "/Core_Ready_Files/",
+                                    paste("other_surveillance_type_linelist", min(non.afp.clean.01$yronset, na.rm = T),
+                                          max(non.afp.clean.01$yronset, na.rm = T),
+                                          sep = "_"
+                                    ),".rds",
+                                    sep = ""
+  ))
+
 
 
 }
