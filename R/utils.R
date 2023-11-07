@@ -3462,6 +3462,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   #Step 5 - Creating Virus datasets ====
   cli::cli_h1("Step 5/5 - Creating Virus datasets")
 
+  cli::cli_process_start("Loading new and old virus data")
   endyr <- year(format(Sys.time()))
   startyr <- 2000
 
@@ -3496,7 +3497,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   names(virus.raw.old) <- stringr::str_to_lower(names(virus.raw.old))
 
-
+  cli::cli_process_done()
   # variables in old dataframe
 
   var.names <- virus.raw.old |>
@@ -3552,21 +3553,22 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   # Step 6: fix all dates from character to ymd format and fix character variables
 
+  cli::cli_process_start("Creating CDC variables")
   virus.01 <- virus.raw.new |>
-    rename(virus.type = `virus.type(s)`,
+    dplyr::rename(virus.type = `virus.type(s)`,
            viruscluster = `virus.cluster(s)`,
            emergencegroup = `emergence.group(s)`,
            ntchanges = nt.changes,
            classificationvdpv =`vdpv.classification(s)`,
            whoregion=who.region
     ) |>
-    mutate(dateonset = dmy(virus.date),
+    dplyr::mutate(dateonset = lubridate::ymd(virus.date),
            datasource='virustable',
-           yronset=year(dateonset))|>
-    mutate(
+           yronset= lubridate::year(dateonset))|>
+    dplyr::mutate(
       surveillance.type = ifelse(surveillance.type == "Environmental", "ENV", surveillance.type),
-      virus.type = str_trim(virus.type, "both"),
-      virustypename = str_trim(virustypename, "both"),
+      virus.type = stringr::str_trim(virus.type, "both"),
+      virustypename = stringr::str_trim(virustypename, "both"),
 
       vaccine.source = ifelse(virus.type %in% c("VACCINE1", "VACCINE2", "VACCINE3", "VDPV1",
                                                 "VDPV2", "VDPV3"), "Sabin", NA),
@@ -3603,166 +3605,159 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
       classificationvdpv = ifelse(is.na(classificationvdpv), "", classificationvdpv),
 
-      adm0guid = case_when(
+      adm0guid = dplyr::case_when(
         !is.na(admin.0.guid) ~ paste0("{", toupper(admin.0.guid), "}"),
         TRUE ~ as.character(admin.0.guid)
       ),
-      adm1guid = case_when(
+      adm1guid = dplyr::case_when(
         !is.na(admin.1.guid) ~ paste0("{", toupper(admin.1.guid), "}"),
         TRUE ~ as.character(admin.1.guid),
       ),
-      adm2guid = case_when(
+      adm2guid = dplyr::case_when(
         !is.na(admin.2.guid) ~ paste0("{", toupper(admin.2.guid), "}"),
         TRUE ~ as.character(admin.2.guid)
       )
     ) |>
-    rename(virustype=virus.type) |>
-    select(-admin.0.guid, -admin.1.guid, -admin.2.guid, -virus.date) |>
+    dplyr::rename(virustype=virus.type) |>
+    dplyr::select(-admin.0.guid, -admin.1.guid, -admin.2.guid, -virus.date) |>
     #separate(location, c("place.admin.0", "place.admin.1", "place.admin.2"), ",") |>
     #fix CIV
-    mutate(place.admin.0 = ifelse(str_detect(place.admin.0, "IVOIRE"),"COTE D IVOIRE", place.admin.0))
+    dplyr::mutate(place.admin.0 = ifelse(stringr::str_detect(place.admin.0, "IVOIRE"),"COTE D IVOIRE", place.admin.0))
 
+  cli::cli_process_done()
   #flag to identify vaccine with nt.changes >= 6
   vaccine.6.plus <- virus.01 |>
-    filter(virustypename %in% c("VACCINE 1", "VACCINE 2", "VACCINE 3", "VACCINE 2-n") &
+    dplyr::filter(virustypename %in% c("VACCINE 1", "VACCINE 2", "VACCINE 3", "VACCINE 2-n") &
              ntchanges >= 6) |>
-    select(epid, surveillance.type, virustype, virustypename, ntchanges, classificationvdpv, vaccine.source)
+    dplyr::select(epid, surveillance.type, virustype, virustypename, ntchanges, classificationvdpv, vaccine.source)
 
   if (nrow(vaccine.6.plus) >= 1) {
-    stop("There is a potentially misclassified virus based on ntchanges, check in POLIS and flag on message board")
-  } else {
-    "Virus classifications are correct"
+    cli::cli_alert_warning("There is a potentially misclassified virus based on ntchanges, check in POLIS and flag on message board. Writing out viruses to check.")
+    readr::write_csv(vaccine.6.plus, paste0(polis_data_folder, "/Core_Ready_Files/virus_large_nt_changes.csv"))
+    } else {
+    cli::cli_alert_info("Virus classifications are correct")
   }
 
   # Step 7: Check for duplicate viruses
 
   virus.dup.01 <- virus.01 |>
-    select(epid, epid.in.polis, pons.epid, virus.id, polis.case.id, env.sample.id, place.admin.0, surveillance.type, datasource, virustype, dateonset, yronset, ntchanges, emergencegroup) |>
-    group_by(epid, virustype, dateonset, yronset, ntchanges, emergencegroup) |>
-    mutate(virus_dup=n()) |>
-    filter(virus_dup>=2)
+    dplyr::select(epid, epid.in.polis, pons.epid, virus.id, polis.case.id, env.sample.id, place.admin.0, surveillance.type, datasource, virustype, dateonset, yronset, ntchanges, emergencegroup) |>
+    dplyr::group_by(epid, virustype, dateonset, yronset, ntchanges, emergencegroup) |>
+    dplyr::mutate(virus_dup=dplyr::n()) |>
+    dplyr::filter(virus_dup>=2)
 
   # Script below will stop further execution if there is a duplicate virus, with same onset date, virus type, emergence group, ntchanges
   if (nrow(virus.dup.01) >= 1) {
-    stop("Duplicate viruses in the virus table data. Check the data for duplicate records.
+    cli::cli_alert_warning("Duplicate viruses in the virus table data. Check the data for duplicate records.
           If they are the exact same, then contact Ashley")
+    virus.dup.01 <- virus.dup.01[order(virus.dup.01$surveillance.type,virus.dup.01$virustype, virus.dup.01$yronset),] |> select(-virus_dup)
+
+    readr::write_csv(virus.dup.01, paste0(polis_data_folder, "/Core_Ready_Files/duplicate_viruses_Polis_virusTableData.csv"))
   } else {
-    "If no duplicates found, then proceed"
+    cli::cli_alert_info("If no duplicates found, then proceed")
   }
-
-  virus.dup.01 <- virus.dup.01[order(virus.dup.01$surveillance.type,virus.dup.01$virustype, virus.dup.01$yronset),] |> select(-virus_dup)
-
-  # Export duplicate viruses in the CSV file:
-  write_csv(virus.dup.01, "./preprocessing/datafiles_01/duplicate_viruses_Polis_virusTableData.csv", na = "")
 
   # Human virus dataset with sabin 2 and positive viruses only
   human.virus.01 <- virus.01 |>
-    filter(!surveillance.type=="ENV") |>
-    filter(!virustype %in% c("VACCINE 1", "VACCINE 3") & classificationvdpv != "Pending")
+    dplyr::filter(!surveillance.type=="ENV") |>
+    dplyr::filter(!virustype %in% c("VACCINE 1", "VACCINE 3") & classificationvdpv != "Pending")
+
+  cli::cli_process_start("Clearing memory")
+  rm(
+    "new.df", "new.var.virus.01", "vaccine.6.plus", "var.names", "var.names.01",
+    "virus.dup.01", "virus.raw.new", "virus.raw.new.comp", "virus.raw.old",
+    "virus.raw.old.comp", "virus.types.names", "new.file", "old.file", "var.list.01", "x", "y"
+  )
+  gc()
+  cli::cli_process_done()
+
+  cli::cli_process_start("Processing and cleaning AFP/non-AFP files")
+  afp.files.01 <- list.files(path = paste0(polis_data_folder, "/Core_Ready_Files/"), pattern = "^(afp_linelist).*(.rds)$", full.names = TRUE)
+  afp.01 <- purrr::map_df(afp.files.01, ~readr::read_rds(.x)) |>
+    dplyr::ungroup() |>
+    dplyr::distinct(.keep_all = T)|>
+    dplyr::filter(dplyr::between(yronset, startyr, endyr))
 
 
-
-  # read in AFP and non AFP surveillance types files
-  # not_afp_01 <- rio::import("./datafiles_01/not_afp_linelist_2017_2019.rds")
-
-
-  #not_afp_01_new <- read_rds("./datafiles_01/not_afp_linelist_2017_2019.rds")
-
-  afp.files.01 <- list.files(path = "./datafiles_01/old files/CORE_datafiles_to_combine/", pattern = "^(afp_linelist).*(.rds)$", full.names = TRUE)
-  afp.01 <- map_df(afp.files.01, ~read_rds(.x)) |>
-    distinct(.keep_all = T)|>
-    filter(between(yronset, startyr, endyr))
-
-
-  non.afp.files.01 <- list.files(path = "./datafiles_01/old files/CORE_datafiles_to_combine/", pattern = "^(other_surveillance_type_linelist).*(.rds)$", full.names = TRUE)
-  non.afp.01 <- map_df(non.afp.files.01, ~ read_rds(.x)) |>
-    distinct(.keep_all = T) |>
-    filter(between(yronset, startyr, endyr))
+  non.afp.files.01 <- list.files(path = paste0(polis_data_folder, "/Core_Ready_Files/"), pattern = "^(other_surveillance_type_linelist).*(.rds)$", full.names = TRUE)
+  non.afp.01 <- purrr::map_df(non.afp.files.01, ~ readr::read_rds(.x)) |>
+    dplyr::ungroup() |>
+    dplyr::distinct(.keep_all = T) |>
+    dplyr::filter(dplyr::between(yronset, startyr, endyr))
 
   # deleting any duplicate records in afp.01.
   afp.01 <- afp.01[!duplicated(afp.01$epid), ] |>
-    select(epid, dateonset,  place.admin.0, place.admin.1, place.admin.2, admin0guid, yronset, admin1guid, admin2guid, cdc.classification.all,
+    dplyr::select(epid, dateonset,  place.admin.0, place.admin.1, place.admin.2, admin0guid, yronset, admin1guid, admin2guid, cdc.classification.all,
            whoregion, nt.changes, emergence.group, virus.cluster, surveillancetypename, lat, lon, vtype.fixed)
 
   # deleting any duplicate records in non.afp.files.01.
   non.afp.01 <- non.afp.01[!duplicated(non.afp.01$epid), ] |>
-    select(epid, dateonset,  place.admin.0, place.admin.1, place.admin.2, admin0guid, yronset, admin1guid, admin2guid, cdc.classification.all,
+    dplyr::select(epid, dateonset,  place.admin.0, place.admin.1, place.admin.2, admin0guid, yronset, admin1guid, admin2guid, cdc.classification.all,
            whoregion, nt.changes, emergence.group, virus.cluster, surveillancetypename, lat, lon, vtype.fixed)
 
 
   #Combine AFP and other surveillance type cases
   afp.02 <- rbind(afp.01, non.afp.01) |>
-    select(epid, lat, lon)
+    dplyr::select(epid, lat, lon)
 
 
   # Get geo cordinates from AFP linelist.
-  human.virus.02 <- right_join(afp.02, human.virus.01, by=c("epid"="epid"))|>
-    mutate_at(c("lat", "lon", "x", "y"), ~as.numeric(.)) |>
-    distinct() |>
-    mutate(latitude = ifelse(is.na(lat), y, lat),
+  human.virus.02 <- dplyr::right_join(afp.02, human.virus.01, by=c("epid"="epid"))|>
+    dplyr::mutate_at(c("lat", "lon", "x", "y"), ~as.numeric(.)) |>
+    dplyr::distinct() |>
+    dplyr::mutate(latitude = ifelse(is.na(lat), y, lat),
            longitude = ifelse(is.na(lon), x, lon)) |>
-    select(-x, -y, -lat, -lon) |>
-    mutate(congo_wild1 = case_when((place.admin.0 == "CONGO" & yronset == '2010' & virustypename == "WILD 1")~ 1))
+    dplyr::select(-x, -y, -lat, -lon) |>
+    dplyr::mutate(congo_wild1 = dplyr::case_when((place.admin.0 == "CONGO" & yronset == '2010' & virustypename == "WILD 1")~ 1))
 
 
   # Remove CONGO 2010 WILD 1 cases from VIRUS table
   human.virus.03 <- human.virus.02 |>
-    filter(is.na(congo_wild1)) |>
-    select(-congo_wild1)
+    dplyr::filter(is.na(congo_wild1)) |>
+    dplyr::select(-congo_wild1)
 
 
   # Create dataset of AFP CONGO Wild 1 (441)cases from 2010 from AFP linelist
   congo.afp.wild1 <- afp.01 |>
-    filter(place.admin.0=="CONGO" & yronset =='2010' & vtype.fixed == "WILD 1") |>
-    mutate(virustypename = "WILD 1",
+    dplyr::filter(place.admin.0=="CONGO" & yronset =='2010' & vtype.fixed == "WILD 1") |>
+    dplyr::mutate(virustypename = "WILD 1",
            latitude= as.numeric(lat),
            longitude= as.numeric(lon),
-           adm0guid = case_when(
+           adm0guid = dplyr::case_when(
              !is.na(admin0guid) ~ paste0("{", toupper(admin0guid), "}"),
              TRUE ~ as.character(admin0guid)
            ),
-           adm1guid = case_when(
+           adm1guid = dplyr::case_when(
              !is.na(admin1guid) ~ paste0("{", toupper(admin1guid), "}"),
              TRUE ~ as.character(admin1guid),
            ),
-           adm2guid = case_when(
+           adm2guid = dplyr::case_when(
              !is.na(admin2guid) ~ paste0("{", toupper(admin2guid), "}"),
              TRUE ~ as.character(admin2guid)
            ),
            datasource="afp_linelist"
     ) |>
-    select(epid, dateonset,  place.admin.0, place.admin.1, place.admin.2, adm0guid, yronset, adm1guid, adm2guid, cdc.classification.all,
+    dplyr::select(epid, dateonset,  place.admin.0, place.admin.1, place.admin.2, adm0guid, yronset, adm1guid, adm2guid, cdc.classification.all,
            whoregion, nt.changes, emergence.group, virus.cluster, surveillancetypename, latitude, longitude, datasource, virustypename) |>
-    rename(virustype=cdc.classification.all, surveillance.type = surveillancetypename, viruscluster = virus.cluster,
+    dplyr::rename(virustype=cdc.classification.all, surveillance.type = surveillancetypename, viruscluster = virus.cluster,
            emergencegroup = emergence.group, ntchanges = nt.changes)
 
 
   # Adding Congo 2010 WILD 1 (441)cases in VIRUS table.
-  human.virus.04 <- bind_rows(congo.afp.wild1, human.virus.03)
-
-  #### WHO added these positive cases from AFP linelist to Virus table data...no need to run this code
-  # Read in missing_AFP_in_virus datafile (17 cases) from AFP linelist
-  #afp_positives <- read_csv("./preprocessing/datafiles_01/missing_AFP_in_virusTable.csv", guess_max = 2000000) |>
-  #  mutate(latitude= as.character(latitude),
-  #         longitude= as.character(longitude),
-  #         dateonset = mdy(dateonset))
-
-
-  # Adding 23 AFP positive cases from AFP linelist
-  #human.virus.05 <- bind_rows(afp_positives, human.virus.04)
-
-
+  human.virus.04 <- dplyr::bind_rows(congo.afp.wild1, human.virus.03)
 
   ### ENV data from virus table
   env.virus.01 <- virus.01 |>
-    filter(surveillance.type == "ENV" & !is.na(virustype) &
+    dplyr::filter(surveillance.type == "ENV" & !is.na(virustype) &
              !virustype %in% c("VACCINE 1", "VACCINE 3", "NPEV") & classificationvdpv != "Pending")
 
+  cli::cli_process_done()
+  cli::cli_process_start("Adding in ES data")
 
   # read in ES files from cleaned ENV linelist
-  es.files.01 <- list.files(path = "./datafiles_01/", pattern = "^(es).*(.rds)$", full.names = TRUE)
-  es.01 <- map_df(es.files.01, ~ read_rds(.x)) |>
-    distinct(.keep_all = T)
+  es.files.01 <- list.files(path = paste0(polis_data_folder, "/Core_Ready_Files/"), pattern = "^(es).*(.rds)$", full.names = TRUE)
+  es.01 <- purrr::map_df(es.files.01, ~ readr::read_rds(.x)) |>
+    dplyr::distinct(.keep_all = T)
 
 
   # Make sure 'env.sample.maual.edit.id' is unique for each ENV sample
@@ -3770,7 +3765,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
 
   es.02 <- es.01 |>
-    rename(
+    dplyr::rename(
       place.admin.0 = ADM0_NAME,
       place.admin.1 = ADM1_NAME,
       place.admin.2 = ADM2_NAME,
@@ -3781,152 +3776,138 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
       yronset = collect.yr,
       whoregion = region.name
     ) |>
-    select(virus.type, everything()) |>
-    mutate(
-      dateonset = dmy(dateonset),
-      virustype = str_replace_all(virus.type, "  ", " "),
+    dplyr::select(virus.type, dplyr::everything()) |>
+    dplyr::mutate(
+      dateonset = lubridate::dmy(dateonset),
+      virustype = stringr::str_replace_all(virus.type, "  ", " "),
       datasource = "es_linelist",
       lat = as.numeric(lat),
       lon = as.numeric(lng)
     ) |>
-    separate_rows(virus.type, sep = ", ")
+    tidyr::separate_rows(virus.type, sep = ", ")
 
 
   es.03 <- es.02 |>
-    select(env.sample.id, site.id, lat, lon) |>
-    rename(epid = env.sample.id)
+    dplyr::select(env.sample.id, site.id, lat, lon) |>
+    dplyr::rename(epid = env.sample.id)
 
 
   # get goe coordinates from ES linelist.
-  env.virus.02 <- left_join(env.virus.01, es.03, by=c("epid"="epid"))
+  env.virus.02 <- dplyr::left_join(env.virus.01, es.03, by=c("epid"="epid"), relationship = "many-to-many")
 
+  cli::cli_process_done()
 
-  #duplicate to check: PAK/KP/PWR/LM-1/15/001
-
+  cli::cli_process_start("Removing duplicates from virus table")
 
   # remove duplicates in virus table
   env.virus.02 <- env.virus.02[!duplicated(env.virus.02$virus.id), ]
 
   env.virus.03 <- env.virus.02 |>
-    mutate_at(c("lat", "lon", "x", "y"), ~as.numeric(.)) |>
-    mutate(latitude = ifelse(is.na(lat), y, lat),
+    dplyr::mutate_at(c("lat", "lon", "x", "y"), ~as.numeric(.)) |>
+    dplyr::mutate(latitude = ifelse(is.na(lat), y, lat),
            longitude = ifelse(is.na(lon), x, lon)) |>
-    select(-x, -y, -lat, -lon)
-
-
-  # Read in missing_ENV_in_virus datafile (119 specimens) from ES linelist
-  #env_positives <- read_csv("./preprocessing/datafiles_01/missing_ENVs_in_virusTable.csv", guess_max = 2000000) |>
-  #  mutate(latitude= as.character(latitude),
-  #         longitude= as.character(longitude),
-  #         surveillance.type = "ENV")
-
-
-  # Adding 71 ES positive specimens from ENV linelist
-  #env.virus.04 <- bind_rows(env_positives, env.virus.03)
-
-  library(stringi)
+    dplyr::select(-x, -y, -lat, -lon)
 
   env.virus.04 <- env.virus.03 |>
-    mutate(place.admin.0 =  stri_trim(place.admin.0, "left"),
-           place.admin.1 =  stri_trim(place.admin.1, "left"),
-           place.admin.2 =  stri_trim(place.admin.2, "left"))
+    dplyr::mutate(place.admin.0 =  stringi::stri_trim(place.admin.0, "left"),
+           place.admin.1 =  stringi::stri_trim(place.admin.1, "left"),
+           place.admin.2 =  stringi::stri_trim(place.admin.2, "left"))
 
   human.virus.05 <- human.virus.04 |>
-    mutate(place.admin.0 =  stri_trim(place.admin.0, "left"),
-           place.admin.1 =  stri_trim(place.admin.1, "left"),
-           place.admin.2 =  stri_trim(place.admin.2, "left"))
+    dplyr::mutate(place.admin.0 =  stringi::stri_trim(place.admin.0, "left"),
+           place.admin.1 =  stringi::stri_trim(place.admin.1, "left"),
+           place.admin.2 =  stringi::stri_trim(place.admin.2, "left"))
 
-
+  cli::cli_process_done()
+  cli::cli_process_start("Creating final virus file")
 
   # Final virus file with AFP and ES
-  afp.es.virus.01 <- bind_rows(human.virus.05, env.virus.04) |>
-    rename(source = surveillance.type,
+  afp.es.virus.01 <- dplyr::bind_rows(human.virus.05, env.virus.04) |>
+    dplyr::rename(source = surveillance.type,
            measurement = virustypename,
            admin2guid = adm2guid) |>
-    mutate(cdc.classification.all = 'cdc.classification.all') |>
+    dplyr::mutate(cdc.classification.all = 'cdc.classification.all') |>
     #fix CIV
-    mutate(place.admin.0 = ifelse(str_detect(place.admin.0, "IVOIRE"),"COTE D IVOIRE", place.admin.0)) |>
-    # select(epid, whoregion, place.admin.0, place.admin.1, place.admin.2, adm0guid,	adm1guid,	admin2guid, yronset, dateonset,
-    #      latitude, longitude, datasource, measurement, ntchanges, emergencegroup, viruscluster, polis.case.id, source, env.sample.id,
-    #      country.iso3, site.code, site.id, site.name, cdc.classification.all, is.breakthrough) |>
-    mutate(latitude = as.character(latitude),
+    dplyr::mutate(place.admin.0 = ifelse(stringr::str_detect(place.admin.0, "IVOIRE"),"COTE D IVOIRE", place.admin.0)) |>
+    dplyr::mutate(latitude = as.character(latitude),
            longitude = as.character(longitude),
            env.sample.id = as.numeric(env.sample.id),
            polis.case.id = as.numeric(polis.case.id))
 
-  # savescipen <- getOption("scipen")
-  # options(scipen = 999)
-  # afp.es.virus.01 <- afp.es.virus.01 |>
-  #   mutate(sample.id = as.character(as.numeric(sample.id)))
-  # options(scipen = savescipen)
+  cli::cli_process_done()
 
-
-  # Make sure there are no duplicates
-  test <- afp.es.virus.01 |>
-    filter(epid=="GHA-BNE-PRW-20-001")
+  cli::cli_process_start("Checking for variables that don't match last weeks pull")
 
   #Compare the final file to last week's final file to identify any differences in var_names, var_classes, or categorical responses
   new_table_metadata <- f.summarise.metadata(afp.es.virus.01)
-  old_table_metadata <- f.summarise.metadata(readRDS("./datafiles_01/positives_2001-01-01_2023-09-05.rds"))
+  old.file <- list.files(paste0(polis_data_folder, "/Core_Ready_Files/"), full.names = T)
+  old.file <- old.file[grepl("positives_2001", old.file)]
+  old_table_metadata <- f.summarise.metadata(readr::read_rds(old.file))
   positives_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata)
 
   new <- afp.es.virus.01 |>
     unique() |>
-    mutate(epid = str_squish(epid)) |>
-    group_by(epid)|>
-    slice(1) |>
-    ungroup() |>
-    mutate_all(as.character)
-  old <- readRDS("./datafiles_01/positives_2001-01-01_2023-09-05.rds") |>
-    mutate_all(as.character) |>
-    mutate(epid = str_squish(epid)) |>
-    group_by(epid)|>
-    slice(1) |>
-    ungroup()
+    dplyr::mutate(epid = stringr::str_squish(epid)) |>
+    dplyr::group_by(epid)|>
+    dplyr::slice(1) |>
+    dplyr::ungroup() |>
+    dplyr::mutate_all(as.character)
 
-  nrow(new)
-  nrow(old)
-  ncol(new)
-  ncol(old)
+  old <- readr::read_rds(old.file) |>
+    dplyr::mutate(epid = stringr::str_squish(epid)) |>
+    dplyr::group_by(epid)|>
+    dplyr::slice(1) |>
+    dplyr::ungroup() |>
+    dplyr::mutate_all(as.character)
+
+
   in_new_not_old <- new |>
-    filter(!(epid %in% old$epid))
+    dplyr::filter(!(epid %in% old$epid))
+
   in_old_not_new <- old |>
-    filter(!(epid %in% new$epid))
+    dplyr::filter(!(epid %in% new$epid))
+
   in_new_and_old_but_modified <- new |>
-    filter(epid %in% old$epid) |>
-    select(-c(setdiff(colnames(new), colnames(old)))) |>
-    setdiff(., old |>
-              select(-c(setdiff(colnames(old), colnames(new))))) |>
-    inner_join(old |>
-                 filter(epid %in% new$epid) |>
-                 select(-c(setdiff(colnames(old), colnames(new)))) |>
-                 setdiff(., new |>
+    dplyr::filter(epid %in% old$epid) |>
+    dplyr::select(-c(setdiff(colnames(new), colnames(old)))) |>
+    setdiff(old |>
+              dplyr::select(-c(setdiff(colnames(old), colnames(new))))) |>
+    dplyr::inner_join(old |>
+                        dplyr::filter(epid %in% new$epid) |>
+                        dplyr::select(-c(setdiff(colnames(old), colnames(new)))) |>
+                        dplyr::setdiff(new |>
                            select(-c(setdiff(colnames(new), colnames(old))))), by="epid") |>
     #wide_to_long
-    pivot_longer(cols=-epid) |>
-    mutate(source = ifelse(str_sub(name, -2) == ".x", "new", "old")) |>
-    mutate(name = str_sub(name, 1, -3)) |>
+    tidyr::pivot_longer(cols=-epid) |>
+    dplyr::mutate(source = ifelse(stringr::str_sub(name, -2) == ".x", "new", "old")) |>
+    dplyr::mutate(name = stringr::str_sub(name, 1, -3)) |>
     #long_to_wide
-    pivot_wider(names_from=source, values_from=value) |>
-    mutate(new = unlist(new)) |>
-    mutate(old = unlist(old)) |>
-    filter(new != old)
+    tidyr::pivot_wider(names_from=source, values_from=value)
+
+  if(nrow(in_new_and_old_but_modified) > 0){
+    in_new_and_old_but_modified <- in_new_and_old_but_modified |>
+      dplyr::mutate(new = unlist(new)) |>
+      dplyr::mutate(old = unlist(old)) |>
+      dplyr::filter(new != old)
+
+    # list of records for which virus type name has changed from last week to this week.
+    pos_changed_virustype <- in_new_and_old_but_modified |> filter(name=="measurement")
+
+    # Export records for which virus type has changed from last week to this week in the CSV file:
+    readr::write_csv(pos_changed_virustype, paste0(polis_data_folder, "/Core_Ready_Files/Changed_virustype_virusTableData.csv"), na = "")
+
+  }
 
   # list of records in new but not in old.
   in_new_not_old <- in_new_not_old |> select(place.admin.0, epid, dateonset, yronset, source, virustype)
 
-  # Export records for which virus type has changed from last week to this week in the CSV file:
-  write_csv(in_new_not_old, "./preprocessing/datafiles_01/in_new_not_old_virusTableData.csv", na = "")
-
-  # list of records for which virus type name has changed from last week to this week.
-  pos_changed_virustype <- in_new_and_old_but_modified |> filter(name=="measurement")
-
-  # Export records for which virus type has changed from last week to this week in the CSV file:
-  write_csv(pos_changed_virustype, "./preprocessing/datafiles_01/Changed_virustype_virusTableData.csv", na = "")
+  if(nrow(in_new_not_old) > 0 ){
+    # Export records for which virus type has changed from last week to this week in the CSV file:
+    readr::write_csv(in_new_not_old, paste0(polis_data_folder, "/Core_Ready_Files/in_new_not_old_virusTableData.csv"), na = "")
+  }
 
 
-
-  write_rds(afp.es.virus.01, paste("./datafiles_01/",
+  readr::write_rds(afp.es.virus.01, paste(polis_data_folder, "/Core_Ready_Files/",
                                    paste("positives", min(afp.es.virus.01$dateonset, na.rm = T),
                                          max(afp.es.virus.01$dateonset, na.rm = T),
                                          sep = "_"
@@ -3935,14 +3916,18 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
                                    sep = ""
   ))
 
+  cli::cli_process_done()
 
+  cli::cli_process_start("Checking for positives that don't match to GUIDs")
+
+  long.global.dist.01 <- sirfunctions::load_clean_dist_sp(type = "long")
 
   # AFP and ES that do not match to shape file
-  unmatched.afp.es.viruses.01 <- anti_join(afp.es.virus.01, long.global.dist.01, by = c("admin2guid" = "GUID", "yronset" = "active.year.01"))
+  unmatched.afp.es.viruses.01 <- dplyr::anti_join(afp.es.virus.01, long.global.dist.01, by = c("admin2guid" = "GUID", "yronset" = "active.year.01"))
 
   # CSV file listing out unmatch virus
 
-  write.csv(unmatched.afp.es.viruses.01, paste("./datafiles_01/",
+  readr::write_csv(unmatched.afp.es.viruses.01, paste(polis_data_folder, "/Core_Ready_Files/",
                                                paste("unmatch_positives", min(unmatched.afp.es.viruses.01$yronset, na.rm = T),
                                                      max(unmatched.afp.es.viruses.01$yronset, na.rm = T),
                                                      sep = "_"
@@ -3951,5 +3936,11 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
                                                sep = ""
   ))
 
+  cli::cli_process_done()
+
+  cli::cli_process_start("Clearing memory")
+  rm(list = ls())
+  gc()
+  cli::cli_process_done()
 
 }
