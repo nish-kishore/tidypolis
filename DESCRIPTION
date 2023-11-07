@@ -21,4 +21,10 @@ Imports:
   progressr,
   readr,
   tibble,
-  yaml
+  yaml, 
+  sirfunctions, 
+  purrr, 
+  rio, 
+  sf, 
+  stringr, 
+  tidyr

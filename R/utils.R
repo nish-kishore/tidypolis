@@ -817,7 +817,7 @@ create_cred_file <- function(polis_data_folder) {
 #' Rename variables via crosswalk
 #'
 #' @description Rename variables in tibble using crosswalk data
-#' @imoport dplyr
+#' @import dplyr
 #' @param api_data tibble: data pulled from api
 #' @param crosswalk tibble: crosswalk file loaded through rio
 #' @param table_name str: name of table to be crosswalked
@@ -1023,7 +1023,8 @@ f.download.compare.02 <- function(df.from.f.download.compare.01, old.download, n
 #' @description Create random samples of points for missing GPS data
 #' @import dplyr sf tidyr tibble
 #' @param df01 tibble: table of afp data
-#' @param long.global.dist.01 sf: spatial file of all locations
+#' @param global.dist.01 sf: spatial file of all locations
+#' @param returns tibble with lat/lon for all unsampled locations
 f.pre.stsample.01 <- function(df01, global.dist.01) {
 
   df01.noshape <- dplyr::anti_join(df01, global.dist.01, by=c("Admin2GUID"="GUID"))
@@ -1098,7 +1099,7 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
 
 #' Function for data qa check in AFP line list cleaning
 #' @description function creates a new variable when combined with a mutate statement in R code
-#' @imports dplyr
+#' @import dplyr
 #' @param date1 date 1 is the date to be checked against date2
 #' @param date2 date 2 is the date of onset such that the date should be after onset
 #' @returns quality controlled date variable
@@ -1117,7 +1118,7 @@ f.datecheck.onset <- function(date1, date2) {
 }
 
 #' Compare meta data outputs between two datasets
-#' @desciprtion compare meta data outputs between two datasets
+#' @description compare meta data outputs between two datasets
 #' @import dplyr
 #' @param new_table_metadata tibble
 #' @param old_table_metadata tibble
@@ -1184,6 +1185,7 @@ f.compare.metadata <- function(new_table_metadata, old_table_metadata){
 
 #' Summarize metadata from a tibble
 #' @description Summarize metadata from tibble
+#' @import skimr
 #' @param dataframe tibble
 #' @param categorical_max int: maximum number of categories considered
 #' @returns tibble: metadata
@@ -1235,8 +1237,8 @@ get_env_site_data <- function(){
 #'
 #' @description
 #' Process POLIS data into analytic datasets needed for CDC
-#' @import cli sirfunctions dplyr readr lubridate stringr rio tidyr purrr sf
-#' @param polis_data_folder
+#' @import cli sirfunctions dplyr readr lubridate stringr rio tidyr purrr sf openxlsx stringi tidyselect
+#' @param polis_data_folder str: location of polis data folder
 preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   #Step 1 - Basic cleaning and crosswalk ======
   cli::cli_h1("Step 1/5: Basic cleaning and crosswalk across datasets")
