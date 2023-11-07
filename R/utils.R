@@ -2420,6 +2420,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   gc()
   cli::cli_process_done()
 
+  cli::cli_process_start("Checking duplicated AFP EPIDs")
 
   afp.linelist.02 <- afp.linelist.01 |>
     dplyr::filter(surveillancetypename == "AFP") |>
@@ -2446,6 +2447,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   # remove duplicates in afp linelist
   afp.linelist.02 <- afp.linelist.02[!duplicated(afp.linelist.02$epid), ]
 
+  cli::cli_process_done()
+
+  cli::cli_process_start("Checking Missing AFP EPIDs and GUIDs")
 
   not.afp <- afp.linelist.01 |>
     dplyr::filter(surveillancetypename != "AFP") # this gives us non-AFP line list
@@ -2480,6 +2484,10 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
                                   ".csv",
                                   sep = ""
   ))
+
+  cli::cli_process_done()
+
+  cli::cli_process_start("Comparing data with last AFP dataset")
 
   afp.linelist.02 <- afp.linelist.02 |>
     dplyr::mutate(polis.latitude = as.character(polis.latitude),
@@ -2563,6 +2571,10 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
                                           sep = ""
   ))
 
+  cli::cli_process_done()
+
+  cli::cli_process_start("Create AFP Lat/Lon list")
+
   # note above is keeping the cases with missing date of onset and creating a giant new data dataet
 
   # Step 12 write.csv for AFP cases for Lat and long
@@ -2576,6 +2588,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
                                         sep = ""
   ))
 
+  cli::cli_process_done()
+
+  cli::cli_process_start("Comparing data with last non-AFP dataset")
 
   # Step 13 write.rds file for non AFP type cases
   not.afp.01 <- rbind(not.afp, unknown.afp)
@@ -2650,7 +2665,10 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
                               sep = ""
   ))
 
+  cli::cli_process_done()
 
+
+  cli::cli_process_start("Generating AFP dataset")
   # AFP cases with EPIDs ("14070210003" "50023710003" "Per 011-21"  "53060210001") got removed from original POLIS download "Cases_30-04-2020_20-15-38_from_01_Jan_2000_to_31_Dec_2018.csv"
 
   #move newly created linelists to the "core datafiles to combine" folder within core 2.0
@@ -2666,7 +2684,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
                                 ),".rds",
                                 sep = ""
   ))
+  cli::cli_process_done()
 
+  cli::cli_process_start("Creating light AFP dataset for WHO")
   #outputting lighter file for WHO
   afp.clean.light <- afp.clean.01 |>
     dplyr::filter(yronset >= 2019)
@@ -2679,6 +2699,10 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
                                    sep = ""
   ))
 
+  cli::cli_process_done()
+
+  cli::cli_process_start("Creating non-AFP dataset")
+
   #other surveillance linelist combine
   non.afp.files.01 <- list.files(path=paste0(polis_data_folder, "/Core_Ready_Files"), pattern="^.*(other_surveillance_type_linelist).*(.rds)$", full.names=TRUE)
   non.afp.clean.01 <- purrr::map_df(non.afp.files.01 , ~readr::read_rds(.x))
@@ -2689,6 +2713,10 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
                                     ),".rds",
                                     sep = ""
   ))
+
+  cli::cli_process_done()
+
+  cli::cli_h1("Creating SIA datasets")
 
 
 
