@@ -2716,7 +2716,374 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   cli::cli_process_done()
 
-  cli::cli_h1("Creating SIA datasets")
+  cli::cli_process_start("Clearing memory")
+
+  rm('afp.clean.01', 'afp.clean.light', 'afp.files.01', 'afp.linelist.01',
+     'afp.linelist.02', 'afp.linelist.latlong', 'afp.missing.01',
+     'afp.missing.02', 'afp_metadata_comparison', 'categorical_max',
+     'categorical_vars', 'col.afp.raw.01', 'dataframe', 'dup.epid',
+     'endyr', 'global.dist.01', 'in_new_and_old_but_modified',
+     'in_new_not_old', 'in_old_not_new', 'latest_folder_in_archive',
+     'new', 'new_table_metadata', 'non.afp.clean.01', 'non.afp.files.01',
+     'not.afp', 'not.afp.01', 'not_afp_metadata_comparison', 'old',
+     'old.file', 'old_table_metadata', 'startyr', 'table_metadata',
+     'unknown.afp', 'var_name_class', 'x')
+
+  gc()
+
+  cli::cli_process_done()
+
+  #Step 3 - Creating SIA datasets ====
+  cli::cli_h1("Step 3/5 - Creating SIA datasets")
+
+
+  # Step 1: Read in "old" data file (System to find "Old" data file)
+  latest_folder_in_archive <- list.files(paste0(polis_data_folder, "/Core_Ready_Files/Archive"), full.names = T) |>
+    file.info() |>
+    dplyr::filter(ctime == max(ctime)) |>
+    row.names()
+
+  x <- list.files(latest_folder_in_archive, full.names = T)
+
+  y <- list.files(paste0(polis_data_folder, "/Core_Ready_Files"), full.names = T)
+
+  old.file <- x[grepl("Activity",x)]
+
+  new.file <- y[grepl("Activity", y)]
+
+
+  cli::cli_process_start("Loading new SIA data")
+  # Step 1: Read in "new" data file
+  # Newest downloaded activity file, will be .rds located in Core Ready Files
+  sia.01.new <- readr::read_rds(new.file) |>
+    dplyr::mutate_all(as.character) |>
+    dplyr::rename_all(function(x) gsub(" ", ".", x)) |>
+    dplyr::mutate_all(list(~dplyr::na_if(.,"")))
+
+  # Make the names small case and remove space bar from names
+  names(sia.01.new) <- stringr::str_to_lower(names(sia.01.new))
+  cli::cli_process_done()
+
+  # QC CHECK
+  # This is for checking data across different download options
+
+  cli::cli_process_start("Loading old SIA data")
+  # Old pre-existing download
+  # This is previous Activity .rds that was preprocessed last week, it has been moved to the archive, change archive subfolder and specify last weeks Activity .rds
+  sia.01.old <- readr::read_rds(old.file) |>
+    dplyr::mutate_all(as.character) |>
+    dplyr::rename_all(function(x) gsub(" ", ".", x)) |>
+    dplyr::mutate_all(list(~dplyr::na_if(.,"")))
+
+  names(sia.01.old) <- stringr::str_to_lower(names(sia.01.old))
+  cli::cli_process_done()
+
+  # Are there differences in the names of the columns between two downloads?
+  f.compare.dataframe.cols(sia.01.old, sia.01.new)
+
+  # If okay with above then proceed to next step
+  # First determine the variables that would be excluded from the comparison
+  # this includes variables such as EPID numbers which would invariably change in values
+
+  var.list.01 <- c(
+    "sia.code", "sia.sub-activity.code", "country", "country.iso3", "who.region", "ist", "activity.start.date", "activity.end.date",
+    "last.updated.date", "sub-activity.start.date", "sub-activity.end.date", "admin1",
+    "admin2", "delay.reason", "priority", "country.population.%", "unpd.country.population", "targeted.population",
+    "immunized.population", "admin.coverage.%", "area.targeted.%", "area.population", "age.group.%", "wastage.factor",
+    "number.of.doses", "number.of.doses.approved", "im.loaded", "lqas.loaded", "sub-activity.last.updated.date", "admin.2.targeted.population",
+    "admin.2.immunized.population", "admin.2.accessibility.status", "admin.2.comments", "sub-activity.initial.planned.date",
+    "activity.parent.children.inaccessible", "children.inaccessible", "admin2.children.inaccessible", "linked.outbreak(s)",
+    "admin.0.guid", "admin.1.guid", "admin.2.guid"
+  )
+
+  cli::cli_process_start("Comparing downloaded variables")
+  # Exclude the variables from
+  sia.01.old.compare <- sia.01.old |>
+    dplyr::select(-var.list.01)
+
+  sia.01.new.compare <- sia.01.new |>
+    dplyr::select(-var.list.01)
+
+  new.var.sia.01 <- f.download.compare.01(sia.01.old.compare, sia.01.new.compare)
+
+  new.df <- new.var.sia.01 |>
+    dplyr::filter(is.na(old.distinct.01) | diff.distinct.01 >= 1)
+
+  if (nrow(new.df) >= 1) {
+    cli::cli_alert_danger("There is either a new variable in the SIA data or new value of an existing variable.
+       Please run f.download.compare.02 to see what it is. Preprocessing can not continue until this is adressed.")
+    stop()
+  } else {
+
+    # Uncomment for STOP error above
+    # Use the function below to determine what has changed between the two downloads
+    # run the above line by line to generate new.var.sia.01
+
+    #new.value.or.var.01 <- f.download.compare.02(new.var.sia.01, sia.01.old.compare, sia.01.new.compare)
+
+  }
+  cli::cli_process_done()
+
+  # Get the date from 'Mon-year' format of parent start date as a first day of the month.
+  # this would insert first of month if date is missing from the activity date. This
+  # leads to errors if one is trying to guess duration of activity. For negative duration ignore it.
+  # Active year at country level is start yr of activity
+  # active year at prov and district level is start yr of sub-activity
+
+  cli::cli_process_start("Create CDC variables")
+  endyr <- year(format(Sys.time()))
+  startyr <- 2020
+  sia.02 <- sia.01.new |>
+    dplyr::rename(linked.obx=`linked.outbreak(s)`,
+           sia.sub.activity.code = `sia.sub-activity.code`,
+           sub.activity.end.date = `sub-activity.end.date`,
+           sub.activity.start.date = `sub-activity.start.date`,
+           sub.activity.last.updated.date = `sub-activity.last.updated.date`,
+           sub.activity.initial.planned.date = `sub-activity.initial.planned.date`
+           #`country.population.%` = `country.population.%`,
+           #`area.targeted.%` = `area.targeted.%`,
+           #`age.group.%`=`age.group.%`,
+           #`admin.coverage.%` = `admin.coverage.%`
+    ) |>
+    dplyr::mutate(
+      # Checked with Valentina at WHO. lqas and im loaded variables are not correctly populated in the POLIS. Valentina will fix this issue.
+      #status = ifelse((im.loaded == "yes" & is.na(status == T)) | (lqas.loaded == "yes" & is.na(status == T)),
+      #                "Done", status),
+      status = tidyr::replace_na(status, "Missing"),
+      vaccine.type = tidyr::replace_na(vaccine.type, "Missing")
+    ) |>
+
+    dplyr::mutate_at(
+      dplyr::vars(sub.activity.end.date), ~ dplyr::na_if(., "undefined")
+    ) |>
+    dplyr::mutate_at(
+      dplyr::vars(
+        activity.start.date, activity.end.date,
+        sub.activity.start.date, sub.activity.end.date
+      ), ~ lubridate::parse_date_time(., c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S"))
+    ) |>
+    dplyr::mutate(
+      yr.sia = lubridate::year(activity.start.date),
+      yr.subsia = lubridate::year(sub.activity.start.date),
+      month.sia = lubridate::month(activity.start.date),
+      month.subsia = lubridate::month(activity.start.date),
+      `admin.coverage.%` = as.numeric(`admin.coverage.%`)
+    ) |>
+    dplyr::rename(
+      place.admin.0 = country,
+      place.admin.1 = admin1,
+      place.admin.2 = admin2
+    ) |>
+    dplyr::filter(dplyr::between(yr.sia, startyr, endyr)) |>
+    # Pakistan does not match to shape file for 2008 and 2009 for
+    # KP and FATA as name change. They were called NWFP then
+    dplyr::mutate(
+      place.admin.1 = dplyr::case_when(
+        (yr.sia == 2009 | yr.sia == 2008) & (place.admin.1 == "KHYBER PAKHTOON" | place.admin.1 == "FATA") ~ "NWFP",
+        TRUE ~ as.character(place.admin.1)
+      ),
+      place.admin.0 = ifelse(stringr::str_detect(place.admin.0, "IVOIRE"),"COTE D IVOIRE",place.admin.0)
+    ) |>
+    dplyr::mutate(
+      adm2guid  = paste0("{", toupper(admin.2.guid), "}"),
+      adm1guid  = paste0("{", toupper(admin.1.guid), "}"),
+      adm0guid  = paste0("{", toupper(admin.0.guid), "}")
+    ) |>
+    dplyr::select(-admin.0.guid, -admin.1.guid, -admin.2.guid) |>
+    dplyr::distinct()
+
+  cli::cli_process_done()
+
+  cli::cli_process_start("Load long global district shapefiles")
+  long.global.dist.01 <- sirfunctions::load_clean_dist_sp(type = "long")
+  cli::cli_process_done()
+
+  cli::cli_process_start("Checking GUIDs")
+  # SIA file with GUID
+  # SIAs match with GUIDs in shapes
+  sia.03 <- sia.02 |>
+    dplyr::left_join(long.global.dist.01 |> dplyr::select(GUID, ADM0_NAME, ADM1_NAME, ADM2_NAME, active.year.01), by=c("adm2guid"="GUID", "yr.sia"="active.year.01"))|>
+    dplyr::mutate(no_match=ifelse(is.na(ADM2_NAME)==T, 1, 0))
+
+  # SIAs did not match with GUIDs in shapes.
+  tofix <- sia.03 |>
+    dplyr::select(-ADM0_NAME, -ADM1_NAME, -ADM2_NAME) |>
+    dplyr::filter(no_match==1) |>
+    dplyr::left_join(long.global.dist.01 |> dplyr::select(ADM0_NAME, ADM1_NAME, ADM2_NAME, active.year.01, GUID),
+              by = c("place.admin.0" = "ADM0_NAME", "place.admin.1" = "ADM1_NAME", "place.admin.2" = "ADM2_NAME", "yr.sia" = "active.year.01")) |>
+    dplyr::mutate(missing.guid = ifelse(is.na(GUID)==T, 1, 0),
+           adm2guid = ifelse(missing.guid==0, GUID, adm2guid)) |>
+    dplyr::select(-GUID, -no_match)
+
+  # Combine SIAs matched with prov, dist with shapes
+  sia.04 <- sia.03 |>
+    dplyr::filter(no_match==0)|>
+    dplyr::bind_rows(tofix)|>
+    dplyr::mutate(place.admin.1=ifelse(is.na(place.admin.1)==T, ADM1_NAME, place.admin.1),
+           place.admin.2=ifelse(is.na(place.admin.2)==T, ADM2_NAME, place.admin.2)) |>
+    dplyr::select(-no_match)
+
+  # Next step is to remove duplicates:
+  sia.05 <- dplyr::distinct(sia.04, adm2guid, sub.activity.start.date, vaccine.type, age.group, status, lqas.loaded, im.loaded, .keep_all= TRUE)
+
+  cli::cli_process_done()
+
+  cli::cli_process_start("Checking for duplicates")
+  # Another step to check duplicates:
+  savescipen <- getOption("scipen")
+  options(scipen = 999)
+  sia.06 <- sia.05 |>
+    dplyr::mutate(sub.activity.start.date = lubridate::as_date(sub.activity.start.date)) |>
+    dplyr::arrange(sub.activity.start.date) |>
+    dplyr::group_by(adm2guid, vaccine.type) |>
+    dplyr::mutate(camp.diff.days = as.numeric(sub.activity.start.date - dplyr::lag(sub.activity.start.date))) |>
+    #this creates variable that is days from last campaign of that vaccine
+    dplyr::mutate(dup=dplyr::case_when(camp.diff.days==0 & !is.na(place.admin.2)~ 1,
+                         camp.diff.days>0 | is.na(place.admin.2)==T | is.na(camp.diff.days)==T ~ 0)) |>
+
+    #manually removing extra duplicates
+    dplyr::filter(sia.sub.activity.code!="PAK-2021-006-1") |>
+    dplyr::filter(sia.sub.activity.code!="SOM-2000-002-2") |>
+    dplyr::select(-missing.guid, -ADM0_NAME, -ADM1_NAME, -ADM2_NAME) |>
+    dplyr::select(-c(camp.diff.days, dup)) |>
+    #change class of vars to match old file
+    dplyr::mutate(`country.population.%` = as.character(`country.population.%`),
+           `area.targeted.%` = as.character(`area.targeted.%`),
+           `age.group.%` = as.character(`age.group.%`),
+           `wastage.factor` = as.character(`wastage.factor`),
+           sub.activity.start.date = as.POSIXct(round(as.POSIXct(sub.activity.start.date), units="day"), format="%Y-%m-%d %H:%M:%S")
+    ) |>
+    dplyr::ungroup() |>
+    dplyr::mutate_at(c("admin.1.id",
+                "admin.2.id",
+                "unpd.country.population",
+                "immunized.population",
+                "targeted.population",
+                "number.of.doses",
+                "admin.2.targeted.population",
+                "admin.2.immunized.population",
+                "admin2.children.inaccessible",
+                "number.of.doses.approved",
+                "children.inaccessible",
+                "activity.parent.children.inaccessible",
+                "admin.0.id" ),
+              as.numeric)
+  options(scipen = savescipen)
+
+  cli::cli_process_done()
+
+  cli::cli_process_start("Checking metadata")
+  # This is the final SIA file which would be used for analysis.
+  #Compare the final file to last week's final file to identify any differences in var_names, var_classes, or categorical responses
+  sia.06 <- sia.06 |>
+    dplyr::select(-dplyr::starts_with("SHAPE"))
+
+  files <- list.files(paste0(polis_data_folder, "/Core_Ready_Files/"), full.names = T)
+
+  old.file <- files[grepl("sia", files)]
+
+  new_table_metadata <- f.summarise.metadata(sia.06)
+  old_table_metadata <- f.summarise.metadata(readr::read_rds(old.file))
+  sia_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata)
+
+  #check obs in new and old
+  old <- readr::read_rds(old.file) |>
+    dplyr::mutate_all(as.character)
+  new <- sia.06 |>
+    dplyr::mutate_all(as.character)
+  in_old_not_new <- old |>
+    dplyr::anti_join(new, by=c("sia.sub.activity.code", "adm2guid"))
+  in_new_not_old <- new |>
+    dplyr::anti_join(old, by=c("sia.sub.activity.code", "adm2guid"))
+  in_new_and_old_but_modified <- new |>
+    dplyr::group_by(sia.sub.activity.code, adm2guid) |>
+    dplyr::slice(1) |>
+    dplyr::ungroup() |>
+    dplyr::inner_join(old |>
+                 dplyr::group_by(sia.sub.activity.code, adm2guid) |>
+                 dplyr::slice(1) |>
+                 dplyr::ungroup(), by=c("sia.sub.activity.code", "adm2guid")) |>
+    dplyr::select(-c(setdiff(colnames(new), colnames(old)))) |>
+    # setdiff(., old |>
+    #           select(-c(setdiff(colnames(old), colnames(new))))) |>
+    # #wide_to_long
+    tidyr::pivot_longer(cols=-c("sia.sub.activity.code", "adm2guid")) |>
+    dplyr::mutate(source = ifelse(stringr::str_sub(name, -2) == ".x", "new", "old")) |>
+    dplyr::mutate(name = stringr::str_sub(name, 1, -3)) |>
+    #long_to_wide
+    tidyr::pivot_wider(names_from=source, values_from=value) |>
+    dplyr::filter(new != old)
+
+  cli::cli_process_done()
+
+  cli::cli_process_start("Writing out SIA file")
+  # Write final SIA file to RDS file
+  readr::write_rds(sia.06, paste(polis_data_folder, "/Core_Ready_Files/",
+                          paste("sia", min(sia.06$yr.sia, na.rm = T), max(sia.06$yr.sia, na.rm = T), sep = "_"),
+                          ".rds",
+                          sep = ""
+  ))
+  cli::cli_process_done()
+
+  #combine SIA pre-2020 with the current rds
+  # read SIA and combine to make one SIA dataset
+  sia.files.01 <- list.files(path=paste0(polis_data_folder, "/Core_Ready_Files/"), pattern="^.*(sia).*(.rds)$", full.names=TRUE)
+  sia.clean.01 <- purrr::map_df(sia.files.01 , ~readr::read_rds(.x))
+
+  readr::write_rds(sia.clean.01, paste(polis_data_folder, "Core_Ready_Files",
+                                paste("sia", min(sia.clean.01$yr.sia, na.rm = T),
+                                      max(sia.clean.01$yr.sia, na.rm = T),
+                                      sep = "_"
+                                ),".rds",
+                                sep = ""
+  ))
+
+  cli::cli_process_start("Evaluating unmatched SIAs")
+
+  # Identify the SIAs did not match to shape file.
+  # Each SIA by district is a separate row
+
+  dist.sia.mismatch.01 <- sia.05 |>
+    dplyr::filter(missing.guid == 1)
+
+  # Summary list of non-matching SIA to shape file
+  # by country by year
+
+  cty.yr.mismatch <- dist.sia.mismatch.01 |>
+    dplyr::group_by(place.admin.0, yr.sia) |>
+    dplyr::summarise(no.of.mismatch.sia = n())
+
+  # excel file summarizing mismatch SIA by country
+
+  readr::write_csv(cty.yr.mismatch, paste(polis_data_folder, "/Core_Ready_Files",
+                                   paste("ctry_sia_mismatch", min(cty.yr.mismatch$yr.sia, na.rm = T),
+                                         max(cty.yr.mismatch$yr.sia, na.rm = T),
+                                         sep = "_"
+                                   ),
+                                   ".csv",
+                                   sep = ""
+  ))
+
+  cli::cli_process_done()
+  # the curly brace below is closure of else statement. Do not delete
+
+  cli::cli_process_done("Clearing memory")
+  rm(
+    'cty.yr.mismatch',
+    'dist.sia.mismatch.01', 'endyr', 'files',
+    'in_new_and_old_but_modified', 'in_new_not_old',
+    'in_old_not_new', 'latest_folder_in_archive',
+    'long.global.dist.01', 'new', 'new.df', 'new.file',
+    'new.var.sia.01', 'new_table_metadata', 'old', 'old.file',
+    'old_table_metadata', 'savescipen',
+    'sia.01.new', 'sia.01.new.compare', 'sia.01.old',
+    'sia.01.old.compare', 'sia.02', 'sia.03', 'sia.04', 'sia.05',
+    'sia.06', 'sia.clean.01', 'sia.files.01', 'sia_metadata_comparison',
+    'startyr', 'tofix', 'var.list.01', 'x', 'y'
+  )
+
+  cli::cli_process_done()
+  cli::cli_h1("Step 4/5 - ES Data")
 
 
 
