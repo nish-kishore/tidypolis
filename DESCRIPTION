@@ -22,7 +22,13 @@ Imports:
   readr,
   tibble,
   yaml, 
-  rio, 
   sirfunctions, 
-  stringr,
-  tidyr
+  purrr,
+  rio, 
+  sf, 
+  stringi,
+  stringr, 
+  tidyr, 
+  skimr, 
+  openxlsx, 
+  tidyselect
