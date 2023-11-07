@@ -3087,4 +3087,367 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
 
 
+  es.01.new <- rio::import("./preprocessing/datafiles_01/API_files/Core_Ready_Files/EnvSamples_Detailed_Dataset_09-10-2023_15-10-49_from_01_Jan_2000_to_09_Oct_2023.rds") |>
+    mutate_all(as.character) |>
+    rename_all(function(x) gsub(" ", ".", x)) |>
+    mutate_all(list(~na_if(.,"")))
+
+  es.prob.01 <- problems(es.01.new)
+
+  # Script below will stop further execution if there is parsing failure above
+  if (nrow(es.prob.01) >= 1) {
+    stop("ES parsing issue. Review parsing problem dataframe")
+  }
+
+
+  es.01.old <- rio::import("./preprocessing/datafiles_01/API_files/Core_Ready_Files/Archive/09-10-2023_15-10-49/EnvSamples_Detailed_Dataset_02-10-2023_10-22-38_from_01_Jan_2000_to_02_Oct_2023.rds") |>
+    mutate_all(as.character) |>
+    rename_all(function(x) gsub(" ", ".", x)) |>
+    mutate_all(list(~na_if(.,"")))
+
+  es.prob.01 <- problems(es.01.old)
+
+  # Script below will stop further execution if there is parsing failure above
+  if (nrow(es.prob.01) >= 1) {
+    stop("ES parsing issue. Review parsing problem dataframe")
+  }
+
+
+  # Modifing POLIS variable names to make them easier to work with
+  names(es.01.new) <- str_to_lower(names(es.01.new))
+  names(es.01.old) <- str_to_lower(names(es.01.old))
+
+
+  # QC CHECK ====================
+  # This is for checking data across different download options
+
+
+  # Are there differences in the names of the columns between two downloads?
+  f.compare.dataframe.cols(es.01.old, es.01.new)
+
+  setdiff(colnames(es.01.old), colnames(es.01.new))
+  setdiff(colnames(es.01.new), colnames(es.01.old))
+
+
+  # If ok with above then proceed to next step
+  # First determine the variables that would be excluded from the comparison
+  # this includes variables such as EPID numbers which would invariably change in values
+
+
+  var.list.01 <- c(
+    "env.sample.id", "env.sample.manual.edit.id", "sample.id", "worksheet.name", "labid",
+    "site.comment", "y", "x", "collection.date", "npev", "under.process", "is.suspected","advanced.notification",
+    "date.shipped.to.ref.lab", "region.id", "region.official.name", "admin.0.officialname", "admin.1.id",
+    "admin.1.officialname", "admin.2.id", "admin.2.officialname", "updated.date", "publish.date", "uploaded.date",
+    "uploaded.by",  "reporting.year", "date.notification.to.hq", "date.received.in.lab", "created.date", "date.f1.ref.itd",
+    "date.f2.ref.itd", "date.f3.ref.itd","date.f4.ref.itd","date.f5.ref.itd", "date.f6.ref.itd"
+  )
+
+
+  ## Exclude the variables from
+  es.02.old <- es.01.old |>
+    select(-var.list.01)
+
+  es.02.new <- es.01.new |>
+    select(-c(var.list.01))
+
+  new.var.es.01 <- f.download.compare.01(es.02.new, es.02.old)
+
+  new.df <- new.var.es.01 |>
+    filter(is.na(old.distinct.01) | diff.distinct.01 >= 1)
+
+  if (nrow(new.df) >= 1) {
+    stop("There is either a new variable in the ES data or new value of an existing variable.
+          Please run f.download.compare.01 to see what it is. Preprocessing can not continue until this is adressed.")
+  }
+  temp <- f.download.compare.02(new.var.es.01 |> filter(!(is.na(old.distinct.01)) & variable != "id"), es.02.old, es.02.new)
+  remove(es.01.old, es.02.old)
+  # Data manipulation ---------------------------
+
+  # Renaming and creating variables
+  es.02 <- es.01.new |>
+    rename(
+      province = admin.1.officialname,
+      district = admin.2.officialname,
+      ctry.guid = admin.0.guid,
+      prov.guid = admin.1.guid,
+      dist.guid = admin.2.guid,
+      lat = y,
+      lng = x,
+      vdpv.classification.id = `vdpv.classification.id(s)`,
+      vdpv.classification = `vdpv.classification(s)`,
+      is.advanced.notification = advanced.notification,
+      virus.cluster = `virus.cluster(s)`,
+      emergence.group = `emergence.group(s)`,
+      virus.type = `virus.type(s)`
+    ) |>
+    mutate(
+      ctry = admin.0,
+      site = str_to_title(site.name),
+      collect.date = dmy(collection.date),
+      collect.yr = year(collect.date),
+      sabin = case_when(
+        vaccine.1 == "Yes" | vaccine.2 == "Yes" | vaccine.3 == "Yes" ~ 1,
+        vaccine.1 == "No" & vaccine.2 == "No" & vaccine.3 == "No" ~ 0
+      ),
+      vdpv = case_when(
+        vdpv.1 == "Yes" | vdpv.2 == "Yes" | vdpv.3 == "Yes" ~ 1,
+        vdpv.1 == "No" & vdpv.2 == "No" & vdpv.3 == "No" ~ 0
+      ),
+      wpv = case_when(
+        wild.1 == "Yes" | wild.3 == "Yes" ~ 1,
+        wild.1 == "No" & wild.3 == "No" ~ 0
+      ),
+      npev = case_when(
+        npev == "Yes" ~ 1,
+        #npev == "No" | is.na(npev) ~ 0
+        npev == "No" | npev=="" | is.na(npev) ~ 0
+      ),
+      nvaccine = case_when(
+        nvaccine.2 == "Yes"  ~ 1,
+        nvaccine.2 == "No"   ~ 0,
+      ),
+      # nvdpv = case_when(
+      #    nvdpv.2 == "Yes" ~ 1,
+      #    nvdpv.2 == "No" ~ 0,
+      # ),
+      #ev.detect = case_when(
+      #  sabin == 1 | vdpv == 1 | wpv == 1 | npev == 1 | nvaccine == 1 | nvdpv == 1 ~ 1,
+      #  sabin == 0 & vdpv == 0 & wpv == 0 & npev == 0 & nvaccine == 0 & nvdpv == 0 ~ 0
+      #),
+      ev.detect = case_when(who.region == "AFRO" & (
+        if_any( c("vaccine.1", "vaccine.2", "vaccine.3", "nvaccine.2",
+                  "vdpv.1", "vdpv.2", "vdpv.3",
+                  "wild.1", "wild.3"), ~str_detect(., "Yes")) |
+          npev==1 |
+          str_detect(virus.type, "WILD") |
+          str_detect(virus.type, "VDPV") |
+          str_detect(virus.type, "VACCINE") |
+          str_detect(virus.type, "NPE") |
+          str_detect(final.combined.rtpcr.results, "PV") |
+          str_detect(final.combined.rtpcr.results, "NPE")) ~ 1,
+        who.region != "AFRO" & (
+          if_any(c("vaccine.1", "vaccine.2", "vaccine.3",
+                   "nvaccine.2", "vdpv.1", "vdpv.2", "vdpv.3",
+                   "wild.1", "wild.3"), ~str_detect(., "Yes")) |
+            (npev==1 & !is.na(npev))) ~ 1,
+        TRUE ~ 0),
+      ctry.guid = ifelse(is.na(ctry.guid) | ctry.guid == "", NA, paste("{", str_to_upper(ctry.guid), "}", sep = "")),
+      prov.guid = ifelse(is.na(prov.guid) | prov.guid == "", NA, paste("{", str_to_upper(prov.guid), "}", sep = "")),
+      dist.guid = ifelse(is.na(dist.guid) | dist.guid == "", NA, paste("{", str_to_upper(dist.guid), "}", sep = ""))
+    ) |>
+    mutate_at(c("ctry", "province", "district"), list(~str_trim(str_to_upper(.), "both"))) |>
+    distinct()
+
+
+  # Make sure 'env.sample.maual.edit.id' is unique for each ENV sample
+  es.00 <- es.02[duplicated(es.02$env.sample.manual.edit.id), ]
+
+  # Script below will stop further execution if there is a duplicate ENV sample manual id
+  if (nrow(es.00) >= 1) {
+    stop("Duplicate ENV sample manual ids. Check the data for duplicate records.
+          If they are the exact same, then delete one record")
+  } else {
+    "If no duplicates found, then proceed"
+  }
+
+
+  # find out duplicate ES samples even though they have different 'env.sample.maual.edit.id'
+  # from same site, same date, with same virus type on sabin samples.
+
+  es.dup.01 <- es.02 |>
+    filter(sabin==1) |>
+    group_by(env.sample.id, virus.type, emergence.group, nt.changes, site.id, collection.date, collect.yr) |>
+    mutate(es.dups=n()) |>
+    filter(es.dups >=2)|>
+    select(env.sample.manual.edit.id, env.sample.id, sample.id, site.id, site.code, site.name, sample.condition, collection.date, virus.type,
+           nt.changes, emergence.group,ctry, collect.date, collect.yr, es.dups )
+
+  # Script below will stop further execution if there is a duplicate ENV sabin sample from same site, same date, with same virus type
+  if (nrow(es.dup.01) >= 1) {
+    stop("Duplicate ENV sample. Check the data for duplicate records.
+          If they are the exact same, then contact Ashley")
+  } else {
+    "If no duplicates found, then proceed"
+  }
+
+  es.dup.01 <- es.dup.01[order(es.dup.01$env.sample.id,es.dup.01$virus.type, es.dup.01$collect.yr),] |> select(-es.dups)
+
+  # Export duplicate viruses in the CSV file:
+  write_csv(es.dup.01, "./preprocessing/datafiles_01/duplicate_ES_Polis.csv", na = "")
+
+  remove(es.dup.01)
+
+  es.space.02 <- es.02 |>
+    separate_rows(virus.type, sep = ",") |>
+    mutate(
+      virus.type = str_trim(virus.type, "both"),
+      virus.type = ifelse(virus.type == "cVDPV1", "cVDPV 1", virus.type),
+      virus.type = ifelse(virus.type == "cVDPV2", "cVDPV 2", virus.type),
+      virus.type = ifelse(virus.type == "cVDPV3", "cVDPV 3", virus.type),
+      virus.type = ifelse(virus.type == "WILD1", "WILD 1", virus.type),
+      virus.type = ifelse(virus.type == "WILD3", "WILD 3", virus.type),
+      virus.type = ifelse(virus.type == "VDPV1", "VDPV 1", virus.type),
+      virus.type = ifelse(virus.type == "VDPV2", "VDPV 2", virus.type),
+      virus.type = ifelse(virus.type == "VDPV3", "VDPV 3", virus.type),
+      virus.type = ifelse(virus.type == "VACCINE1", "VACCINE 1", virus.type),
+      virus.type = ifelse(virus.type == "VACCINE2", "VACCINE 2", virus.type),
+      virus.type = ifelse(virus.type == "VACCINE3", "VACCINE 3", virus.type),
+      virus.type = ifelse(virus.type == "aVDPV1", "aVDPV 1", virus.type),
+      virus.type = ifelse(virus.type == "aVDPV2", "aVDPV 2", virus.type),
+      virus.type = ifelse(virus.type == "aVDPV3", "aVDPV 3", virus.type)
+    )
+
+
+  es.space.03 <- es.space.02 |>
+    group_by(env.sample.manual.edit.id) |>
+    summarise(virus.type.01 = paste(virus.type, collapse = ", "))
+
+  es.space.03$virus.type.01[es.space.03$virus.type.01=="NA"] <- NA
+
+  es.02 <- right_join(es.space.03, es.02, by= c("env.sample.manual.edit.id"="env.sample.manual.edit.id")) |>
+    select(-virus.type) |>
+    rename(virus.type=virus.type.01) |>
+    mutate(lat = as.numeric(lat),
+           lng = as.numeric(lng))
+
+
+
+  # Check if na in guid of es country, province or district ================
+  na.es.01 <- es.02 |>
+    summarise_at(vars(ctry.guid, prov.guid, dist.guid, lat, lng), list(~sum(is.na(.))))
+
+  remove(es.space.02, es.space.03, es.01.new, es.02.new)
+
+  # attach to shapefile  ---------------------------
+
+  # check and make sure there are no new site names:
+  envSiteYearList <- read.csv("./preprocessing/datafiles_01/envSiteYearList.csv", stringsAsFactors = FALSE)
+  envSiteYearList$site.name <- gsub("\n", " ", envSiteYearList$site.name)
+  envSiteYearList$site.name <- toupper(envSiteYearList$site.name)
+
+  es.02$site.name <- gsub("\r\n", " ", es.02$site.name)
+  es.02$site.name <- toupper(es.02$site.name)
+  es.02$site.name <- str_trim(es.02$site.name)
+
+  envSiteYearList$site.name <- str_trim(envSiteYearList$site.name)
+
+  newsites <- setdiff(es.02$site.name, envSiteYearList$site.name)
+
+  # some new sites are just old sites with no lat or long
+  truenewsites <- es.02 |>
+    filter(site.name %in% newsites) |>
+    filter(is.na(lat)) |>
+    select(admin.0, site.name, site.id, site.code, lat) |>
+    unique()
+
+  if (nrow(truenewsites) > 0) {
+    ENVstatus <- "WARNING"
+    print("WARNING, there are site names which can not be found in our database.
+            Please run envshapecheck_02.R to make sure each site has a new GUID.
+            Once envshapecheck.02 is run come back to this code and run from line #194")
+  }
+
+  ENVstatus <- "clear"
+
+
+  #Note 5/27/22 (Luke): We are currently skipping the join to envSiteYearList until issues with shape matching in envShapeCheck_02 have been resolved.
+  # change incorrect guids
+  # es.03 <- left_join(
+  #   es.02 |> select(-c(
+  #     admin.0,  admin.1,
+  #     admin.2, district,  ctry, province
+  #   )),
+  #   envSiteYearList |> select(ADM0_NAME, ADM1_NAME, ADM2_NAME, site.name, GUID, year),
+  #   by = c("site.name" = "site.name", "collect.yr" = "year")
+  # )  |> mutate(
+  #   ADM0_NAME = ifelse(is.na(ADM0_NAME), str_to_upper(ADM0_NAME), ADM0_NAME),
+  #   ADM1_NAME = ifelse(is.na(ADM1_NAME), str_to_upper(ADM1_NAME), ADM1_NAME),
+  #   ADM2_NAME = ifelse(is.na(ADM2_NAME), str_to_upper(ADM2_NAME), ADM2_NAME),
+  #   GUID = case_when(is.na(GUID) | GUID == "" ~ dist.guid,
+  #                    TRUE ~ GUID),
+  #   site.name = str_to_title(site.name))
+  #changed above to keep old "official" name variables so that we have geography for sites without lat/long
+
+  #Rename es.02 as es.03 directly, until the above has been re-instated and issues with envshapecheck resolved. Change var names to match es.03 expected output
+  es.03 <-  es.02 |>
+    rename(ADM0_NAME = admin.0,
+           ADM1_NAME = admin.1,
+           ADM2_NAME = admin.2) |>
+    mutate(GUID = dist.guid) |>
+    select(-c("district", "ctry", "province"))
+
+
+  #fix CIV
+  es.03 = es.03|>
+    mutate(ADM0_NAME = ifelse(str_detect(ADM0_NAME, "IVOIRE"),"COTE D IVOIRE",ADM0_NAME))
+
+  shape.name.01 <- global.ctry.01 |>
+    select(ISO_3_CODE, ADM0_NAME.rep = ADM0_NAME) |> distinct(.keep_all = T)
+
+  savescipen <- getOption("scipen")
+  options(scipen = 999)
+  es.04 <- left_join(es.03, shape.name.01, by = c("country.iso3" = "ISO_3_CODE")) |>
+    mutate(ADM0_NAME = ifelse(is.na(ADM0_NAME), ADM0_NAME.rep, ADM0_NAME)) |>
+    select(-ADM0_NAME.rep) |>
+    mutate(lat = as.character(lat),
+           lng = as.character(lng)) |>
+    mutate_at(c("admin.2.id", "region.id", "reporting.week", "reporting.year",
+                "env.sample.manual.edit.id", "site.id", "sample.id", "admin.0.id", "admin.1.id"), ~as.numeric(.))
+  options(scipen = savescipen)
+
+  # save data  ---------------------------
+  #Compare the final file to last week's final file to identify any differences in var_names, var_classes, or categorical responses
+  new_table_metadata <- f.summarise.metadata(es.04)
+  old_table_metadata <- f.summarise.metadata(readRDS("./datafiles_01/es_2001-01-08_2023-09-08.rds"))
+  es_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata)
+
+  #compare obs
+  new <- es.04 |>
+    mutate(env.sample.manual.edit.id = str_squish(env.sample.manual.edit.id)) |>
+    mutate_all(as.character)
+  old <- readRDS("./datafiles_01/es_2001-01-08_2023-09-08.rds") |>
+    mutate(env.sample.manual.edit.id = str_squish(env.sample.manual.edit.id)) |>
+    mutate_all(as.character)
+  nrow(new)
+  nrow(old)
+  ncol(new)
+  ncol(old)
+  in_new_not_old <- new |>
+    filter(!(env.sample.manual.edit.id %in% old$env.sample.manual.edit.id))
+  in_old_not_new <- old |>
+    filter(!(env.sample.manual.edit.id %in% new$env.sample.manual.edit.id))
+  in_new_and_old_but_modified <- new |>
+    filter(env.sample.manual.edit.id %in% old$env.sample.manual.edit.id) |>
+    select(-c(setdiff(colnames(new), colnames(old)))) |>
+    setdiff(., old |>
+              select(-c(setdiff(colnames(old), colnames(new))))) |>
+    inner_join(old |>
+                 filter(env.sample.manual.edit.id %in% new$env.sample.manual.edit.id) |>
+                 select(-c(setdiff(colnames(old), colnames(new)))) |>
+                 setdiff(., new |>
+                           select(-c(setdiff(colnames(new), colnames(old))))), by="env.sample.manual.edit.id") |>
+    #wide_to_long
+    pivot_longer(cols=-env.sample.manual.edit.id) |>
+    mutate(source = ifelse(str_sub(name, -2) == ".x", "new", "old")) |>
+    mutate(name = str_sub(name, 1, -3)) |>
+    #long_to_wide
+    pivot_wider(names_from=source, values_from=value) |>
+    filter(new != old)
+
+  write_rds(es.04, paste("./datafiles_01/",
+                         paste("es", min(es.04$collect.date, na.rm = T), max(es.04$collect.date, na.rm = T), sep = "_"),
+                         ".rds",
+                         sep = ""
+  ))
+
+
+  # remove unneeded data from workspace
+  remove(es.00, es.02, es.03, shape.name.01, envSiteYearList, na.es.01,
+         new.var.es.01, new.df, var.list.01)
+
+
+
+
+
 }
