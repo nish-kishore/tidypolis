@@ -23,8 +23,12 @@ Imports:
   tibble,
   yaml, 
   sirfunctions, 
-  purrr, 
+  purrr,
   rio, 
   sf, 
+  stringi,
   stringr, 
-  tidyr
+  tidyr, 
+  skimr, 
+  openxlsx, 
+  tidyselect

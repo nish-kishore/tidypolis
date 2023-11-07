@@ -956,7 +956,7 @@ f.download.compare.01 <- function(old.download, new.download) {
 #' THIS FUNCTION WOULD LIST OUT THE DISTINCT VALUES BY VARIABLE
 #' ALL VALUES FOR NEW VARIABLE AND NEW VALUES FOR EXISTING
 #' @description List out distinct values that are not the same by variable
-#' @import dplyr
+#' @import dplyr purrr purrr
 #' @param df.from.f.download.compare.01 tibble: output from f.download.compare.01
 #' @param old.download tibble
 #' @param new.download tibble
@@ -1019,7 +1019,7 @@ f.download.compare.02 <- function(df.from.f.download.compare.01, old.download, n
 #' @import dplyr sf tidyr tibble
 #' @param df01 tibble: table of afp data
 #' @param global.dist.01 sf: spatial file of all locations
-#' @param returns tibble with lat/lon for all unsampled locations
+#' @returns tibble with lat/lon for all unsampled locations
 f.pre.stsample.01 <- function(df01, global.dist.01) {
 
   df01.noshape <- dplyr::anti_join(df01, global.dist.01, by=c("Admin2GUID"="GUID"))
@@ -1180,7 +1180,7 @@ f.compare.metadata <- function(new_table_metadata, old_table_metadata){
 
 #' Summarize metadata from a tibble
 #' @description Summarize metadata from tibble
-#' @import skimr
+#' @import skimr tidyselect
 #' @param dataframe tibble
 #' @param categorical_max int: maximum number of categories considered
 #' @returns tibble: metadata
@@ -1232,7 +1232,7 @@ get_env_site_data <- function(){
 #'
 #' @description
 #' Process POLIS data into analytic datasets needed for CDC
-#' @import cli sirfunctions dplyr readr lubridate stringr rio tidyr
+#' @import cli sirfunctions dplyr readr lubridate stringr rio tidyr openxlsx stringi purrr
 #' @param polis_data_folder str: location of the POLIS data folder
 #' @return Outputs intermediary core ready files
 preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
@@ -2958,7 +2958,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
            `area.targeted.%` = as.character(`area.targeted.%`),
            `age.group.%` = as.character(`age.group.%`),
            `wastage.factor` = as.character(`wastage.factor`),
-           sub.activity.start.date = as.POSIXct(round(as.POSIXct(sub.activity.start.date), units="day"), format="%Y-%m-%d %H:%M:%S")
+           sub.activity.start.date = as.POSIXct(round(as.POSIXct(sub.activity.start.date)), format="%Y-%m-%d %H:%M:%S")
     ) |>
     dplyr::ungroup() |>
     dplyr::mutate_at(c("admin.1.id",

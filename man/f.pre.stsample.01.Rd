@@ -9,7 +9,10 @@ f.pre.stsample.01(df01, global.dist.01)
 \arguments{
 \item{df01}{tibble: table of afp data}
 
-\item{long.global.dist.01}{sf: spatial file of all locations}
+\item{global.dist.01}{sf: spatial file of all locations}
+}
+\value{
+tibble with lat/lon for all unsampled locations
 }
 \description{
 Create random samples of points for missing GPS data
