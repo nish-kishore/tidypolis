@@ -31,4 +31,6 @@ Imports:
   tidyr, 
   skimr, 
   openxlsx, 
-  tidyselect
+  tidyselect, 
+  pbapply, 
+  lwgeom
