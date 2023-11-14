@@ -1680,6 +1680,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_done()
   #Get list of most recent files
   most_recent_files <- list.files(file.path(polis_data_folder, "Core_Ready_Files"))[grepl(".rds", list.files(file.path(polis_data_folder, "Core_Ready_Files")))]
+  most_recent_file_patterns <- c("Activity_Data", "EnvSamples", "Human_Detailed", "Viruses_Detailed")
+  most_recent_files <- most_recent_files[grepl(paste(most_recent_file_patterns, collapse = "|"), most_recent_files)]
 
   if(length(most_recent_files)>0){
 
@@ -1805,6 +1807,18 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     }
   }
 
+  most_recent_files_01 <- list.files(file.path(polis_data_folder, "Core_Ready_Files"))
+  most_recent_file_01_patterns <- c(".rds", ".csv", ".xlsx")
+  most_recent_files_01 <- most_recent_files_01[grepl(paste(most_recent_file_01_patterns, collapse = "|"), most_recent_files_01)]
+
+  for(i in 1:length(most_recent_files_01)){
+    cli::cli_process_start(paste0("Archiving Data for: ", most_recent_files_01[i]))
+
+    rio::export(rio::import(file.path(polis_data_folder, "Core_Ready_Files", most_recent_files_01[i])), file.path(polis_data_folder, "Core_Ready_Files", "Archive", timestamp, most_recent_files_01[i]))
+    unlink(file.path(polis_data_folder, "Core_Ready_files", most_recent_files_01[i]))
+    cli::cli_process_done()
+  }
+
   cli::cli_process_start("Writing all final Core Ready files")
   #Export files (as csv) to be used as pre-processing starting points
   readr::write_rds(api_case_sub3, file.path(polis_data_folder, "Core_Ready_Files", paste0("Human_Detailed_Dataset_",timestamp,"_from_01_Dec_2019_to_",format(ts, "%d_%b_%Y"),".rds")))
@@ -1819,7 +1833,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
      "in_old_not_new", "new", "old", "potential_duplicates_new", "potential_duplicates_old",
      "x", "i", "most_recent_files", "n_added", "n_deleted", "n_edited", "vars_added", "vars_dropped",
      "api_activity_sub2", "api_case_sub3", "api_es_sub3", "api_virus_sub3", "long.global.dist.01",
-     "api_subactivity_sub4")
+     "api_subactivity_sub4", "most_recent_file_01_patterns", "most_recent_file_patterns",
+     "most_recent_files_01")
   gc()
   cli::cli_process_done()
 
@@ -2424,7 +2439,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   ) |>
     dplyr::filter(!is.na(epid))
 
-  rm("afp.linelist.fixed.03", "afp.linelist.fixed.04")
+  rm("afp.linelist.fixed.04")
   gc()
   cli::cli_process_done()
 
@@ -2509,12 +2524,12 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   latest_folder_in_archive <- list.files(paste0(polis_data_folder, "/Core_Ready_Files/Archive"), full.names = T) |>
     file.info() |>
     dplyr::arrange(desc(ctime)) |>
-    dplyr::slice(2) |>
+    dplyr::slice(1) |>
     row.names()
 
   x <- list.files(latest_folder_in_archive, full.names = T)
 
-  old.file <- x[grepl("afp_linelist_2001", x)]
+  old.file <- x[grepl("afp_linelist_2020", x)]
 
   old <- readr::read_rds(old.file) |>
     dplyr::mutate(epid = stringr::str_squish(epid)) |>
@@ -2574,11 +2589,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
                                    sep = ""
   ))
 
-  readr::write_rds(afp.linelist.02, paste(polis_data_folder, "/Core_Ready_Files/Archive/",timestamp,"/",
-                                          paste("afp_linelist", min(afp.linelist.02$dateonset, na.rm = T), max(afp.linelist.02$dateonset, na.rm = T), sep = "_"),
-                                          ".rds",
-                                          sep = ""
-  ))
 
   cli::cli_process_done()
 
@@ -2615,12 +2625,12 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   latest_folder_in_archive <- list.files(paste0(polis_data_folder, "/Core_Ready_Files/Archive"), full.names = T) |>
     file.info() |>
     dplyr::arrange(desc(ctime)) |>
-    dplyr::slice(2) |>
+    dplyr::slice(1) |>
     row.names()
 
   x <- list.files(latest_folder_in_archive, full.names = T)
 
-  old.file <- x[grepl("other_", x)]
+  old.file <- x[grepl("other_surveillance_type_linelist_2016", x)]
 
   old <- readr::read_rds(old.file) |>
     dplyr::mutate(epid = stringr::str_squish(epid)) |>
@@ -2664,11 +2674,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     pivot_wider(names_from=source, values_from=value) |>
     filter(new != old)
 
-  readr::write_rds(not.afp.01, paste(polis_data_folder, "/Core_Ready_Files/Archive/", timestamp, "/",
-                              paste("other_surveillance_type_linelist", min(not.afp.01$yronset, na.rm = T), max(not.afp.01$yronset, na.rm = T), sep = "_"),
-                              ".rds",
-                              sep = ""
-  ))
 
   readr::write_rds(not.afp.01, paste(polis_data_folder, "/Core_Ready_Files/",
                               paste("other_surveillance_type_linelist", min(not.afp.01$yronset, na.rm = T), max(not.afp.01$yronset, na.rm = T), sep = "_"),
@@ -2686,7 +2691,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   # read AFP surveillance type linelist and combine to make one AFP-linlelist
   afp.files.01 <- list.files(path=paste0(polis_data_folder, "/Core_Ready_Files"), pattern="^.*(afp_linelist).*(.rds)$", full.names=TRUE)
-  afp.clean.01 <- purrr::map_df(afp.files.01 , ~readr::read_rds(.x))
+  afp.files.02 <- list.files(path=paste0(polis_data_folder, "/Core_Ready_Files/Core Files to Combine"), pattern="^.*(afp_linelist).*(.rds)$", full.names=TRUE)
+  afp.files.03 <- c(afp.files.01, afp.files.02)
+  afp.clean.01 <- purrr::map_df(afp.files.03, ~readr::read_rds(.x))
 
   write_rds(afp.clean.01, paste(polis_data_folder, "/Core_Ready_Files/",
                                 paste("afp_linelist", min(afp.clean.01$dateonset, na.rm = T),
@@ -2716,7 +2723,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   #other surveillance linelist combine
   non.afp.files.01 <- list.files(path=paste0(polis_data_folder, "/Core_Ready_Files"), pattern="^.*(other_surveillance_type_linelist).*(.rds)$", full.names=TRUE)
-  non.afp.clean.01 <- purrr::map_df(non.afp.files.01 , ~readr::read_rds(.x))
+  non.afp.files.02 <- list.files(path=paste0(polis_data_folder, "/Core_Ready_Files/Core Files to Combine"), pattern="^.*(other_surveillance_type_linelist).*(.rds)$", full.names=TRUE)
+  non.afp.files.03 <- c(non.afp.files.01, non.afp.files.02)
+  non.afp.clean.01 <- purrr::map_df(non.afp.files.03 , ~readr::read_rds(.x))
   readr::write_rds(non.afp.clean.01, paste(polis_data_folder, "/Core_Ready_Files/",
                                     paste("other_surveillance_type_linelist", min(non.afp.clean.01$yronset, na.rm = T),
                                           max(non.afp.clean.01$yronset, na.rm = T),
@@ -2729,13 +2738,15 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   cli::cli_process_start("Clearing memory")
 
-  rm('afp.clean.01', 'afp.clean.light', 'afp.files.01', 'afp.linelist.01',
+  rm('afp.clean.01', 'afp.clean.light', 'afp.files.01', 'afp.files.02',
+     'afp.files.03', 'afp.linelist.01',
      'afp.linelist.02', 'afp.linelist.latlong', 'afp.missing.01',
      'afp.missing.02', 'afp_metadata_comparison',
      'col.afp.raw.01', 'dup.epid', 'issuesbyCtry', 'issuesbyyear',
      'endyr', 'global.dist.01', 'in_new_and_old_but_modified',
      'in_new_not_old', 'in_old_not_new', 'latest_folder_in_archive',
      'new', 'new_table_metadata', 'non.afp.clean.01', 'non.afp.files.01',
+     'non.afp.files.02', 'non.afp.files.03', 'non.afp.files.03',
      'not.afp', 'not.afp.01', 'not_afp_metadata_comparison', 'old',
      'old.file', 'old_table_metadata', 'startyr',
      'unknown.afp', 'x')
@@ -2989,9 +3000,10 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   sia.06 <- sia.06 |>
     dplyr::select(-dplyr::starts_with("SHAPE"))
 
-  files <- list.files(paste0(polis_data_folder, "/Core_Ready_Files/"), full.names = T)
+  x <- list.files(latest_folder_in_archive, full.names = T)
 
-  old.file <- files[grepl("sia_2020", files)]
+  old.file <- x[grepl("sia_2020", x)]
+
 
   new_table_metadata <- f.summarise.metadata(sia.06)
   old_table_metadata <- f.summarise.metadata(readr::read_rds(old.file))
@@ -3041,14 +3053,10 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   #combine SIA pre-2020 with the current rds
   # read SIA and combine to make one SIA dataset
   sia.files.01 <- list.files(path=paste0(polis_data_folder, "/Core_Ready_Files/"), pattern="^.*(sia).*(.rds)$", full.names=TRUE)
+  sia.files.02 <- list.files(path=paste0(polis_data_folder, "/Core_Ready_Files/Core Files to Combine"), pattern="^.*(sia).*(.rds)$", full.names=TRUE)
+  sia.files.03 <- c(sia.files.01, sia.files.02)
 
-  sia.files.01 <- as_tibble(sia.files.01) |>
-    filter(!grepl("2000_2023.rds", value))
-
-  sia.files.01 <- sia.files.01 |>
-    pull(value)
-
-  sia.clean.01 <- purrr::map_df(sia.files.01 , ~readr::read_rds(.x))
+  sia.clean.01 <- purrr::map_df(sia.files.03 , ~readr::read_rds(.x))
 
   readr::write_rds(sia.clean.01, paste(polis_data_folder, "/Core_Ready_Files/",
                                 paste("sia", min(sia.clean.01$yr.sia, na.rm = T),
@@ -3098,7 +3106,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     'old_table_metadata', 'savescipen',
     'sia.01.new', 'sia.01.new.compare', 'sia.01.old',
     'sia.01.old.compare', 'sia.02', 'sia.03', 'sia.04', 'sia.05',
-    'sia.06', 'sia.clean.01', 'sia.files.01', 'sia_metadata_comparison',
+    'sia.06', 'sia.clean.01', 'sia.files.01', 'sia.files.02',
+    'sia.files.03', 'sia_metadata_comparison', 'sia.file.path',
     'startyr', 'tofix', 'var.list.01', 'x', 'y'
   )
 
@@ -3396,11 +3405,10 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   # save data
   #Compare the final file to last week's final file to identify any differences in var_names, var_classes, or categorical responses
-  old.es.file <- list.files(paste0(polis_data_folder, "/Core_Ready_Files/"), full.names = T)
+  old.es.file <- list.files(latest_folder_in_archive, full.names = T)
 
-  old.es.file <- old.es.file[grepl("es_2001", old.es.file)] |>
+  old.es.file <- old.es.file[grepl("es_2001-01-08", old.es.file)] |>
     file.info() |>
-    dplyr::filter(ctime == max(ctime)) |>
     row.names()
 
   new_table_metadata <- f.summarise.metadata(es.04)
@@ -3446,12 +3454,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
                          paste("es", min(es.04$collect.date, na.rm = T), max(es.04$collect.date, na.rm = T), sep = "_"),
                          ".rds",
                          sep = ""
-  ))
-
-  readr::write_rds(es.04, paste(polis_data_folder, "/Core_Ready_Files/Archive/", timestamp, "/",
-                                paste("es", min(es.04$collect.date, na.rm = T), max(es.04$collect.date, na.rm = T), sep = "_"),
-                                ".rds",
-                                sep = ""
   ))
 
   cli::cli_process_done()
@@ -3852,7 +3854,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   #Compare the final file to last week's final file to identify any differences in var_names, var_classes, or categorical responses
   new_table_metadata <- f.summarise.metadata(afp.es.virus.01)
-  old.file <- list.files(paste0(polis_data_folder, "/Core_Ready_Files/"), full.names = T)
+  old.file <- list.files(latest_folder_in_archive, full.names = T)
   old.file <- old.file[grepl("positives_2001-01-01", old.file)]
   old_table_metadata <- f.summarise.metadata(readr::read_rds(old.file))
   positives_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata)
@@ -3927,15 +3929,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
                                    ".rds",
                                    sep = ""
   ))
-
-  #remove old positives file
-  pos.file <- list.files(paste0(polis_data_folder, "/Core_Ready_Files/"), full.names = T)
-  pos.file <- pos.file[grepl("positives_2001-01-01", pos.file)] |>
-    file.info() |>
-    dplyr::arrange(desc(ctime)) |>
-    dplyr::slice(2) |>
-    row.names() |>
-    file.remove()
 
 
   cli::cli_process_done()
