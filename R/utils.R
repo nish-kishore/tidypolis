@@ -3098,7 +3098,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_done("Clearing memory")
   rm(
     'cty.yr.mismatch',
-    'dist.sia.mismatch.01', 'endyr', 'files',
+    'dist.sia.mismatch.01', 'endyr',
     'in_new_and_old_but_modified', 'in_new_not_old',
     'in_old_not_new', 'latest_folder_in_archive',
     'long.global.dist.01', 'new', 'new.df', 'new.file',
