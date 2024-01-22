@@ -3594,7 +3594,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
       vaccine.source = ifelse(virus.type %in% c("VACCINE1", "VACCINE2", "VACCINE3", "VDPV1",
                                                 "VDPV2", "VDPV3"), "Sabin", NA),
-      vaccine.source = ifelse(virus.type %in% c("nVACCINE2"), "Novel", vaccine.source),
+      vaccine.source = ifelse(virus.type %in% c("nVACCINE2")|emergencegroup %in% nopv.emrg$emergencegroup, "Novel", vaccine.source),
 
       virustypename = ifelse(virustypename == "aVDPV1", "aVDPV 1", virustypename),
       virustypename = ifelse(virustypename == "aVDPV2", "aVDPV 2", virustypename),
