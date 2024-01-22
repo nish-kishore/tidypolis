@@ -3646,6 +3646,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     #fix CIV
     dplyr::mutate(place.admin.0 = ifelse(stringr::str_detect(place.admin.0, "IVOIRE"),"COTE D IVOIRE", place.admin.0))
 
+  rm(nopv.emrg)
+
   cli::cli_process_done()
   #flag to identify vaccine with nt.changes >= 6
   vaccine.6.plus <- virus.01 |>
