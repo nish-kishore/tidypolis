@@ -3568,6 +3568,14 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   # Step 6: fix all dates from character to ymd format and fix character variables
 
   cli::cli_process_start("Creating CDC variables")
+
+  #read in list of novel emergences supplied by ORPG
+  nopv.emrg <- sirfunctions::edav_io(io = "read", file_loc = file.path("GID/PEB/SIR/Data/orpg/nopv_emg.table.rds"), default_dir = NULL) |>
+    dplyr::rename(emergencegroup = emergence_group,
+                  vaccine.source = vaccine_source) |>
+    dplyr::mutate(vaccine.source = dplyr::if_else(vaccine.source == "novel", "Novel", vaccine.source))
+
+
   virus.01 <- virus.raw.new |>
     dplyr::rename(virus.type = `virus.type(s)`,
            viruscluster = `virus.cluster(s)`,
