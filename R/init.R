@@ -104,6 +104,20 @@ init_tidypolis <- function(
 
   if(file.exists(cache_file)){
     cli::cli_alert_success("Previous cache located!")
+    cache <- readr::read_rds(cache_file)
+    if("pop" %in% dplyr::pull(cache, table)){
+      cli::cli_alert_success("Cache version is up to date!")
+    }else{
+      cli::cli_alert_info("Updating cache version")
+      cache |>
+        dplyr::bind_rows(
+          dplyr::tibble(
+            "table" = "pop",
+            "endpoint" = "Population"
+          )
+        )|>
+        readr::write_rds(cache_file)
+    }
   }else{
     tibble::tibble(
       "table" = c("cache", "virus", "case", "human_specimen", "environmental_sample",
