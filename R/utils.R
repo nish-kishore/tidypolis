@@ -3568,6 +3568,14 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   # Step 6: fix all dates from character to ymd format and fix character variables
 
   cli::cli_process_start("Creating CDC variables")
+
+  #read in list of novel emergences supplied by ORPG
+  nopv.emrg <- sirfunctions::edav_io(io = "read", file_loc = file.path("GID/PEB/SIR/Data/orpg/nopv_emg.table.rds"), default_dir = NULL) |>
+    dplyr::rename(emergencegroup = emergence_group,
+                  vaccine.source = vaccine_source) |>
+    dplyr::mutate(vaccine.source = dplyr::if_else(vaccine.source == "novel", "Novel", vaccine.source))
+
+
   virus.01 <- virus.raw.new |>
     dplyr::rename(virus.type = `virus.type(s)`,
            viruscluster = `virus.cluster(s)`,
@@ -3586,7 +3594,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
       vaccine.source = ifelse(virus.type %in% c("VACCINE1", "VACCINE2", "VACCINE3", "VDPV1",
                                                 "VDPV2", "VDPV3"), "Sabin", NA),
-      vaccine.source = ifelse(virus.type %in% c("nVACCINE2"), "Novel", vaccine.source),
+      vaccine.source = ifelse(virus.type %in% c("nVACCINE2")|emergencegroup %in% nopv.emrg$emergencegroup, "Novel", vaccine.source),
 
       virustypename = ifelse(virustypename == "aVDPV1", "aVDPV 1", virustypename),
       virustypename = ifelse(virustypename == "aVDPV2", "aVDPV 2", virustypename),
@@ -3637,6 +3645,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     #separate(location, c("place.admin.0", "place.admin.1", "place.admin.2"), ",") |>
     #fix CIV
     dplyr::mutate(place.admin.0 = ifelse(stringr::str_detect(place.admin.0, "IVOIRE"),"COTE D IVOIRE", place.admin.0))
+
+  rm(nopv.emrg)
 
   cli::cli_process_done()
   #flag to identify vaccine with nt.changes >= 6
