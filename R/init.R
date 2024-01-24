@@ -167,14 +167,24 @@ init_tidypolis <- function(
 #' Manager function to get and update POLIS data
 #'
 #' @description This function iterates through all tables and loads POLIS data
+#' @param type choose to download population data ("pop") or all other data
 #' @import dplyr
 #' @export
-get_polis_data <- function(){
+get_polis_data <- function(type = "all"){
 
-  tables <- c("virus", "case", "human_specimen", "environmental_sample",
-              "activity", "sub_activity", "lqas", "im")
+  if(type == "all"){
 
-  sapply(tables, function(x) get_table_data(.table = x))
+    tables <- c("virus", "case", "human_specimen", "environmental_sample",
+                "activity", "sub_activity", "lqas", "im")
+
+    sapply(tables, function(x) get_table_data(.table = x))
+
+  }
+
+  if(type == "pop"){
+    get_table_data(.table = "pop")
+  }
+
 
 }
 
