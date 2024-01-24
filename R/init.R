@@ -104,18 +104,33 @@ init_tidypolis <- function(
 
   if(file.exists(cache_file)){
     cli::cli_alert_success("Previous cache located!")
+    cache <- readr::read_rds(cache_file)
+    if("pop" %in% dplyr::pull(cache, table)){
+      cli::cli_alert_success("Cache version is up to date!")
+    }else{
+      cli::cli_alert_info("Updating cache version")
+      cache |>
+        dplyr::bind_rows(
+          dplyr::tibble(
+            "table" = "pop",
+            "endpoint" = "Population",
+            "polis_id" = "Id"
+          )
+        )|>
+        readr::write_rds(cache_file)
+    }
   }else{
     tibble::tibble(
       "table" = c("cache", "virus", "case", "human_specimen", "environmental_sample",
                   "activity", "sub_activity", "lqas", "im", "population", "geography",
-                  "synonym", "indicator", "reference_data"),
+                  "synonym", "indicator", "reference_data", "pop"),
       "endpoint" = c("cache", "Virus", "Case", "LabSpecimen", "EnvSample", "Activity",
                      "SubActivity", "Lqas", "Im", "Population", "Geography", "Synonym", "IndicatorValue",
-                     "RefData"),
+                     "RefData", "Population"),
       "polis_id" = c(NA, "VirusId", "EPID", "SpecimenId", "EnviroSampleId", "SubActivityId", "SubActivityByAdmin2Id",
-                     "LqasId", "ImId", "FK_GeoplaceId", "PlaceId", NA, NA, NA),
+                     "LqasId", "ImId", "FK_GeoplaceId", "PlaceId", NA, NA, NA, "Id"),
       "polis_update_id" = c(NA, "UpdatedDate", "LastUpdateDate", "LastUpdateDate", "LastUpdateDate", "LastUpdateDate", "UpdatedDate",
-                            NA, NA, "UpdatedDate", "UpdatedDate", NA, NA, NA),
+                            NA, NA, "UpdatedDate", "UpdatedDate", NA, NA, NA, NA),
       "nrow" = NA
     ) |>
       dplyr::mutate(last_sync = ifelse(table == "cache", Sys.time(), NA),
@@ -167,14 +182,24 @@ init_tidypolis <- function(
 #' Manager function to get and update POLIS data
 #'
 #' @description This function iterates through all tables and loads POLIS data
+#' @param type choose to download population data ("pop") or all other data
 #' @import dplyr
 #' @export
-get_polis_data <- function(){
+get_polis_data <- function(type = "all"){
 
-  tables <- c("virus", "case", "human_specimen", "environmental_sample",
-              "activity", "sub_activity", "lqas", "im")
+  if(type == "all"){
 
-  sapply(tables, function(x) get_table_data(.table = x))
+    tables <- c("virus", "case", "human_specimen", "environmental_sample",
+                "activity", "sub_activity", "lqas", "im")
+
+    sapply(tables, function(x) get_table_data(.table = x))
+
+  }
+
+  if(type == "pop"){
+    get_table_data(.table = "pop")
+  }
+
 
 }
 
