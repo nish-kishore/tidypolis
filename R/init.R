@@ -113,7 +113,8 @@ init_tidypolis <- function(
         dplyr::bind_rows(
           dplyr::tibble(
             "table" = "pop",
-            "endpoint" = "Population"
+            "endpoint" = "Population",
+            "polis_id" = "Id"
           )
         )|>
         readr::write_rds(cache_file)

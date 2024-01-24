@@ -13,7 +13,7 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
   table_data <- get_polis_cache(.table = .table)
   table_url <- paste0(base_url, table_data$endpoint)
 
-  #check if ID API works
+  #check if ID API works for key files
   api_url <-
     paste0(base_url,
            table_data$endpoint,
@@ -24,7 +24,8 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
                               "environmental_sample",
                               "activity",
                               "sub_activity",
-                              "lqas")) {
+                              "lqas",
+                              "pop")) {
     urls <-
       create_table_urls(url = api_url,
                         table_size = 3000,
@@ -85,7 +86,8 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
                                 "environmental_sample",
                                 "activity",
                                 "sub_activity",
-                                "lqas")) {
+                                "lqas",
+                                "pop")) {
       urls <-
         create_table_urls(url = table_url,
                           table_size = table_size,
@@ -3959,3 +3961,5 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_done()
 
 }
+
+
