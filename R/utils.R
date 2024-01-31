@@ -630,21 +630,40 @@ run_single_table_diagnostic <-
 update_polis_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
                              .time = Sys.time(),
                              .user = Sys.getenv("USERNAME"),
-                             .event_type,
+                             .event_type = "START",
                              .event) {
+
+
 
   log_names <- readr::read_rds(log_file) |>
     names()
 
-  c("time", "user", "event_type", "event") %in% log_names
+  if(!"event_type" %in% log_names){
 
+    readr::read_rds(log_file) |>
+      cbind(event_type = NA) |>
+      tibble::add_row(time = .time,
+                      user = .user,
+                      event_type = "INFO",
+                      event = "Updating log format") |>
+      readr::write_rds(log_file)
+
+    readr::read_rds(log_file) |>
+      tibble::add_row(time = .time,
+                      user = .user,
+                      event_type = .event_type,
+                      event = .event) |>
+      readr::write_rds(log_file)
+
+  }else{
 
   readr::read_rds(log_file) |>
     tibble::add_row(time = .time,
                     user = .user,
+                    event_type = .event_type,
                     event = .event) |>
     readr::write_rds(log_file)
-
+  }
 }
 
 
