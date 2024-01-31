@@ -107,7 +107,8 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
       " rows of ",
       table_data$table,
       " data"
-    ))
+    ),
+    .event_type = "INFO")
     cli::cli_process_done()
 
     #update cache information
@@ -137,7 +138,8 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
       table_data$table,
       ".rds"
     ))
-    update_polis_log(.event = paste0(table_data$table, " data saved locally"))
+    update_polis_log(.event = paste0(table_data$table, " data saved locally"),
+                     .event_type = "END")
     cli::cli_process_done()
 
     gc()
@@ -172,7 +174,8 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
           ": ",
           table_size,
           " new or updated records identified!"
-        )
+        ),
+        .event_type = "START"
       )
 
       if (table_size > 0) {
@@ -213,7 +216,8 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
           "rows of ",
           table_data$table,
           " data"
-        ))
+        ),
+        .event_type = "INFO")
         cli::cli_process_done()
 
         #check ids and make list of ids to be deleted
@@ -270,7 +274,8 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
             " rows of data being updated;",
             paste0(length(deleted_ids), " rows of data were deleted - "),
             paste0(deleted_ids, collapse = ", ")
-          )
+          ),
+          .event_type = "INFO"
         )
 
         #update cache
@@ -301,7 +306,8 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
                            table_data$table,
                            ".rds"
                          ))
-        update_polis_log(.event = paste0(table_data$table, " data saved locally"))
+        update_polis_log(.event = paste0(table_data$table, " data saved locally"),
+                         .event_type = "END")
         cli::cli_process_done()
 
         #garbage clean
