@@ -633,7 +633,7 @@ run_single_table_diagnostic <-
 #' @param log_file str: location of cache file
 #' @param .time dttm: time of update
 #' @param .user double: user who conducted the action
-#' @param .event_type str: START, INFO, ERROR, ALERT, END
+#' @param .event_type str: START, PROCESS, INFO, ERROR, ALERT, END
 #' @param .event str: event to be logged
 #' @returns Return true if cache updated
 update_polis_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
@@ -1277,6 +1277,11 @@ get_env_site_data <- function(){
 preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   #Step 1 - Basic cleaning and crosswalk ======
   cli::cli_h1("Step 1/5: Basic cleaning and crosswalk across datasets")
+
+  #update log for start of creation of CORE ready datasets
+  update_polis_log(.event = "Beginning Preprocessing - Creation of CORE Ready Datasets",
+                   .event_type = "START")
+
   #Read in the updated API datasets
   cli::cli_h2("Loading data")
 
