@@ -936,8 +936,15 @@ get_crosswalk_data <- function(
 f.compare.dataframe.cols <- function(old, new) {
   cli::cli_process_start("Checking column names")
   if (length(setdiff(colnames(new), colnames(old))) >= 1 | length(setdiff(colnames(old), colnames(new))) >= 1) {
-    cli::cli_alert_danger(msg = "WARNING there is a new column in the data. Please investigate this new column")
-    stop()
+    cli::cli_alert_danger(msg = "WARNING there is a new or removed column in the data. Please investigate this new column")
+
+    new.var <- setdiff(names(new), names(old))
+    lost.var <- setdiff(names(old), names(new))
+
+    update_polis_log(.event = paste0("New Var: ", new.var, ", Removed Var:", lost.var),
+                     .event_type = "ALERT")
+
+
   } else {cli::cli_alert_info("No differences found in column names")}
 }
 
