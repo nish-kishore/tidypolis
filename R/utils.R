@@ -1322,6 +1322,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     sirfunctions::load_clean_dist_sp(type = "long")
   cli::cli_process_done()
 
+  update_polis_log(.event = "De-duplicating Data",
+                   .event_type = "PROCESS")
 
   cli::cli_h2("De-duplicating data")
 
@@ -1356,6 +1358,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
      "api_case_2019_12_01_onward", "api_virus_complete")
   gc()
   cli::cli_process_done()
+
+  update_polis_log(.event = "Processing sub-activity spatial data",
+                   .event_type = "PROCESS")
 
   cli::cli_process_start("Processing sub-activity spatial data")
   api_subactivity_sub2 <- api_subactivity_sub1 |>
@@ -1401,6 +1406,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_done()
 
   #Import the crosswalk file and use it to rename all data elements in the API-downloaded tables.
+  update_polis_log(.event = "Crosswalk and rename variables",
+                   .event_type = "PROCESS")
+
   cli::cli_h2("Crosswalk and rename variables")
 
   crosswalk <- get_crosswalk_data()
@@ -1446,6 +1454,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
      "api_virus_sub1")
 
   cli::cli_process_done()
+
+  update_polis_log(.event = "Modifying and reconciling variable types",
+                   .event_type = "PROCESS")
 
   cli::cli_h2("Modifying and reconciling variable types")
   #    Modify individual variables in the API files to match the coding in the web-interface downloads,
@@ -1623,6 +1634,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   gc()
   cli::cli_process_done()
 
+  update_polis_log(.event = "Cleaning irregular location names",
+                   .event_type = "PROCESS")
+
   cli::cli_process_start("Cleaning irregular location names")
   api_virus_sub3 <- api_virus_sub2 |>
     dplyr::mutate(location = paste(
@@ -1682,6 +1696,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   gc()
   cli::cli_process_done()
 
+  update_polis_log(.event = "Removing empty columns",
+                   .event_type = "PROCESS")
+
   cli::cli_process_start("Removing empty columns")
 
   cli::cli_h3("Case")
@@ -1699,6 +1716,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_done()
 
   #13. Export csv files that match the web download, and create archive and change log
+  update_polis_log(.event = "Creating change log, archiving, and exporting data",
+                   .event_type = "PROCESS")
+
   cli::cli_h2("Creating change log and exporting data")
 
   cli::cli_process_start("Checking on requisite file structure")
@@ -1871,6 +1891,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   readr::write_rds(api_virus_sub3, file.path(polis_data_folder, "Core_Ready_Files", paste0("Viruses_Detailed_Dataset_",timestamp,"_from_01_Dec_1999_to_",format(ts, "%d_%b_%Y"),".rds")))
   cli::cli_process_done()
 
+  update_polis_log(.event = "CORE Ready files and change logs complete",
+                   .event_type = "PROCESS")
   #14. Remove temporary files from working environment, and set scientific notation back to whatever it was originally
   cli::cli_process_start("Clearing memory from first step")
   rm("change_summary", "crosswalk", "in_new_and_old_but_modified", "in_new_not_old",
