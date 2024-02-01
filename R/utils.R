@@ -1905,6 +1905,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_done()
 
   #Step 2 - Creating AFP and EPI datasets ====
+  update_polis_log(.event = "Creating AFP and Epi analytic datasets",
+                   .event_type = "PROCESS")
+
   cli::cli_h1("Step 2/5 - Creating AFP and Epi analytic datasets")
 
   # Step 1: Read in "old" data file (System to find "Old" data file)
