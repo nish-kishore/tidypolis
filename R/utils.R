@@ -2216,6 +2216,10 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
     if(length(epids) > 0){
       cli::cli_alert_danger("There is a 'none' classification, flag for POLIS and get guidance on proper classification")
+
+      update_polis_log(.event = "NONE classification found, must be manually addressed",
+                       .event_type = "ERROR")
+
       stop()
     }
   }
