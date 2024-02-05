@@ -939,7 +939,9 @@ f.compare.dataframe.cols <- function(old, new) {
     cli::cli_alert_danger(text = "WARNING there is a new or removed column in the data. Please investigate this new column")
 
     new.var <- setdiff(names(new), names(old))
+    new.var <- ifelse(length(new.var) == 0, "NULL", new.var)
     lost.var <- setdiff(names(old), names(new))
+    lost.var <- ifelse(length(lost.var) == 0, "NULL", lost.var)
 
     update_polis_log(.event = paste0("New Var: ", new.var, ", Removed Var: ", lost.var),
                      .event_type = "ALERT")
@@ -3246,11 +3248,18 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   if (nrow(new.df) >= 1) {
     cli::cli_alert_danger("There is either a new variable in the ES data or new value of an existing variable.
           Please run f.download.compare.01 to see what it is. Preprocessing can not continue until this is adressed.")
-    stop()
+
+
+    es.new.value <- f.download.compare.02(new.var.es.01 |> filter(!(is.na(old.distinct.01)) & variable != "id"), es.02.old, es.02.new)
+
+
+    update_polis_log(.event = test,
+                     .event_type = "ALERT")
+
   }else{
     cli::cli_alert_info("No variable change errors")
   }
-  #temp <- f.download.compare.02(new.var.es.01 |> filter(!(is.na(old.distinct.01)) & variable != "id"), es.02.old, es.02.new)
+
   remove("es.01.old", "es.02.old")
   # Data manipulation
 
@@ -3629,7 +3638,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   # Step 4: Apply compare variables function
 
-  #new.value.or.var.01 <- f.download.compare.02(new.var.virus.01, virus.raw.old.comp, virus.raw.new.comp)
+  new.value.or.var.01 <- f.download.compare.02(new.var.virus.01, virus.raw.old.comp, virus.raw.new.comp)
 
 
   # Step 5: check virus types and virus type names to ensure that novel derived viruses are properly
