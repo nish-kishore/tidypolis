@@ -1990,20 +1990,21 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   new.df <- new.var.afp.01 |>
     dplyr::filter(is.na(old.distinct.01) | diff.distinct.01 >= 1)
 
+  # Step 4: Apply compare variables function
   if (nrow(new.df) >= 1) {
     cli::cli_alert_danger("There is either a new variable in the AFP data or new value of an existing variable.
-       Please run f.download.compare.02 to see what it is. Preprocessing can not continue until this is adressed. Note, function
-       should fail everytime. Check to make sure that only new surveillancetypename=Community and NA and only new poliovirus types are VACCINE 3, VDPV 1 and VACCINE 1, VACCINE 3, VDPV 1")
-    stop()
+       Please run f.download.compare.02 to see what it is. New values of variables are present in log file.")
+
+    afp.new.value <- f.download.compare.02(new.var.afp.01, afp.raw.old.comp, afp.raw.new.comp)
+
+    update_polis_log(.event = sapply(names(afp.new.value), function(x) paste0(x, " - ", paste0(unique(dplyr::pull(afp.new.value, x)), collapse = ", "))) |>
+                       paste0(collapse = "; "),
+                     .event_type = "ALERT")
+
   } else {
     cli::cli_alert_info("New AFP download is comparable to old AFP download")
   }
 
-  # Step 4: Apply compare variables function
-
-  if(nrow(new.df) >= 1){
-    new.value.or.var.01 <- f.download.compare.02(new.var.afp.01, afp.raw.old.comp, afp.raw.new.comp)
-  }
 
   #Find out if there are duplicate epids.
   cli::cli_process_start("Checking for duplicated EPIDs")
