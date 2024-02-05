@@ -2025,7 +2025,10 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
                                                           sep = "_"), ".csv", sep = "")
     )
     cli::cli_alert_info("Duplicate AFP case. Check the data for duplicate records. If they are exact same, then contact Ashley")
-    stop()
+
+    update_polis_log(.event = "Duplicate AFP cases output in duplicate_AFPcases_Polis within Core_Ready_files",
+                     .event_type = "ALERT")
+
   } else {
     cli::cli_process_done(msg_done = "No duplicate EPIDs found, okay to proceed")
   }
