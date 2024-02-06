@@ -1331,8 +1331,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     sirfunctions::load_clean_dist_sp(type = "long")
   cli::cli_process_done()
 
-  update_polis_log(.event = "De-duplicating Data",
-                   .event_type = "PROCESS")
 
   cli::cli_h2("De-duplicating data")
 
@@ -1367,9 +1365,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
      "api_case_2019_12_01_onward", "api_virus_complete")
   gc()
   cli::cli_process_done()
-
-  update_polis_log(.event = "Processing sub-activity spatial data",
-                   .event_type = "PROCESS")
 
   cli::cli_process_start("Processing sub-activity spatial data")
   api_subactivity_sub2 <- api_subactivity_sub1 |>
@@ -1415,8 +1410,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_done()
 
   #Import the crosswalk file and use it to rename all data elements in the API-downloaded tables.
-  update_polis_log(.event = "Crosswalk and rename variables",
-                   .event_type = "PROCESS")
 
   cli::cli_h2("Crosswalk and rename variables")
 
@@ -1464,8 +1457,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   cli::cli_process_done()
 
-  update_polis_log(.event = "Modifying and reconciling variable types",
-                   .event_type = "PROCESS")
 
   cli::cli_h2("Modifying and reconciling variable types")
   #    Modify individual variables in the API files to match the coding in the web-interface downloads,
@@ -1643,8 +1634,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   gc()
   cli::cli_process_done()
 
-  update_polis_log(.event = "Cleaning irregular location names",
-                   .event_type = "PROCESS")
 
   cli::cli_process_start("Cleaning irregular location names")
   api_virus_sub3 <- api_virus_sub2 |>
@@ -1705,8 +1694,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   gc()
   cli::cli_process_done()
 
-  update_polis_log(.event = "Removing empty columns",
-                   .event_type = "PROCESS")
 
   cli::cli_process_start("Removing empty columns")
 
@@ -2666,12 +2653,14 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
       dplyr::mutate(name = stringr::str_sub(name, 1, -3)) |>
       #long_to_wide
       tidyr::pivot_wider(names_from=source, values_from=value) |>
-      dplyr::filter(new != old)
+      dplyr::filter(new != old & !name %in% c("lat", "lon"))
 
-    update_polis_log(.event = paste0("New Records: ", nrow(in_new_not_old), "; ",
-                                     "Removed Records: ", nrow(in_old_not_new), "; ",
-                                     "Modified Records: ", ))
+
   }
+
+  update_polis_log(.event = paste0("New Records: ", nrow(in_new_not_old), "; ",
+                                   "Removed Records: ", nrow(in_old_not_new), "; ",
+                                   "Modified Records: ", length(unique(in_new_and_old_but_modified$epid))))
 
   readr::write_rds(afp.linelist.02, paste(polis_data_folder, "/Core_Ready_Files/",
                                    paste("afp_linelist", min(afp.linelist.02$dateonset, na.rm = T), max(afp.linelist.02$dateonset, na.rm = T), sep = "_"),
