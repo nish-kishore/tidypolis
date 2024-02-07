@@ -1177,6 +1177,10 @@ f.compare.metadata <- function(new_table_metadata, old_table_metadata){
   if(length(new_vars) != 0){
     new_vars <- new_vars
     warning(print("There are new variables in the POLIS table\ncompared to when it was last retrieved\nReview in 'new_vars'"))
+
+    update_polis_log(.event = paste0("New Var(s): ", new_vars),
+                     .event_type = "ALERT")
+
   }
 
   lost_vars <- (compare_metadata |>
@@ -1185,6 +1189,10 @@ f.compare.metadata <- function(new_table_metadata, old_table_metadata){
   if(length(lost_vars) != 0){
     lost_vars <- lost_vars
     warning(print("There are missing variables in the POLIS table\ncompared to when it was last retrieved\nReview in 'lost_vars'"))
+
+    update_polis_log(.event = paste0("Lost Var(s): ", lost_vars),
+                     .event_type = "ALERT")
+
   }
 
   class_changed_vars <- compare_metadata |>
@@ -1199,6 +1207,8 @@ f.compare.metadata <- function(new_table_metadata, old_table_metadata){
   if(nrow(class_changed_vars) != 0){
     class_changed_vars <- class_changed_vars
     warning(print("There are variables in the POLIS table with different classes\ncompared to when it was last retrieved\nReview in 'class_changed_vars'"))
+
+    update_polis_log(.event = paste0("Variables changed class: ", class_changed_vars))
   }
 
   #Check for new responses in categorical variables (excluding new variables and class changed variables that have been previously shown)
@@ -1889,6 +1899,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   update_polis_log(.event = "CORE Ready files and change logs complete",
                    .event_type = "PROCESS")
+
   #14. Remove temporary files from working environment, and set scientific notation back to whatever it was originally
   cli::cli_process_start("Clearing memory from first step")
   rm("change_summary", "crosswalk", "in_new_and_old_but_modified", "in_new_not_old",
@@ -2660,7 +2671,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   update_polis_log(.event = paste0("AFP New Records: ", nrow(in_new_not_old), "; ",
                                    "AFP Removed Records: ", nrow(in_old_not_new), "; ",
-                                   "AFP Modified Records: ", length(unique(in_new_and_old_but_modified$epid))))
+                                   "AFP Modified Records: ", length(unique(in_new_and_old_but_modified$epid))),
+                   .event_type = "INFO")
 
   readr::write_rds(afp.linelist.02, paste(polis_data_folder, "/Core_Ready_Files/",
                                    paste("afp_linelist", min(afp.linelist.02$dateonset, na.rm = T), max(afp.linelist.02$dateonset, na.rm = T), sep = "_"),
@@ -2755,7 +2767,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   update_polis_log(.event = paste0("Other Surveillance New Records: ", nrow(in_new_not_old), "; ",
                                    "Other Surveillance Removed Records: ", nrow(in_old_not_new), "; ",
-                                   "Other Surveillance Modified Records: ", length(unique(in_new_and_old_but_modified$epid))))
+                                   "Other Surveillance Modified Records: ", length(unique(in_new_and_old_but_modified$epid))),
+                   .event_type = "INFO")
 
 
   readr::write_rds(not.afp.01, paste(polis_data_folder, "/Core_Ready_Files/",
