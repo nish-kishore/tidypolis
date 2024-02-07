@@ -3380,9 +3380,10 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   # Script below will stop further execution if there is a duplicate ENV sample manual id
   if (nrow(es.00) >= 1) {
-    cli::cli_alert_danger("Duplicate ENV sample manual ids. Check the data for duplicate records.
-          If they are the exact same, then delete one record")
-    stop()
+    cli::cli_alert_danger("Duplicate ENV sample manual ids. Flag for POLIS. Output in duplicate_ES_sampleID_Polis.csv.")
+
+    readr::write_csv(es.00, paste0(polis_data_folder, "/Core_Ready_Files/duplicate_ES_sampleID_Polis.csv"), na = "")
+
   } else {
     cli::cli_alert_info("No duplicates identified")
   }
@@ -3571,7 +3572,10 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     dplyr::mutate(source = ifelse(stringr::str_sub(name, -2) == ".x", "new", "old")) |>
     dplyr::mutate(name = stringr::str_sub(name, 1, -3)) |>
     #long_to_wide
-    tidyr::pivot_wider(names_from=source, values_from=value)
+    tidyr::pivot_wider(names_from=source, values_from=value) |>
+    dplyr::filter(new != old)
+
+
 
   cli::cli_process_done()
 
