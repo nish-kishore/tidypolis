@@ -1179,7 +1179,7 @@ f.compare.metadata <- function(new_table_metadata, old_table_metadata, table){
     new_vars <- new_vars
     warning(print("There are new variables in the POLIS table\ncompared to when it was last retrieved\nReview in 'new_vars'"))
 
-    update_polis_log(.event = paste0(table, " - ", "New Var(s): ", new_vars),
+    update_polis_log(.event = paste0(table, " - ", "New Var(s): ", paste(new_vars, collapse = ", "),
                      .event_type = "ALERT")
 
   }
@@ -1191,7 +1191,7 @@ f.compare.metadata <- function(new_table_metadata, old_table_metadata, table){
     lost_vars <- lost_vars
     warning(print("There are missing variables in the POLIS table\ncompared to when it was last retrieved\nReview in 'lost_vars'"))
 
-    update_polis_log(.event = paste0(table, " - ", "Lost Var(s): ", lost_vars),
+    update_polis_log(.event = paste0(table, " - ", "Lost Var(s): ", paste(lost_vars, collapse = ", ")),
                      .event_type = "ALERT")
 
   }
