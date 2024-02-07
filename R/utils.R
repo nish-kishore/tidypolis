@@ -1728,9 +1728,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_done()
 
   #13. Export csv files that match the web download, and create archive and change log
-  update_polis_log(.event = "Creating change log, archiving, and exporting data",
-                   .event_type = "PROCESS")
-
   cli::cli_h2("Creating change log and exporting data")
 
   cli::cli_process_start("Checking on requisite file structure")
