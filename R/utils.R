@@ -1995,7 +1995,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
     afp.new.value <- f.download.compare.02(new.var.afp.01, afp.raw.old.comp, afp.raw.new.comp)
 
-    update_polis_log(.event = sapply(names(afp.new.value), function(x) paste0(x, " - ", paste0(unique(dplyr::pull(afp.new.value, x)), collapse = ", "))) |>
+    update_polis_log(.event = sapply(names(afp.new.value), function(x) paste0("New Values in: ", x, " - ", paste0(unique(dplyr::pull(afp.new.value, x)), collapse = ", "))) |>
                        paste0(collapse = "; "),
                      .event_type = "ALERT")
 
@@ -2855,8 +2855,10 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_done()
 
   #Step 3 - Creating SIA datasets ====
-  cli::cli_h1("Step 3/5 - Creating SIA analytic datasets")
+  update_polis_log(.event = "Creating SIA analytic datasets",
+                   .event_type = "PROCESS")
 
+  cli::cli_h1("Step 3/5 - Creating SIA analytic datasets")
 
   # Step 1: Read in "old" data file (System to find "Old" data file)
   latest_folder_in_archive <- list.files(paste0(polis_data_folder, "/Core_Ready_Files/Archive"), full.names = T) |>
@@ -2928,19 +2930,22 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   new.var.sia.01 <- f.download.compare.01(sia.01.old.compare, sia.01.new.compare)
 
   new.df <- new.var.sia.01 |>
-    dplyr::filter(is.na(old.distinct.01) | diff.distinct.01 >= 1)
+    dplyr::filter(is.na(old.distinct.01) | diff.distinct.01 >= 1) |>
+    dplyr::filter(!variable %in% c("parentid", "id"))
 
   if (nrow(new.df) >= 1) {
     cli::cli_alert_danger("There is either a new variable in the SIA data or new value of an existing variable.
        Please run f.download.compare.02 to see what it is. Preprocessing can not continue until this is adressed.")
-    stop()
+
+    sia.new.value <- f.download.compare.02(new.var.sia.01, sia.01.old.compare, sia.01.new.compare)
+
+    update_polis_log(.event = sapply(names(sia.new.value), function(x) paste0("New values in: ", x, " - ", paste0(unique(dplyr::pull(sia.new.value, x)), collapse = ", "))) |>
+                       paste0(collapse = "; "),
+                     .event_type = "ALERT")
+
   } else {
 
-    # Uncomment for STOP error above
-    # Use the function below to determine what has changed between the two downloads
-    # run the above line by line to generate new.var.sia.01
-
-    #new.value.or.var.01 <- f.download.compare.02(new.var.sia.01, sia.01.old.compare, sia.01.new.compare)
+    cli::cli_alert_info("New SIA download is comparable to old SIA download")
 
   }
   cli::cli_process_done()
