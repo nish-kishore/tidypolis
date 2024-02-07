@@ -2658,9 +2658,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   }
 
-  update_polis_log(.event = paste0("New Records: ", nrow(in_new_not_old), "; ",
-                                   "Removed Records: ", nrow(in_old_not_new), "; ",
-                                   "Modified Records: ", length(unique(in_new_and_old_but_modified$epid))))
+  update_polis_log(.event = paste0("AFP New Records: ", nrow(in_new_not_old), "; ",
+                                   "AFP Removed Records: ", nrow(in_old_not_new), "; ",
+                                   "AFP Modified Records: ", length(unique(in_new_and_old_but_modified$epid))))
 
   readr::write_rds(afp.linelist.02, paste(polis_data_folder, "/Core_Ready_Files/",
                                    paste("afp_linelist", min(afp.linelist.02$dateonset, na.rm = T), max(afp.linelist.02$dateonset, na.rm = T), sep = "_"),
@@ -2751,7 +2751,11 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     mutate(name = str_sub(name, 1, -3)) |>
     #long_to_wide
     pivot_wider(names_from=source, values_from=value) |>
-    filter(new != old)
+    filter(new != old & !name %in% c("lat", "lon"))
+
+  update_polis_log(.event = paste0("Other Surveillance New Records: ", nrow(in_new_not_old), "; ",
+                                   "Other Surveillance Removed Records: ", nrow(in_old_not_new), "; ",
+                                   "Other Surveillance Modified Records: ", length(unique(in_new_and_old_but_modified$epid))))
 
 
   readr::write_rds(not.afp.01, paste(polis_data_folder, "/Core_Ready_Files/",
@@ -2814,6 +2818,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   ))
 
   cli::cli_process_done()
+
+  update_polis_log(.event = "AFP and Other Surveillance Linelists Finished",
+                   .event_type = "PROCESS")
 
   cli::cli_process_start("Clearing memory")
 
