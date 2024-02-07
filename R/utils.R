@@ -1179,7 +1179,7 @@ f.compare.metadata <- function(new_table_metadata, old_table_metadata, table){
     new_vars <- new_vars
     warning(print("There are new variables in the POLIS table\ncompared to when it was last retrieved\nReview in 'new_vars'"))
 
-    update_polis_log(.event = paste0(table, "New Var(s): ", new_vars),
+    update_polis_log(.event = paste0(table, " - ", "New Var(s): ", new_vars),
                      .event_type = "ALERT")
 
   }
@@ -1191,13 +1191,13 @@ f.compare.metadata <- function(new_table_metadata, old_table_metadata, table){
     lost_vars <- lost_vars
     warning(print("There are missing variables in the POLIS table\ncompared to when it was last retrieved\nReview in 'lost_vars'"))
 
-    update_polis_log(.event = paste0(table, "Lost Var(s): ", lost_vars),
+    update_polis_log(.event = paste0(table, " - ", "Lost Var(s): ", lost_vars),
                      .event_type = "ALERT")
 
   }
 
   if(length(new_vars) == 0 & length(lost_vars) == 0){
-    update_polis_log(.event = paste0(table, "No new or lost varaibles"),
+    update_polis_log(.event = paste0(table, " - ", "No new or lost varaibles"),
                      .event_type = "INFO")
   }
 
@@ -1214,7 +1214,7 @@ f.compare.metadata <- function(new_table_metadata, old_table_metadata, table){
     class_changed_vars <- class_changed_vars
     warning(print("There are variables in the POLIS table with different classes\ncompared to when it was last retrieved\nReview in 'class_changed_vars'"))
 
-    update_polis_log(.event = paste0(table, "Variables changed class: ", class_changed_vars))
+    update_polis_log(.event = paste0(table, " - ", "Variables changed class: ", class_changed_vars))
   }
 
   #Check for new responses in categorical variables (excluding new variables and class changed variables that have been previously shown)
@@ -3147,6 +3147,11 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     tidyr::pivot_wider(names_from=source, values_from=value) |>
     dplyr::filter(new != old)
 
+  update_polis_log(.event = paste0("SIA New Records: ", nrow(in_new_not_old), "; ",
+                                   "SIA Surveillance Removed Records: ", nrow(in_old_not_new), "; ",
+                                   "SIA Modified Records: ", length(unique(in_new_and_old_but_modified$sia.sub.activity.code))),
+                   .event_type = "INFO")
+
   cli::cli_process_done()
 
   cli::cli_process_start("Writing out SIA file")
@@ -3204,6 +3209,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   cli::cli_process_done()
   # the curly brace below is closure of else statement. Do not delete
+
+  update_polis_log(.event = "SIA Finished",
+                   .event_type = "PROCESS")
 
   cli::cli_process_done("Clearing memory")
   rm(
