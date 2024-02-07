@@ -1165,8 +1165,9 @@ f.datecheck.onset <- function(date1, date2) {
 #' @import dplyr
 #' @param new_table_metadata tibble
 #' @param old_table_metadata tibble
+#' @param table str: "AFP", "Other Surv", "SIA", "ES", "POS"
 #' @returns meta data comparisons
-f.compare.metadata <- function(new_table_metadata, old_table_metadata){
+f.compare.metadata <- function(new_table_metadata, old_table_metadata, table){
   #compare to old metadata
   compare_metadata <- new_table_metadata |>
     dplyr::full_join(old_table_metadata, by=c("var_name"))
@@ -1178,7 +1179,7 @@ f.compare.metadata <- function(new_table_metadata, old_table_metadata){
     new_vars <- new_vars
     warning(print("There are new variables in the POLIS table\ncompared to when it was last retrieved\nReview in 'new_vars'"))
 
-    update_polis_log(.event = paste0("New Var(s): ", new_vars),
+    update_polis_log(.event = paste0(table, "New Var(s): ", new_vars),
                      .event_type = "ALERT")
 
   }
@@ -1190,9 +1191,14 @@ f.compare.metadata <- function(new_table_metadata, old_table_metadata){
     lost_vars <- lost_vars
     warning(print("There are missing variables in the POLIS table\ncompared to when it was last retrieved\nReview in 'lost_vars'"))
 
-    update_polis_log(.event = paste0("Lost Var(s): ", lost_vars),
+    update_polis_log(.event = paste0(table, "Lost Var(s): ", lost_vars),
                      .event_type = "ALERT")
 
+  }
+
+  if(length(new_vars) == 0 & length(lost_vars) == 0){
+    update_polis_log(.event = paste0(table, "No new or lost varaibles"),
+                     .event_type = "INFO")
   }
 
   class_changed_vars <- compare_metadata |>
@@ -1208,7 +1214,7 @@ f.compare.metadata <- function(new_table_metadata, old_table_metadata){
     class_changed_vars <- class_changed_vars
     warning(print("There are variables in the POLIS table with different classes\ncompared to when it was last retrieved\nReview in 'class_changed_vars'"))
 
-    update_polis_log(.event = paste0("Variables changed class: ", class_changed_vars))
+    update_polis_log(.event = paste0(table, "Variables changed class: ", class_changed_vars))
   }
 
   #Check for new responses in categorical variables (excluding new variables and class changed variables that have been previously shown)
@@ -2632,7 +2638,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   #Compare the final file to last week's final file to identify any differences in var_names, var_classes, or categorical responses
   new_table_metadata <- f.summarise.metadata(head(afp.linelist.02, 1000))
   old_table_metadata <- f.summarise.metadata(head(readr::read_rds(old.file), 1000))
-  afp_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata)
+  afp_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata, "AFP")
 
   #compare obs
   new <- afp.linelist.02 |>
@@ -2735,7 +2741,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   #Compare the final file to last week's final file to identify any differences in var_names, var_classes, or categorical responses
   new_table_metadata <- f.summarise.metadata(not.afp.01)
   old_table_metadata <- f.summarise.metadata(readr::read_rds(old.file))
-  not_afp_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata)
+  not_afp_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata, "Other Surv")
   #compare obs
   new <- not.afp.01 |>
     dplyr::mutate(epid = stringr::str_squish(epid)) |>
@@ -3111,7 +3117,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   new_table_metadata <- f.summarise.metadata(sia.06)
   old_table_metadata <- f.summarise.metadata(readr::read_rds(old.file))
-  sia_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata)
+  sia_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata, "SIA")
 
   #check obs in new and old
   old <- readr::read_rds(old.file) |>
@@ -3282,7 +3288,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     es.new.value <- f.download.compare.02(new.var.es.01 |> filter(!(is.na(old.distinct.01)) & variable != "id"), es.02.old, es.02.new)
 
 
-    update_polis_log(.event = sapply(names(es.new.value), function(x) paste0(x, " - ", paste0(unique(dplyr::pull(es.new.value, x)), collapse = ", "))) |>
+    update_polis_log(.event = sapply(names(es.new.value), function(x) paste0("New Values in: ", x, " - ", paste0(unique(dplyr::pull(es.new.value, x)), collapse = ", "))) |>
                        paste0(collapse = "; "),
                      .event_type = "ALERT")
 
@@ -3525,7 +3531,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   new_table_metadata <- f.summarise.metadata(es.04)
   old_table_metadata <- f.summarise.metadata(readr::read_rds(old.es.file))
-  es_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata)
+  es_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata, "ES")
 
   #compare obs
   new <- es.04 |>
@@ -3979,7 +3985,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   old.file <- list.files(latest_folder_in_archive, full.names = T)
   old.file <- old.file[grepl("positives_2001-01-01", old.file)]
   old_table_metadata <- f.summarise.metadata(readr::read_rds(old.file))
-  positives_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata)
+  positives_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata, "POS")
 
   new <- afp.es.virus.01 |>
     unique() |>
