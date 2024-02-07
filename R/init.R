@@ -192,11 +192,18 @@ get_polis_data <- function(type = "all"){
     tables <- c("virus", "case", "human_specimen", "environmental_sample",
                 "activity", "sub_activity", "lqas", "im")
 
+    update_polis_log(.event = paste0("Start POLIS download of: ", paste(tables, collapse = ", ")),
+                     .event_type = "START")
+
     sapply(tables, function(x) get_table_data(.table = x))
 
   }
 
   if(type == "pop"){
+
+    update_polis_log(.event = "Start POLIS pop download",
+                     .event_type = "START")
+
     get_table_data(.table = "pop")
   }
 
