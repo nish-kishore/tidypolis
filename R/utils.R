@@ -633,13 +633,13 @@ run_single_table_diagnostic <-
 #' @param log_file str: location of cache file
 #' @param .time dttm: time of update
 #' @param .user double: user who conducted the action
-#' @param .event_type str: START, PROCESS, INFO, ERROR, ALERT, END
+#' @param .event_type str: INIT, START, PROCESS, INFO, ERROR, ALERT, END
 #' @param .event str: event to be logged
 #' @returns Return true if cache updated
 update_polis_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
                              .time = Sys.time(),
                              .user = Sys.getenv("USERNAME"),
-                             .event_type = "START",
+                             .event_type = "INIT",
                              .event) {
 
 
