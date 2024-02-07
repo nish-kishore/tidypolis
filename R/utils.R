@@ -3799,6 +3799,10 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   if (nrow(vaccine.6.plus) >= 1) {
     cli::cli_alert_warning("There is a potentially misclassified virus based on ntchanges, check in POLIS and flag on message board. Writing out viruses to check.")
     readr::write_csv(vaccine.6.plus, paste0(polis_data_folder, "/Core_Ready_Files/virus_large_nt_changes.csv"))
+
+    update_polis_log(.event = paste0("Vaccine viruses with 6+ NT changes, flag for POLIS"),
+                     .event_type = "ALERT")
+
     } else {
     cli::cli_alert_info("Virus classifications are correct")
   }
@@ -3818,6 +3822,10 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     virus.dup.01 <- virus.dup.01[order(virus.dup.01$surveillance.type,virus.dup.01$virustype, virus.dup.01$yronset),] |> select(-virus_dup)
 
     readr::write_csv(virus.dup.01, paste0(polis_data_folder, "/Core_Ready_Files/duplicate_viruses_Polis_virusTableData.csv"))
+
+    update_polis_log(.event = paste0("Duplicate viruses available in duplicate_viruses_Polis_virusTableData.csv"),
+                     .event_type = "ALERT")
+
   } else {
     cli::cli_alert_info("If no duplicates found, then proceed")
   }
