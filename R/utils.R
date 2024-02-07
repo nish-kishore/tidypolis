@@ -3610,6 +3610,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_done()
 
   #Step 5 - Creating Virus datasets ====
+  update_polis_log(.event = "Creating Positives analytic datasets",
+                   .event_type = "PROCESS")
+
   cli::cli_h1("Step 5/5 - Creating Virus datasets")
 
   cli::cli_process_start("Loading new and old virus data")
@@ -3683,17 +3686,19 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   if (nrow(new.df) >= 1) {
     cli::cli_alert_danger("There is either a new variable in the AFP data or new value of an existing variable.
-       Please run f.download.compare.02 to see what it is. Preprocessing can not continue until this is adressed. Note, function
-       should fail everytime. Check to make sure that only new surveillancetypename=Community and NA and only new poliovirus types are VACCINE 3, VDPV 1 and VACCINE 1, VACCINE 3, VDPV 1")
-    stop()
+       Please run f.download.compare.02 to see what it is.")
+
+    # Step 4: Apply compare variables function
+
+    virus.new.value <- f.download.compare.02(new.var.virus.01, virus.raw.old.comp, virus.raw.new.comp)
+
+    update_polis_log(.event = sapply(names(virus.new.value), function(x) paste0("New Values in: ", x, " - ", paste0(unique(dplyr::pull(virus.new.value, x)), collapse = ", "))) |>
+                       paste0(collapse = "; "),
+                     .event_type = "ALERT")
+
   } else {
     cli::cli_alert_info("New AFP download is comparable to old AFP download")
   }
-
-  # Step 4: Apply compare variables function
-
-  new.value.or.var.01 <- f.download.compare.02(new.var.virus.01, virus.raw.old.comp, virus.raw.new.comp)
-
 
   # Step 5: check virus types and virus type names to ensure that novel derived viruses are properly
   # accounted for
