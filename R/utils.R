@@ -3845,7 +3845,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_done()
 
   cli::cli_process_start("Processing and cleaning AFP/non-AFP files")
-  afp.files.01 <- list.files(path = paste0(polis_data_folder, "/Core_Ready_Files/"), pattern = "^(afp_linelist_2001-01-01_2023).*(.rds)$", full.names = TRUE)
+  afp.files.01 <- list.files(path = paste0(polis_data_folder, "/Core_Ready_Files/"), pattern = "^(afp_linelist_2001-01-01_2024).*(.rds)$", full.names = TRUE)
   afp.01 <- purrr::map_df(afp.files.01, ~readr::read_rds(.x)) |>
     dplyr::ungroup() |>
     dplyr::distinct(.keep_all = T)|>
