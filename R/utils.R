@@ -3604,7 +3604,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     'in_new_and_old_but_modified', 'in_new_not_old', 'in_old_not_new', 'latest_folder_in_archive',
     'na.es.01', 'new', 'new.df', 'new.file', 'new.var.es.01', 'new_table_metadata', 'newsites',
     'old', 'old.es.file', 'old.file', 'old_table_metadata', 'savescipen',
-    'shape.name.01', 'truenewsites', 'var.list.01', 'x', 'y'
+    'shape.name.01', 'truenewsites', 'var.list.01', 'x', 'y', 'sia.new.value'
   )
   gc()
   cli::cli_process_done()
