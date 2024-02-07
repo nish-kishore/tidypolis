@@ -3575,6 +3575,10 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     tidyr::pivot_wider(names_from=source, values_from=value) |>
     dplyr::filter(new != old)
 
+  update_polis_log(.event = paste0("ES New Records: ", nrow(in_new_not_old), "; ",
+                                   "ES Surveillance Removed Records: ", nrow(in_old_not_new), "; ",
+                                   "ES Modified Records: ", length(unique(in_new_and_old_but_modified$env.sample.manual.edit.id))),
+                   .event_type = "INFO")
 
 
   cli::cli_process_done()
@@ -3588,6 +3592,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   cli::cli_process_done()
 
+  update_polis_log(.event = paste0("ES finished"),
+                   .event_type = "PROCESS")
 
   # remove unneeded data from workspace
 
