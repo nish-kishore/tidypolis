@@ -3148,7 +3148,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     dplyr::filter(new != old)
 
   update_polis_log(.event = paste0("SIA New Records: ", nrow(in_new_not_old), "; ",
-                                   "SIA Surveillance Removed Records: ", nrow(in_old_not_new), "; ",
+                                   "SIA Removed Records: ", nrow(in_old_not_new), "; ",
                                    "SIA Modified Records: ", length(unique(in_new_and_old_but_modified$sia.sub.activity.code))),
                    .event_type = "INFO")
 
@@ -3576,7 +3576,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     dplyr::filter(new != old)
 
   update_polis_log(.event = paste0("ES New Records: ", nrow(in_new_not_old), "; ",
-                                   "ES Surveillance Removed Records: ", nrow(in_old_not_new), "; ",
+                                   "ES Removed Records: ", nrow(in_old_not_new), "; ",
                                    "ES Modified Records: ", length(unique(in_new_and_old_but_modified$env.sample.manual.edit.id))),
                    .event_type = "INFO")
 
@@ -4061,10 +4061,17 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     in_new_and_old_but_modified <- in_new_and_old_but_modified |>
       dplyr::mutate(new = unlist(new)) |>
       dplyr::mutate(old = unlist(old)) |>
-      dplyr::filter(new != old)
+      dplyr::filter(new != old & !name %in% c("latitude", "longitude"))
 
     # list of records for which virus type name has changed from last week to this week.
     pos_changed_virustype <- in_new_and_old_but_modified |> filter(name=="measurement")
+
+    if(nrow(pos_changed_virustype) > 0){
+
+      update_polis_log(.event = paste0("Virus type has changed for ", nrow(pos_changed_virustype), " records, review in Changed_virustype_virusTableData.csv"),
+                       .event_type = "ALERT")
+
+    }
 
     # Export records for which virus type has changed from last week to this week in the CSV file:
     readr::write_csv(pos_changed_virustype, paste0(polis_data_folder, "/Core_Ready_Files/Changed_virustype_virusTableData.csv"), na = "")
@@ -4079,6 +4086,10 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     readr::write_csv(in_new_not_old, paste0(polis_data_folder, "/Core_Ready_Files/in_new_not_old_virusTableData.csv"), na = "")
   }
 
+  update_polis_log(.event = paste0("POS New Records: ", nrow(in_new_not_old), "; ",
+                                   "POS Removed Records: ", nrow(in_old_not_new), "; ",
+                                   "POS Modified Records: ", length(unique(in_new_and_old_but_modified$epid))),
+                   .event_type = "INFO")
 
   readr::write_rds(afp.es.virus.01, paste(polis_data_folder, "/Core_Ready_Files/",
                                    paste("positives", min(afp.es.virus.01$dateonset, na.rm = T),
@@ -4112,10 +4123,16 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   cli::cli_process_done()
 
+  update_polis_log(.event = "Positives file finished",
+                   .event_type = "PROCESS")
+
   cli::cli_process_start("Clearing memory")
   rm(list = ls())
   gc()
   cli::cli_process_done()
+
+  update_polis_log(.event = "Processing of CORE datafiles complete",
+                   .event_type = "END")
 
 }
 
