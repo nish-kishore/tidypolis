@@ -1179,7 +1179,7 @@ f.compare.metadata <- function(new_table_metadata, old_table_metadata, table){
     new_vars <- new_vars
     warning(print("There are new variables in the POLIS table\ncompared to when it was last retrieved\nReview in 'new_vars'"))
 
-    update_polis_log(.event = paste0(table, " - ", "New Var(s): ", paste(new_vars, collapse = ", "),
+    update_polis_log(.event = paste0(table, " - ", "New Var(s): ", paste(new_vars, collapse = ", ")),
                      .event_type = "ALERT")
 
   }
