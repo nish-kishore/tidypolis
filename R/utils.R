@@ -4083,6 +4083,12 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     readr::write_csv(in_new_not_old, paste0(polis_data_folder, "/Core_Ready_Files/in_new_not_old_virusTableData.csv"), na = "")
   }
 
+  #identify updated viruses logging change from VDPV to cVDPV
+  class.updated <- afp.es.virus.01 |>
+    dplyr::filter(vdpvclassificationchangedate <= Sys.Date() & vdpvclassificationchangedate > (Sys.Date()- 7)) |>
+    dplyr::select(epid, virustype, measurement, vdpvclassificationchangedate, vdpvclassificationcode, createddate) |>
+    dplyr::mutate(vdpvclassificationchangedate = as.Date(vdpvclassificationchangedate, "%Y-%m-%d"))
+
   update_polis_log(.event = paste0("POS New Records: ", nrow(in_new_not_old), "; ",
                                    "POS Removed Records: ", nrow(in_old_not_new), "; ",
                                    "POS Modified Records: ", length(unique(in_new_and_old_but_modified$epid))),
