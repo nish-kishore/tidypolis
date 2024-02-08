@@ -171,7 +171,8 @@ init_tidypolis <- function(
     update_polis_log(.event = "INIT error - flag > 0")
     stop("Cache and environment could not be reconciled, please delete and reinitate folder")
   }else{
-    update_polis_log(.event = "INIT completed successfully")
+    update_polis_log(.event = "INIT completed successfully",
+                     .event_type = "INIT")
     cli::cli_alert_success("POLIS data folder initiated, key validated and environment setup completed!")
   }
 
