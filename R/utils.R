@@ -1328,6 +1328,15 @@ log_report <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
     paste0(collapse = "\n - ")
 
 
+  #csv files to attach to report
+  duplicate.afp
+  duplicate.es
+  duplicate.virus
+  vaccine.nt
+  changed.virus.type
+  change.virus.class
+
+
   #coms section
 
 
