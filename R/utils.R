@@ -1289,6 +1289,18 @@ get_env_site_data <- function(){
 }
 
 
+#' Function to read and report on latest log file entries
+#'
+#' @description Read log entries from the latest download and preprocessing run, create report to send to team
+#' @param log_file str: location of POLIS log file
+
+f.log.report <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
+){
+
+
+}
+
+
 #### Pre-processing ####
 
 
