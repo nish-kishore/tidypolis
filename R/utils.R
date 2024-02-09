@@ -1311,7 +1311,8 @@ f.log.report <- function(log_file = Sys.getenv("POLIS_LOG_FILE")){
     dplyr::slice(1) |>
     dplyr::pull(time)
 
-  latest_run <-
+  latest_run <- log |>
+    dplyr::filter(time >= last_start & time <= last_end)
 
 }
 
