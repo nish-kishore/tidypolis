@@ -1294,8 +1294,10 @@ get_env_site_data <- function(){
 #' @description Read log entries from the latest download and preprocessing run, create report to send to team
 #' @import dplyr readr
 #' @param log_file str: location of POLIS log file
+#' @param polis_data_folder str: location of the POLIS data folder
 
-log_report <- function(log_file = Sys.getenv("POLIS_LOG_FILE")){
+log_report <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
+                       polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")){
 
   log <- readr::read_rds(log_file)
 
@@ -1317,12 +1319,16 @@ log_report <- function(log_file = Sys.getenv("POLIS_LOG_FILE")){
   report_info <- latest_run |>
     dplyr::filter(event_type == "INFO" & !grepl("records identified!", event)) |>
     dplyr::mutate(event = ifelse(grepl(" - update -", event), sub("deleted.*", "deleted", event), event))|>
-
+    dplyr::pull(event) |>
+    paste0(collapse = "\n - ")
 
   report_alert <- latest_run |>
     dplyr::filter(event_type == "ALERT") |>
     dplyr::pull(event) |>
     paste0(collapse = "\n - ")
+
+
+  #coms section
 
 
 }
