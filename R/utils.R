@@ -1292,11 +1292,17 @@ get_env_site_data <- function(){
 #' Function to read and report on latest log file entries
 #'
 #' @description Read log entries from the latest download and preprocessing run, create report to send to team
+#' @import dplyr readr
 #' @param log_file str: location of POLIS log file
 
-f.log.report <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
-){
+f.log.report <- function(log_file = Sys.getenv("POLIS_LOG_FILE")){
 
+  log <- readr::read_rds(log_file)
+
+  last_start <- log |>
+    dplyr::filter(event_type == "START") |>
+    dplyr::arrange(desc(time)) |>
+    dplyr::slice(1)
 
 }
 
