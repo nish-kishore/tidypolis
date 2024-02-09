@@ -1302,7 +1302,16 @@ f.log.report <- function(log_file = Sys.getenv("POLIS_LOG_FILE")){
   last_start <- log |>
     dplyr::filter(event_type == "START") |>
     dplyr::arrange(desc(time)) |>
-    dplyr::slice(1)
+    dplyr::slice(1) |>
+    dplyr::pull(time)
+
+  last_end <- log |>
+    dplyr::filter(event_type == "END") |>
+    dplyr::arrange(desc(time)) |>
+    dplyr::slice(1) |>
+    dplyr::pull(time)
+
+  latest_run <-
 
 }
 
