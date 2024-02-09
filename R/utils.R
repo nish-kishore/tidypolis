@@ -1315,7 +1315,10 @@ log_report <- function(log_file = Sys.getenv("POLIS_LOG_FILE")){
     dplyr::filter(time >= last_start & time <= last_end)
 
   report_info <- latest_run |>
-    dplyr::filter(event_type == "INFO")
+    dplyr::filter(event_type == "INFO" & !grepl("records identified!", event)) |>
+    dplyr::mutate(event = ifelse(grepl(" - update -", event), sub("deleted.*", "deleted", event), event))|>
+
+
 
   report_alert <- latest_run |>
     dplyr::filter(event_type == "ALERT")
