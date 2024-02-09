@@ -1319,9 +1319,10 @@ log_report <- function(log_file = Sys.getenv("POLIS_LOG_FILE")){
     dplyr::mutate(event = ifelse(grepl(" - update -", event), sub("deleted.*", "deleted", event), event))|>
 
 
-
   report_alert <- latest_run |>
-    dplyr::filter(event_type == "ALERT")
+    dplyr::filter(event_type == "ALERT") |>
+    dplyr::pull(event) |>
+    paste0(collapse = "\n - ")
 
 
 }
