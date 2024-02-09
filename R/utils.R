@@ -1295,7 +1295,7 @@ get_env_site_data <- function(){
 #' @import dplyr readr
 #' @param log_file str: location of POLIS log file
 
-f.log.report <- function(log_file = Sys.getenv("POLIS_LOG_FILE")){
+log_report <- function(log_file = Sys.getenv("POLIS_LOG_FILE")){
 
   log <- readr::read_rds(log_file)
 
@@ -1313,6 +1313,13 @@ f.log.report <- function(log_file = Sys.getenv("POLIS_LOG_FILE")){
 
   latest_run <- log |>
     dplyr::filter(time >= last_start & time <= last_end)
+
+  report_info <- latest_run |>
+    dplyr::filter(event_type == "INFO")
+
+  report_alert <- latest_run |>
+    dplyr::filter(event_type == "ALERT")
+
 
 }
 
