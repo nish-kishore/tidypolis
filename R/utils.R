@@ -1329,12 +1329,9 @@ log_report <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
 
 
   #csv files to attach to report
-  duplicate.afp
-  duplicate.es
-  duplicate.virus
-  vaccine.nt
-  changed.virus.type
-  change.virus.class
+  changed.virus.type <- paste0(polis_data_folder, "/Core_Ready_Files/Changed_virustype_virusTableData.csv")
+  change.virus.class <- paste0(polis_data_folder, "/Core_Ready_Files/virus_class_changed_date.csv")
+  new.virus.records <- paste0(polis_data_folder, "/Core_Ready_Files/in_new_not_old_virusTableData.csv")
 
 
   #coms section
