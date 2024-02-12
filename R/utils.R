@@ -1335,6 +1335,7 @@ log_report <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
 
 
   #coms section
+  send_teams_message("test", attach = c(changed.virus.type, change.virus.class, new.virus.records))
 
 
 }
