@@ -1292,7 +1292,7 @@ get_env_site_data <- function(){
 #' Function to read and report on latest log file entries
 #'
 #' @description Read log entries from the latest download and preprocessing run, create report to send to team
-#' @import dplyr readr
+#' @import dplyr readr sirfunctions
 #' @param log_file str: location of POLIS log file
 #' @param polis_data_folder str: location of the POLIS data folder
 
@@ -1336,7 +1336,8 @@ log_report <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
 
   #coms section
   send_teams_message(msg = paste0("New CORE data files info: ", report_info))
-  send_teams_message("test", attach = c(changed.virus.type, change.virus.class, new.virus.records))
+  send_teams_message(msg = paste0("New CORE data files alerts: ", report_alert))
+  send_teams_message(msg = "Attached CSVs contain information on new/changed virus records", attach = c(changed.virus.type, change.virus.class, new.virus.records))
 
 
 }
