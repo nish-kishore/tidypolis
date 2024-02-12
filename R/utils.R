@@ -1356,13 +1356,11 @@ archive_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
 
   log <- readr::read_rds(log_file)
 
-  three.months <- Sys.Date() - 90
-
   log.old <- log |>
-    dplyr::filter(time < three.months)
+    dplyr::filter(time < (Sys.Date() - 90))
 
   log.current <- log |>
-    dplyr::filter(time >= three.months)
+    dplyr::filter(time >= (Sys.Date() - 90))
 
 }
 
