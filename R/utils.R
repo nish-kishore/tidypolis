@@ -1342,6 +1342,16 @@ log_report <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
 }
 
 
+#' function to archive log report
+#'
+#'
+#' @param log_file str: location of POLIS log file
+
+archive_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE")){
+
+}
+
+
 #### Pre-processing ####
 
 
