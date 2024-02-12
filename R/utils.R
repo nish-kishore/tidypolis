@@ -1349,8 +1349,10 @@ log_report <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
 #'
 #' @import dplyr
 #' @param log_file str: location of POLIS log file
+#' @param polis_data_folder str: location of the POLIS data folder
 
-archive_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE")){
+archive_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
+                        polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")){
 
   log <- readr::read_rds(log_file)
 
