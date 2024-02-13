@@ -1682,7 +1682,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   cli::cli_process_done()
   #Get list of most recent files
-  most_recent_files <- list.files(file.path(polis_data_folder, "Core_Ready_Files"))[grepl(".rds", list.files(file.path(polis_data_folder, "Core_Ready_Files")))]
+  files_in_core_ready <- tidypolis_io(io = "list", file_path = file.path(polis_data_folder, "Core_Ready_Files"))
+  most_recent_files <- files_in_core_ready[grepl(".rds", files_in_core_ready)]
   most_recent_file_patterns <- c("Activity_Data", "EnvSamples", "Human_Detailed", "Viruses_Detailed")
   most_recent_files <- most_recent_files[grepl(paste(most_recent_file_patterns, collapse = "|"), most_recent_files)]
 
