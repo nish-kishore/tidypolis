@@ -13,10 +13,10 @@
 #' @returns conditional on `io`
 tidypolis_io <- function(obj = NULL, io, file_path, edav = Sys.getenv("POLIS_EDAV_FLAG"), azcontainer = sirfunctions::get_azure_storage_connection()){
 
-  opts <- c("read", "write", "delete", "list", "exists.dir", "exists.file")
+  opts <- c("read", "write", "delete", "list", "exists.dir", "exists.file", "create")
 
   if(!io %in% opts){
-    stop("io: must be 'read', 'write', 'delete', 'exists.dir', 'exists.file' or 'list'")
+    stop("io: must be 'read', 'write', 'delete', 'create', 'exists.dir', 'exists.file' or 'list'")
   }
 
   if(io == "write" & is.null(obj)){
@@ -27,7 +27,8 @@ tidypolis_io <- function(obj = NULL, io, file_path, edav = Sys.getenv("POLIS_EDA
 
     if(edav){
       return(sirfunctions::edav_io(io = "list", file_loc = file_path, azcontainer = azcontainer) |>
-        dplyr::pull(name))
+               dplyr::mutate(name = str_replace(name, paste0("GID/PEB/SIR/",file_path,"/"), "")) |>
+               dplyr::pull(name))
     }else{
       return(list.files(file_path))
     }
@@ -99,4 +100,13 @@ tidypolis_io <- function(obj = NULL, io, file_path, edav = Sys.getenv("POLIS_EDA
       file.remove(file_path)
     }
   }
+
+  if(io == "create"){
+    if(edav){
+      sirfunctions::edav_io(io = "create", file_loc = file_path)
+    }else{
+      dir.create(file_path)
+    }
+  }
+
 }
