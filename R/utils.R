@@ -4238,6 +4238,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
                    .event_type = "END")
 
   log_report()
+  archive_log()
 
 }
 
