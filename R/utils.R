@@ -1361,15 +1361,25 @@ archive_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
 
   log <- readr::read_rds(log_file)
 
-  log.old <- log |>
+  log.time.to.arch <- log |>
     dplyr::filter(event_type == "END") |>
     dplyr::arrange(desc(time)) |>
-    dplyr::slice(10)
+    dplyr::slice(10) |>
+    dplyr::pull(time)
+
+  log.to.arch <- log |>
+    dplyr::filter(time <= log.time.to.arch)
 
   log.current <- log |>
-    dplyr::filter(time >= (Sys.Date() - 90))
+    dplyr::filter(time > log.time.to.arch)
 
-
+  #check existence of archived log and either create or rbind to it
+  ifelse(file.exists(file.path(polis_data_folder, "Log_Archive/log_archive.rds")) == FALSE,
+    readr::write_rds(log.to.arch, file.path(polis_data_folder, "Log_Archive/log_archive.rds")),
+    readr::read_rds(file.path(polis_data_folder, "Log_Archive/log_archive.rds")) |>
+      rbind(log.to.arch) |>
+      readr::write_rds(file = file.path(polis_data_folder, "Log_Archive/log_archive.rds"))
+    )
 
 }
 
