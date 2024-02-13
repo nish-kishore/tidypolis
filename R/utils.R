@@ -107,7 +107,8 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
       " rows of ",
       table_data$table,
       " data"
-    ))
+    ),
+    .event_type = "INFO")
     cli::cli_process_done()
 
     #update cache information
@@ -137,7 +138,8 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
       table_data$table,
       ".rds"
     ))
-    update_polis_log(.event = paste0(table_data$table, " data saved locally"))
+    update_polis_log(.event = paste0(table_data$table, " data saved locally"),
+                     .event_type = "PROCESS")
     cli::cli_process_done()
 
     gc()
@@ -172,7 +174,8 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
           ": ",
           table_size,
           " new or updated records identified!"
-        )
+        ),
+        .event_type = "INFO"
       )
 
       if (table_size > 0) {
@@ -213,7 +216,8 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
           "rows of ",
           table_data$table,
           " data"
-        ))
+        ),
+        .event_type = "INFO")
         cli::cli_process_done()
 
         #check ids and make list of ids to be deleted
@@ -270,7 +274,8 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
             " rows of data being updated;",
             paste0(length(deleted_ids), " rows of data were deleted - "),
             paste0(deleted_ids, collapse = ", ")
-          )
+          ),
+          .event_type = "INFO"
         )
 
         #update cache
@@ -301,7 +306,8 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
                            table_data$table,
                            ".rds"
                          ))
-        update_polis_log(.event = paste0(table_data$table, " data saved locally"))
+        update_polis_log(.event = paste0(table_data$table, " data saved locally"),
+                         .event_type = "END")
         cli::cli_process_done()
 
         #garbage clean
@@ -627,18 +633,46 @@ run_single_table_diagnostic <-
 #' @param log_file str: location of cache file
 #' @param .time dttm: time of update
 #' @param .user double: user who conducted the action
+#' @param .event_type str: INIT, START, PROCESS, INFO, ERROR, ALERT, END
 #' @param .event str: event to be logged
 #' @returns Return true if cache updated
 update_polis_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
                              .time = Sys.time(),
                              .user = Sys.getenv("USERNAME"),
+                             .event_type = "INIT",
                              .event) {
+
+
+
+  log_names <- readr::read_rds(log_file) |>
+    names()
+
+  if(!"event_type" %in% log_names){
+
+    readr::read_rds(log_file) |>
+      cbind(event_type = NA) |>
+      tibble::add_row(time = .time,
+                      user = .user,
+                      event_type = "INFO",
+                      event = "Updating log format") |>
+      readr::write_rds(log_file)
+
+    readr::read_rds(log_file) |>
+      tibble::add_row(time = .time,
+                      user = .user,
+                      event_type = .event_type,
+                      event = .event) |>
+      readr::write_rds(log_file)
+
+  }else{
+
   readr::read_rds(log_file) |>
     tibble::add_row(time = .time,
                     user = .user,
+                    event_type = .event_type,
                     event = .event) |>
     readr::write_rds(log_file)
-
+  }
 }
 
 
@@ -905,8 +939,17 @@ get_crosswalk_data <- function(
 f.compare.dataframe.cols <- function(old, new) {
   cli::cli_process_start("Checking column names")
   if (length(setdiff(colnames(new), colnames(old))) >= 1 | length(setdiff(colnames(old), colnames(new))) >= 1) {
-    cli::cli_alert_danger(msg = "WARNING there is a new column in the data. Please investigate this new column")
-    stop()
+    cli::cli_alert_danger(text = "WARNING there is a new or removed column in the data. Please investigate this new column")
+
+    new.var <- setdiff(names(new), names(old))
+    new.var <- ifelse(length(new.var) == 0, "NULL", new.var)
+    lost.var <- setdiff(names(old), names(new))
+    lost.var <- ifelse(length(lost.var) == 0, "NULL", lost.var)
+
+    update_polis_log(.event = paste0("New Var: ", new.var, ", Removed Var: ", lost.var),
+                     .event_type = "ALERT")
+
+
   } else {cli::cli_alert_info("No differences found in column names")}
 }
 
@@ -1122,8 +1165,9 @@ f.datecheck.onset <- function(date1, date2) {
 #' @import dplyr
 #' @param new_table_metadata tibble
 #' @param old_table_metadata tibble
+#' @param table str: "AFP", "Other Surv", "SIA", "ES", "POS"
 #' @returns meta data comparisons
-f.compare.metadata <- function(new_table_metadata, old_table_metadata){
+f.compare.metadata <- function(new_table_metadata, old_table_metadata, table){
   #compare to old metadata
   compare_metadata <- new_table_metadata |>
     dplyr::full_join(old_table_metadata, by=c("var_name"))
@@ -1134,6 +1178,10 @@ f.compare.metadata <- function(new_table_metadata, old_table_metadata){
   if(length(new_vars) != 0){
     new_vars <- new_vars
     warning(print("There are new variables in the POLIS table\ncompared to when it was last retrieved\nReview in 'new_vars'"))
+
+    update_polis_log(.event = paste0(table, " - ", "New Var(s): ", paste(new_vars, collapse = ", ")),
+                     .event_type = "ALERT")
+
   }
 
   lost_vars <- (compare_metadata |>
@@ -1142,6 +1190,15 @@ f.compare.metadata <- function(new_table_metadata, old_table_metadata){
   if(length(lost_vars) != 0){
     lost_vars <- lost_vars
     warning(print("There are missing variables in the POLIS table\ncompared to when it was last retrieved\nReview in 'lost_vars'"))
+
+    update_polis_log(.event = paste0(table, " - ", "Lost Var(s): ", paste(lost_vars, collapse = ", ")),
+                     .event_type = "ALERT")
+
+  }
+
+  if(length(new_vars) == 0 & length(lost_vars) == 0){
+    update_polis_log(.event = paste0(table, " - ", "No new or lost varaibles"),
+                     .event_type = "INFO")
   }
 
   class_changed_vars <- compare_metadata |>
@@ -1156,6 +1213,8 @@ f.compare.metadata <- function(new_table_metadata, old_table_metadata){
   if(nrow(class_changed_vars) != 0){
     class_changed_vars <- class_changed_vars
     warning(print("There are variables in the POLIS table with different classes\ncompared to when it was last retrieved\nReview in 'class_changed_vars'"))
+
+    update_polis_log(.event = paste0(table, " - ", "Variables changed class: ", class_changed_vars))
   }
 
   #Check for new responses in categorical variables (excluding new variables and class changed variables that have been previously shown)
@@ -1230,6 +1289,101 @@ get_env_site_data <- function(){
 }
 
 
+#' Function to read and report on latest log file entries
+#'
+#' @description Read log entries from the latest download and preprocessing run, create report to send to team
+#' @import dplyr readr sirfunctions
+#' @param log_file str: location of POLIS log file
+#' @param polis_data_folder str: location of the POLIS data folder
+
+log_report <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
+                       polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")){
+
+  log <- readr::read_rds(log_file)
+
+  last_start <- log |>
+    dplyr::filter(event_type == "START") |>
+    dplyr::arrange(desc(time)) |>
+    dplyr::slice(1) |>
+    dplyr::pull(time)
+
+  last_end <- log |>
+    dplyr::filter(event_type == "END") |>
+    dplyr::arrange(desc(time)) |>
+    dplyr::slice(1) |>
+    dplyr::pull(time)
+
+  latest_run <- log |>
+    dplyr::filter(time >= last_start & time <= last_end)
+
+  report_info <- latest_run |>
+    dplyr::filter(event_type == "INFO" & !grepl("records identified!", event)) |>
+    dplyr::mutate(event = ifelse(grepl(" - update -", event), sub("deleted.*", "deleted", event), event))|>
+    dplyr::pull(event) |>
+    paste0(collapse = "\n - ")
+
+  report_alert <- latest_run |>
+    dplyr::filter(event_type == "ALERT") |>
+    dplyr::pull(event) |>
+    paste0(collapse = "\n - ")
+
+
+  #csv files to attach to report
+  changed.virus.type <- paste0(polis_data_folder, "/Core_Ready_Files/Changed_virustype_virusTableData.csv")
+  change.virus.class <- paste0(polis_data_folder, "/Core_Ready_Files/virus_class_changed_date.csv")
+  new.virus.records <- paste0(polis_data_folder, "/Core_Ready_Files/in_new_not_old_virusTableData.csv")
+
+
+  #coms section
+  sirfunctions::send_teams_message(msg = paste0("New CORE data files info: ", report_info))
+  sirfunctions::send_teams_message(msg = paste0("New CORE data files alerts: ", report_alert))
+  sirfunctions::send_teams_message(msg = "Attached CSVs contain information on new/changed virus records", attach = c(changed.virus.type, change.virus.class, new.virus.records))
+
+}
+
+
+#' function to archive log report
+#'
+#' @description
+#' Function to read in log file and archive entries older than 3 months
+#'
+#' @import dplyr readr
+#' @param log_file str: location of POLIS log file
+#' @param polis_data_folder str: location of the POLIS data folder
+
+archive_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
+                        polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")){
+
+  #create log archive
+  if(!dir.exists(file.path(polis_data_folder, "Log_Archive"))){
+    dir.create(file.path(polis_data_folder, "Log_Archive"))
+  }
+
+  log <- readr::read_rds(log_file)
+
+  log.time.to.arch <- log |>
+    dplyr::filter(event_type == "END") |>
+    dplyr::arrange(desc(time)) |>
+    dplyr::slice(10) |>
+    dplyr::pull(time)
+
+  log.to.arch <- log |>
+    dplyr::filter(time <= log.time.to.arch)
+
+  log.current <- log |>
+    dplyr::filter(time > log.time.to.arch)
+
+  #check existence of archived log and either create or rbind to it
+  ifelse(!file.exists(file.path(polis_data_folder, "Log_Archive/log_archive.rds")),
+    readr::write_rds(log.to.arch, file.path(polis_data_folder, "Log_Archive/log_archive.rds")),
+    readr::read_rds(file.path(polis_data_folder, "Log_Archive/log_archive.rds")) |>
+      rbind(log.to.arch) |>
+      readr::write_rds(file = file.path(polis_data_folder, "Log_Archive/log_archive.rds"))
+    )
+
+}
+
+
 #### Pre-processing ####
 
 
@@ -1243,6 +1397,11 @@ get_env_site_data <- function(){
 preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   #Step 1 - Basic cleaning and crosswalk ======
   cli::cli_h1("Step 1/5: Basic cleaning and crosswalk across datasets")
+
+  #update log for start of creation of CORE ready datasets
+  update_polis_log(.event = "Beginning Preprocessing - Creation of CORE Ready Datasets",
+                   .event_type = "START")
+
   #Read in the updated API datasets
   cli::cli_h2("Loading data")
 
@@ -1362,6 +1521,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_done()
 
   #Import the crosswalk file and use it to rename all data elements in the API-downloaded tables.
+
   cli::cli_h2("Crosswalk and rename variables")
 
   crosswalk <- get_crosswalk_data()
@@ -1407,6 +1567,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
      "api_virus_sub1")
 
   cli::cli_process_done()
+
 
   cli::cli_h2("Modifying and reconciling variable types")
   #    Modify individual variables in the API files to match the coding in the web-interface downloads,
@@ -1584,6 +1745,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   gc()
   cli::cli_process_done()
 
+
   cli::cli_process_start("Cleaning irregular location names")
   api_virus_sub3 <- api_virus_sub2 |>
     dplyr::mutate(location = paste(
@@ -1642,6 +1804,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   rm("api_virus_sub2")
   gc()
   cli::cli_process_done()
+
 
   cli::cli_process_start("Removing empty columns")
 
@@ -1832,6 +1995,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   readr::write_rds(api_virus_sub3, file.path(polis_data_folder, "Core_Ready_Files", paste0("Viruses_Detailed_Dataset_",timestamp,"_from_01_Dec_1999_to_",format(ts, "%d_%b_%Y"),".rds")))
   cli::cli_process_done()
 
+  update_polis_log(.event = "CORE Ready files and change logs complete",
+                   .event_type = "PROCESS")
+
   #14. Remove temporary files from working environment, and set scientific notation back to whatever it was originally
   cli::cli_process_start("Clearing memory from first step")
   rm("change_summary", "crosswalk", "in_new_and_old_but_modified", "in_new_not_old",
@@ -1844,6 +2010,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_done()
 
   #Step 2 - Creating AFP and EPI datasets ====
+  update_polis_log(.event = "Creating AFP and Epi analytic datasets",
+                   .event_type = "PROCESS")
+
   cli::cli_h1("Step 2/5 - Creating AFP and Epi analytic datasets")
 
   # Step 1: Read in "old" data file (System to find "Old" data file)
@@ -1917,20 +2086,21 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   new.df <- new.var.afp.01 |>
     dplyr::filter(is.na(old.distinct.01) | diff.distinct.01 >= 1)
 
+  # Step 4: Apply compare variables function
   if (nrow(new.df) >= 1) {
     cli::cli_alert_danger("There is either a new variable in the AFP data or new value of an existing variable.
-       Please run f.download.compare.02 to see what it is. Preprocessing can not continue until this is adressed. Note, function
-       should fail everytime. Check to make sure that only new surveillancetypename=Community and NA and only new poliovirus types are VACCINE 3, VDPV 1 and VACCINE 1, VACCINE 3, VDPV 1")
-    stop()
+       Please run f.download.compare.02 to see what it is. New values of variables are present in log file.")
+
+    afp.new.value <- f.download.compare.02(new.var.afp.01, afp.raw.old.comp, afp.raw.new.comp)
+
+    update_polis_log(.event = sapply(names(afp.new.value), function(x) paste0("New Values in: ", x, " - ", paste0(unique(dplyr::pull(afp.new.value, x)), collapse = ", "))) |>
+                       paste0(collapse = "; "),
+                     .event_type = "ALERT")
+
   } else {
     cli::cli_alert_info("New AFP download is comparable to old AFP download")
   }
 
-  # Step 4: Apply compare variables function
-
-  if(nrow(new.df) >= 1){
-    new.value.or.var.01 <- f.download.compare.02(new.var.afp.01, afp.raw.old.comp, afp.raw.new.comp)
-  }
 
   #Find out if there are duplicate epids.
   cli::cli_process_start("Checking for duplicated EPIDs")
@@ -1954,7 +2124,10 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
                                                           sep = "_"), ".csv", sep = "")
     )
     cli::cli_alert_info("Duplicate AFP case. Check the data for duplicate records. If they are exact same, then contact Ashley")
-    stop()
+
+    update_polis_log(.event = "Duplicate AFP cases output in duplicate_AFPcases_Polis within Core_Ready_files",
+                     .event_type = "ALERT")
+
   } else {
     cli::cli_process_done(msg_done = "No duplicate EPIDs found, okay to proceed")
   }
@@ -2142,6 +2315,10 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
     if(length(epids) > 0){
       cli::cli_alert_danger("There is a 'none' classification, flag for POLIS and get guidance on proper classification")
+
+      update_polis_log(.event = "NONE classification found, must be manually addressed",
+                       .event_type = "ERROR")
+
       stop()
     }
   }
@@ -2553,7 +2730,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   #Compare the final file to last week's final file to identify any differences in var_names, var_classes, or categorical responses
   new_table_metadata <- f.summarise.metadata(head(afp.linelist.02, 1000))
   old_table_metadata <- f.summarise.metadata(head(readr::read_rds(old.file), 1000))
-  afp_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata)
+  afp_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata, "AFP")
 
   #compare obs
   new <- afp.linelist.02 |>
@@ -2585,8 +2762,15 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
       dplyr::mutate(name = stringr::str_sub(name, 1, -3)) |>
       #long_to_wide
       tidyr::pivot_wider(names_from=source, values_from=value) |>
-      dplyr::filter(new != old)
+      dplyr::filter(new != old & !name %in% c("lat", "lon"))
+
+
   }
+
+  update_polis_log(.event = paste0("AFP New Records: ", nrow(in_new_not_old), "; ",
+                                   "AFP Removed Records: ", nrow(in_old_not_new), "; ",
+                                   "AFP Modified Records: ", length(unique(in_new_and_old_but_modified$epid))),
+                   .event_type = "INFO")
 
   readr::write_rds(afp.linelist.02, paste(polis_data_folder, "/Core_Ready_Files/",
                                    paste("afp_linelist", min(afp.linelist.02$dateonset, na.rm = T), max(afp.linelist.02$dateonset, na.rm = T), sep = "_"),
@@ -2649,7 +2833,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   #Compare the final file to last week's final file to identify any differences in var_names, var_classes, or categorical responses
   new_table_metadata <- f.summarise.metadata(not.afp.01)
   old_table_metadata <- f.summarise.metadata(readr::read_rds(old.file))
-  not_afp_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata)
+  not_afp_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata, "Other Surv")
   #compare obs
   new <- not.afp.01 |>
     dplyr::mutate(epid = stringr::str_squish(epid)) |>
@@ -2677,7 +2861,12 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     mutate(name = str_sub(name, 1, -3)) |>
     #long_to_wide
     pivot_wider(names_from=source, values_from=value) |>
-    filter(new != old)
+    filter(new != old & !name %in% c("lat", "lon"))
+
+  update_polis_log(.event = paste0("Other Surveillance New Records: ", nrow(in_new_not_old), "; ",
+                                   "Other Surveillance Removed Records: ", nrow(in_old_not_new), "; ",
+                                   "Other Surveillance Modified Records: ", length(unique(in_new_and_old_but_modified$epid))),
+                   .event_type = "INFO")
 
 
   readr::write_rds(not.afp.01, paste(polis_data_folder, "/Core_Ready_Files/",
@@ -2741,6 +2930,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   cli::cli_process_done()
 
+  update_polis_log(.event = "AFP and Other Surveillance Linelists Finished",
+                   .event_type = "PROCESS")
+
   cli::cli_process_start("Clearing memory")
 
   rm('afp.clean.01', 'afp.clean.light', 'afp.files.01', 'afp.files.02',
@@ -2761,8 +2953,10 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_done()
 
   #Step 3 - Creating SIA datasets ====
-  cli::cli_h1("Step 3/5 - Creating SIA analytic datasets")
+  update_polis_log(.event = "Creating SIA analytic datasets",
+                   .event_type = "PROCESS")
 
+  cli::cli_h1("Step 3/5 - Creating SIA analytic datasets")
 
   # Step 1: Read in "old" data file (System to find "Old" data file)
   latest_folder_in_archive <- list.files(paste0(polis_data_folder, "/Core_Ready_Files/Archive"), full.names = T) |>
@@ -2834,19 +3028,22 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   new.var.sia.01 <- f.download.compare.01(sia.01.old.compare, sia.01.new.compare)
 
   new.df <- new.var.sia.01 |>
-    dplyr::filter(is.na(old.distinct.01) | diff.distinct.01 >= 1)
+    dplyr::filter(is.na(old.distinct.01) | diff.distinct.01 >= 1) |>
+    dplyr::filter(!variable %in% c("parentid", "id"))
 
   if (nrow(new.df) >= 1) {
     cli::cli_alert_danger("There is either a new variable in the SIA data or new value of an existing variable.
        Please run f.download.compare.02 to see what it is. Preprocessing can not continue until this is adressed.")
-    stop()
+
+    sia.new.value <- f.download.compare.02(new.var.sia.01, sia.01.old.compare, sia.01.new.compare)
+
+    update_polis_log(.event = sapply(names(sia.new.value), function(x) paste0("New values in: ", x, " - ", paste0(unique(dplyr::pull(sia.new.value, x)), collapse = ", "))) |>
+                       paste0(collapse = "; "),
+                     .event_type = "ALERT")
+
   } else {
 
-    # Uncomment for STOP error above
-    # Use the function below to determine what has changed between the two downloads
-    # run the above line by line to generate new.var.sia.01
-
-    #new.value.or.var.01 <- f.download.compare.02(new.var.sia.01, sia.01.old.compare, sia.01.new.compare)
+    cli::cli_alert_info("New SIA download is comparable to old SIA download")
 
   }
   cli::cli_process_done()
@@ -3012,7 +3209,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   new_table_metadata <- f.summarise.metadata(sia.06)
   old_table_metadata <- f.summarise.metadata(readr::read_rds(old.file))
-  sia_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata)
+  sia_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata, "SIA")
 
   #check obs in new and old
   old <- readr::read_rds(old.file) |>
@@ -3041,6 +3238,11 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     #long_to_wide
     tidyr::pivot_wider(names_from=source, values_from=value) |>
     dplyr::filter(new != old)
+
+  update_polis_log(.event = paste0("SIA New Records: ", nrow(in_new_not_old), "; ",
+                                   "SIA Removed Records: ", nrow(in_old_not_new), "; ",
+                                   "SIA Modified Records: ", length(unique(in_new_and_old_but_modified$sia.sub.activity.code))),
+                   .event_type = "INFO")
 
   cli::cli_process_done()
 
@@ -3099,6 +3301,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   cli::cli_process_done()
   # the curly brace below is closure of else statement. Do not delete
+
+  update_polis_log(.event = "SIA Finished",
+                   .event_type = "PROCESS")
 
   cli::cli_process_done("Clearing memory")
   rm(
@@ -3178,11 +3383,19 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   if (nrow(new.df) >= 1) {
     cli::cli_alert_danger("There is either a new variable in the ES data or new value of an existing variable.
           Please run f.download.compare.01 to see what it is. Preprocessing can not continue until this is adressed.")
-    stop()
+
+
+    es.new.value <- f.download.compare.02(new.var.es.01 |> filter(!(is.na(old.distinct.01)) & variable != "id"), es.02.old, es.02.new)
+
+
+    update_polis_log(.event = sapply(names(es.new.value), function(x) paste0("New Values in: ", x, " - ", paste0(unique(dplyr::pull(es.new.value, x)), collapse = ", "))) |>
+                       paste0(collapse = "; "),
+                     .event_type = "ALERT")
+
   }else{
     cli::cli_alert_info("No variable change errors")
   }
-  #temp <- f.download.compare.02(new.var.es.01 |> filter(!(is.na(old.distinct.01)) & variable != "id"), es.02.old, es.02.new)
+
   remove("es.01.old", "es.02.old")
   # Data manipulation
 
@@ -3259,9 +3472,10 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   # Script below will stop further execution if there is a duplicate ENV sample manual id
   if (nrow(es.00) >= 1) {
-    cli::cli_alert_danger("Duplicate ENV sample manual ids. Check the data for duplicate records.
-          If they are the exact same, then delete one record")
-    stop()
+    cli::cli_alert_danger("Duplicate ENV sample manual ids. Flag for POLIS. Output in duplicate_ES_sampleID_Polis.csv.")
+
+    readr::write_csv(es.00, paste0(polis_data_folder, "/Core_Ready_Files/duplicate_ES_sampleID_Polis.csv"), na = "")
+
   } else {
     cli::cli_alert_info("No duplicates identified")
   }
@@ -3418,7 +3632,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   new_table_metadata <- f.summarise.metadata(es.04)
   old_table_metadata <- f.summarise.metadata(readr::read_rds(old.es.file))
-  es_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata)
+  es_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata, "ES")
 
   #compare obs
   new <- es.04 |>
@@ -3450,7 +3664,14 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     dplyr::mutate(source = ifelse(stringr::str_sub(name, -2) == ".x", "new", "old")) |>
     dplyr::mutate(name = stringr::str_sub(name, 1, -3)) |>
     #long_to_wide
-    tidyr::pivot_wider(names_from=source, values_from=value)
+    tidyr::pivot_wider(names_from=source, values_from=value) |>
+    dplyr::filter(new != old)
+
+  update_polis_log(.event = paste0("ES New Records: ", nrow(in_new_not_old), "; ",
+                                   "ES Removed Records: ", nrow(in_old_not_new), "; ",
+                                   "ES Modified Records: ", length(unique(in_new_and_old_but_modified$env.sample.manual.edit.id))),
+                   .event_type = "INFO")
+
 
   cli::cli_process_done()
 
@@ -3463,6 +3684,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   cli::cli_process_done()
 
+  update_polis_log(.event = paste0("ES finished"),
+                   .event_type = "PROCESS")
 
   # remove unneeded data from workspace
 
@@ -3473,12 +3696,15 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     'in_new_and_old_but_modified', 'in_new_not_old', 'in_old_not_new', 'latest_folder_in_archive',
     'na.es.01', 'new', 'new.df', 'new.file', 'new.var.es.01', 'new_table_metadata', 'newsites',
     'old', 'old.es.file', 'old.file', 'old_table_metadata', 'savescipen',
-    'shape.name.01', 'truenewsites', 'var.list.01', 'x', 'y'
+    'shape.name.01', 'truenewsites', 'var.list.01', 'x', 'y', 'sia.new.value'
   )
   gc()
   cli::cli_process_done()
 
   #Step 5 - Creating Virus datasets ====
+  update_polis_log(.event = "Creating Positives analytic datasets",
+                   .event_type = "PROCESS")
+
   cli::cli_h1("Step 5/5 - Creating Virus datasets")
 
   cli::cli_process_start("Loading new and old virus data")
@@ -3552,17 +3778,19 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   if (nrow(new.df) >= 1) {
     cli::cli_alert_danger("There is either a new variable in the AFP data or new value of an existing variable.
-       Please run f.download.compare.02 to see what it is. Preprocessing can not continue until this is adressed. Note, function
-       should fail everytime. Check to make sure that only new surveillancetypename=Community and NA and only new poliovirus types are VACCINE 3, VDPV 1 and VACCINE 1, VACCINE 3, VDPV 1")
-    stop()
+       Please run f.download.compare.02 to see what it is.")
+
+    # Step 4: Apply compare variables function
+
+    virus.new.value <- f.download.compare.02(new.var.virus.01, virus.raw.old.comp, virus.raw.new.comp)
+
+    update_polis_log(.event = sapply(names(virus.new.value), function(x) paste0("New Values in: ", x, " - ", paste0(unique(dplyr::pull(virus.new.value, x)), collapse = ", "))) |>
+                       paste0(collapse = "; "),
+                     .event_type = "ALERT")
+
   } else {
     cli::cli_alert_info("New AFP download is comparable to old AFP download")
   }
-
-  # Step 4: Apply compare variables function
-
-  #new.value.or.var.01 <- f.download.compare.02(new.var.virus.01, virus.raw.old.comp, virus.raw.new.comp)
-
 
   # Step 5: check virus types and virus type names to ensure that novel derived viruses are properly
   # accounted for
@@ -3663,6 +3891,10 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   if (nrow(vaccine.6.plus) >= 1) {
     cli::cli_alert_warning("There is a potentially misclassified virus based on ntchanges, check in POLIS and flag on message board. Writing out viruses to check.")
     readr::write_csv(vaccine.6.plus, paste0(polis_data_folder, "/Core_Ready_Files/virus_large_nt_changes.csv"))
+
+    update_polis_log(.event = paste0("Vaccine viruses with 6+ NT changes, flag for POLIS"),
+                     .event_type = "ALERT")
+
     } else {
     cli::cli_alert_info("Virus classifications are correct")
   }
@@ -3682,6 +3914,10 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     virus.dup.01 <- virus.dup.01[order(virus.dup.01$surveillance.type,virus.dup.01$virustype, virus.dup.01$yronset),] |> select(-virus_dup)
 
     readr::write_csv(virus.dup.01, paste0(polis_data_folder, "/Core_Ready_Files/duplicate_viruses_Polis_virusTableData.csv"))
+
+    update_polis_log(.event = paste0("Duplicate viruses available in duplicate_viruses_Polis_virusTableData.csv"),
+                     .event_type = "ALERT")
+
   } else {
     cli::cli_alert_info("If no duplicates found, then proceed")
   }
@@ -3701,7 +3937,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_done()
 
   cli::cli_process_start("Processing and cleaning AFP/non-AFP files")
-  afp.files.01 <- list.files(path = paste0(polis_data_folder, "/Core_Ready_Files/"), pattern = "^(afp_linelist_2001-01-01_2023).*(.rds)$", full.names = TRUE)
+  afp.files.01 <- list.files(path = paste0(polis_data_folder, "/Core_Ready_Files/"), pattern = "^(afp_linelist_2001-01-01_2024).*(.rds)$", full.names = TRUE)
   afp.01 <- purrr::map_df(afp.files.01, ~readr::read_rds(.x)) |>
     dplyr::ungroup() |>
     dplyr::distinct(.keep_all = T)|>
@@ -3872,7 +4108,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   old.file <- list.files(latest_folder_in_archive, full.names = T)
   old.file <- old.file[grepl("positives_2001-01-01", old.file)]
   old_table_metadata <- f.summarise.metadata(readr::read_rds(old.file))
-  positives_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata)
+  positives_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata, "POS")
 
   new <- afp.es.virus.01 |>
     unique() |>
@@ -3917,10 +4153,17 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     in_new_and_old_but_modified <- in_new_and_old_but_modified |>
       dplyr::mutate(new = unlist(new)) |>
       dplyr::mutate(old = unlist(old)) |>
-      dplyr::filter(new != old)
+      dplyr::filter(new != old & !name %in% c("latitude", "longitude"))
 
     # list of records for which virus type name has changed from last week to this week.
     pos_changed_virustype <- in_new_and_old_but_modified |> filter(name=="measurement")
+
+    if(nrow(pos_changed_virustype) > 0){
+
+      update_polis_log(.event = paste0("Virus type has changed for ", nrow(pos_changed_virustype), " records, review in Changed_virustype_virusTableData.csv"),
+                       .event_type = "ALERT")
+
+    }
 
     # Export records for which virus type has changed from last week to this week in the CSV file:
     readr::write_csv(pos_changed_virustype, paste0(polis_data_folder, "/Core_Ready_Files/Changed_virustype_virusTableData.csv"), na = "")
@@ -3935,6 +4178,21 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     readr::write_csv(in_new_not_old, paste0(polis_data_folder, "/Core_Ready_Files/in_new_not_old_virusTableData.csv"), na = "")
   }
 
+  #identify updated viruses logging change from VDPV to cVDPV
+  class.updated <- afp.es.virus.01 |>
+    dplyr::filter(vdpvclassificationchangedate <= Sys.Date() & vdpvclassificationchangedate > (Sys.Date()- 7)) |>
+    dplyr::select(epid, virustype, measurement, vdpvclassificationchangedate, vdpvclassificationcode, createddate) |>
+    dplyr::mutate(vdpvclassificationchangedate = as.Date(vdpvclassificationchangedate, "%Y-%m-%d"))
+
+  if(nrow(class.updated > 0)){
+    readr::write_csv(class.updated, paste0(polis_data_folder, "/Core_Ready_Files/virus_class_changed_date.csv"), na = "")
+  }
+
+  update_polis_log(.event = paste0("POS New Records: ", nrow(in_new_not_old), "; ",
+                                   "POS Removed Records: ", nrow(in_old_not_new), "; ",
+                                   "POS Modified Records: ", length(unique(in_new_and_old_but_modified$epid)), "; ",
+                                   "POS Class Changed Records: ", length(unique(class.updated$epid))),
+                   .event_type = "INFO")
 
   readr::write_rds(afp.es.virus.01, paste(polis_data_folder, "/Core_Ready_Files/",
                                    paste("positives", min(afp.es.virus.01$dateonset, na.rm = T),
@@ -3968,10 +4226,19 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   cli::cli_process_done()
 
+  update_polis_log(.event = "Positives file finished",
+                   .event_type = "PROCESS")
+
   cli::cli_process_start("Clearing memory")
   rm(list = ls())
   gc()
   cli::cli_process_done()
+
+  update_polis_log(.event = "Processing of CORE datafiles complete",
+                   .event_type = "END")
+
+  log_report()
+  archive_log()
 
 }
 
