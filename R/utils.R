@@ -1355,7 +1355,7 @@ archive_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
                         polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")){
 
   #create log archive
-  if(dir.exists(file.path(polis_data_folder, "Log_Archive")) == FALSE){
+  if(!dir.exists(file.path(polis_data_folder, "Log_Archive"))){
     dir.create(file.path(polis_data_folder, "Log_Archive"))
   }
 
@@ -1374,7 +1374,7 @@ archive_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
     dplyr::filter(time > log.time.to.arch)
 
   #check existence of archived log and either create or rbind to it
-  ifelse(file.exists(file.path(polis_data_folder, "Log_Archive/log_archive.rds")) == FALSE,
+  ifelse(!file.exists(file.path(polis_data_folder, "Log_Archive/log_archive.rds")),
     readr::write_rds(log.to.arch, file.path(polis_data_folder, "Log_Archive/log_archive.rds")),
     readr::read_rds(file.path(polis_data_folder, "Log_Archive/log_archive.rds")) |>
       rbind(log.to.arch) |>
