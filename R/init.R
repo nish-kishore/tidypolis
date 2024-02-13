@@ -199,7 +199,8 @@ init_tidypolis <- function(
     update_polis_log(.event = "INIT error - flag > 0")
     stop("Cache and environment could not be reconciled, please delete and reinitate folder")
   }else{
-    update_polis_log(.event = "INIT completed successfully")
+    update_polis_log(.event = "INIT completed successfully",
+                     .event_type = "INIT")
     cli::cli_alert_success("POLIS data folder initiated, key validated and environment setup completed!")
   }
 
@@ -220,12 +221,22 @@ get_polis_data <- function(type = "all"){
     tables <- c("virus", "case", "human_specimen", "environmental_sample",
                 "activity", "sub_activity", "lqas", "im")
 
+    update_polis_log(.event = paste0("Start POLIS download of: ", paste(tables, collapse = ", ")),
+                     .event_type = "START")
+
     sapply(tables, function(x) get_table_data(.table = x))
 
   }
 
   if(type == "pop"){
+
+    update_polis_log(.event = "Start POLIS pop download",
+                     .event_type = "START")
+
     get_table_data(.table = "pop")
+
+    update_polis_log(.event = "POLIS Pop file donwloaded",
+                     .event_type = "END")
   }
 
 
