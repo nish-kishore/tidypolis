@@ -633,11 +633,11 @@ update_polis_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
                              .time = Sys.time(),
                              .user = Sys.getenv("USERNAME"),
                              .event) {
-  readr::read_rds(log_file) |>
+  tidypolis_io(io = "read", file_path = log_file) |>
     tibble::add_row(time = .time,
                     user = .user,
                     event = .event) |>
-    readr::write_rds(log_file)
+    tidypolis_io(io = "write", file_path = log_file)
 
 }
 
@@ -653,7 +653,7 @@ update_polis_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
 #' @returns Return tibble with table information
 get_polis_cache <- function(cache_file = Sys.getenv("POLIS_CACHE_FILE"),
                             .table) {
-  cache <- readr::read_rds(cache_file)
+  cache <- tidypolis_io(io = "read", file_path = cache_file)
 
   if (.table %in% dplyr::pull(cache, table)) {
     cache |>
@@ -679,7 +679,7 @@ update_polis_cache <- function(cache_file = Sys.getenv("POLIS_CACHE_FILE"),
                                .table,
                                .nrow,
                                .update_val) {
-  readr::read_rds(cache_file) |>
+  tidypolis_io(io = "read", file_path = cache_file) |>
     dplyr::mutate(
       nrow = ifelse(table == .table, .nrow, nrow),
       last_sync = ifelse(
@@ -696,7 +696,7 @@ update_polis_cache <- function(cache_file = Sys.getenv("POLIS_CACHE_FILE"),
       last_sync = lubridate::as_datetime(last_sync),
       polis_update_value = lubridate::as_datetime(polis_update_value)
     ) |>
-    readr::write_rds(cache_file)
+    tidypolis_io(io = "write", file_path = cache_file)
 
 }
 
