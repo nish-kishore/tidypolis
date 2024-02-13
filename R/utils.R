@@ -1347,7 +1347,7 @@ log_report <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
 #' @description
 #' Function to read in log file and archive entries older than 3 months
 #'
-#' @import dplyr
+#' @import dplyr readr
 #' @param log_file str: location of POLIS log file
 #' @param polis_data_folder str: location of the POLIS data folder
 
@@ -1362,7 +1362,9 @@ archive_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
   log <- readr::read_rds(log_file)
 
   log.old <- log |>
-    dplyr::filter(time < (Sys.Date() - 90))
+    dplyr::filter(event_type == "END") |>
+    dplyr::arrange(desc(time)) |>
+    dplyr::slice(10)
 
   log.current <- log |>
     dplyr::filter(time >= (Sys.Date() - 90))
