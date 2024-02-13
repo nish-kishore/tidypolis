@@ -881,13 +881,11 @@ remove_empty_columns <- function(dataframe) {
 #' @import dplyr cli
 #' @return tibble: crosswalk data
 get_crosswalk_data <- function(
-    file_loc = file.path("","", "cdc.gov/project/CGH_GID_Active/PEB/SIR/",
-                         "DATA/Core 2.0/preprocessing/GetPOLIS",
-                         "api_web_core_crosswalk.xlsx")
+    file_loc = "Data/misc/crosswalk.rds"
   ){
   cli::cli_process_start("Import crosswalk")
   crosswalk <-
-    rio::import(file_loc) |>
+    sirfunctions::edav_io(io = "read", file_loc = file_loc) |>
     #TrendID removed from export
     dplyr::filter(!API_Name %in% c("Admin0TrendId", "Admin0Iso2Code"))
   cli::cli_process_done()
@@ -1225,7 +1223,7 @@ f.summarise.metadata <- function(dataframe, categorical_max = 10){
 #' @import readr
 #' @returns tibble: env site list
 get_env_site_data <- function(){
-  envSiteYearList <- readr::read_csv(file.path("", "", "cdc.gov/project/CGH_GID_Active/PEB/SIR/DATA/Core 2.0/preprocessing/datafiles_01/envSiteYearList.csv"))
+  envSiteYearList <- sirfuntions::edav_io(io = "read", file_loc = "Data/misc/env_sites.rds")
   return(envSiteYearList)
 }
 
@@ -1248,31 +1246,31 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   cli::cli_process_start("Case")
   api_case_2019_12_01_onward <-
-    readr::read_rds(paste0(polis_data_folder, "/case.rds")) |>
+    tidypolis_io(io = "read", file_path = paste0(polis_data_folder, "/case.rds")) |>
     dplyr::mutate_all(as.character)
   cli::cli_process_done()
 
   cli::cli_process_start("Environmental Samples")
   api_es_complete <-
-    readr::read_rds(paste0(polis_data_folder, "/environmental_sample.rds")) |>
+    tidypolis_io(io = "read", file_path = paste0(polis_data_folder, "/environmental_sample.rds")) |>
     dplyr::mutate_all(as.character)
   cli::cli_process_done()
 
   cli::cli_process_start("Sub-activity")
   api_subactivity_complete <-
-    readr::read_rds(paste0(polis_data_folder, "/sub_activity.rds")) |>
+    tidypolis_io(io = "read", file_path = paste0(polis_data_folder, "/sub_activity.rds")) |>
     dplyr::mutate_all(as.character)
   cli::cli_process_done()
 
   cli::cli_process_start("Virus")
   api_virus_complete <-
-    readr::read_rds(paste0(polis_data_folder, "/virus.rds")) |>
+    tidypolis_io(io = "read", file_path = paste0(polis_data_folder, "/virus.rds")) |>
     dplyr::mutate_all(as.character)
   cli::cli_process_done()
 
   cli::cli_process_start("Activity")
   api_activity_complete <-
-    readr::read_rds(paste0(polis_data_folder, "/activity.rds")) |>
+    tidypolis_io(io = "read", file_path = paste0(polis_data_folder, "/activity.rds")) |>
     dplyr::mutate_all(as.character)
   cli::cli_process_done()
 
@@ -1667,21 +1665,21 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   timestamp <- paste0(lubridate::date(ts),"_",lubridate::hour(ts),"-",lubridate::minute(ts),"-",round(lubridate::second(ts), 0))
 
   #create directory
-  if(dir.exists(file.path(polis_data_folder, "Core_Ready_Files")) == FALSE){
-    dir.create(file.path(polis_data_folder, "Core_Ready_Files"))
-  }
-  if(dir.exists(file.path(polis_data_folder, "Core_Ready_Files", "Archive")) == FALSE){
-    dir.create(file.path(polis_data_folder, "Core_Ready_Files", "Archive"))
-  }
-  if(dir.exists(file.path(polis_data_folder, "Core_Ready_Files", "Archive", timestamp)) == FALSE){
-    dir.create(file.path(polis_data_folder, "Core_Ready_Files", "Archive", timestamp))
-  }
-  if(dir.exists(file.path(polis_data_folder, "Core_Ready_Files", "Change Log")) == FALSE){
-    dir.create(file.path(polis_data_folder, "Core_Ready_Files", "Change Log"))
-  }
-  if(dir.exists(file.path(polis_data_folder, "Core_Ready_Files", "Change Log", timestamp)) == FALSE){
-    dir.create(file.path(polis_data_folder, "Core_Ready_Files", "Change Log", timestamp))
-  }
+
+  #files in directory
+  c(
+    file.path(polis_data_folder, "Core_Ready_Files"),
+    file.path(polis_data_folder, "Core_Ready_Files", "Archive"),
+    file.path(polis_data_folder, "Core_Ready_Files", "Archive", timestamp),
+    file.path(polis_data_folder, "Core_Ready_Files", "Change Log"),
+    file.path(polis_data_folder, "Core_Ready_Files", "Change Log", timestamp)
+  ) |>
+    sapply(function(x){
+      if(!tidypolis_io(io = "exists.dir", file_path = x)){
+        tidypolis_io(io = "create", file_path = x)
+      }
+    })
+
   cli::cli_process_done()
   #Get list of most recent files
   most_recent_files <- list.files(file.path(polis_data_folder, "Core_Ready_Files"))[grepl(".rds", list.files(file.path(polis_data_folder, "Core_Ready_Files")))]
