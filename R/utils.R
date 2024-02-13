@@ -1354,6 +1354,11 @@ log_report <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
 archive_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
                         polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")){
 
+  #create log archive
+  if(dir.exists(file.path(polis_data_folder, "Log_Archive")) == FALSE){
+    dir.create(file.path(polis_data_folder, "Log_Archive"))
+  }
+
   log <- readr::read_rds(log_file)
 
   log.old <- log |>
@@ -1361,6 +1366,8 @@ archive_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
 
   log.current <- log |>
     dplyr::filter(time >= (Sys.Date() - 90))
+
+
 
 }
 
