@@ -131,7 +131,7 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
     cli::cli_process_done()
 
     cli::cli_process_start("Writing data cache")
-    readr::write_rds(out, file = paste0(
+    tidypolis_io(obj = out, io = "write", file_path = paste0(
       Sys.getenv("POLIS_DATA_CACHE"),
       "/",
       table_data$table,
@@ -225,7 +225,7 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
         #load in cache
         cli::cli_process_start("Loading existing cache")
         old_cache <-
-          readr::read_rds(paste0(
+          tidypolis_io(io = "read", file_path = paste0(
             Sys.getenv("POLIS_DATA_CACHE"),
             "/",
             table_data$table,
@@ -294,7 +294,7 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
         cli::cli_process_done()
 
         cli::cli_process_start("Writing data cache")
-        readr::write_rds(old_cache,
+        tidypolis_io(obj = old_cache, io = "write",
                          file = paste0(
                            Sys.getenv("POLIS_DATA_CACHE"),
                            "/",
