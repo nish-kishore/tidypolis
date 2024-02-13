@@ -206,6 +206,9 @@ get_polis_data <- function(type = "all"){
                      .event_type = "START")
 
     get_table_data(.table = "pop")
+
+    update_polis_log(.event = "POLIS Pop file donwloaded",
+                     .event_type = "END")
   }
 
 
