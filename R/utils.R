@@ -3666,7 +3666,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     #long_to_wide
     tidyr::pivot_wider(names_from=source, values_from=value) |>
     dplyr::mutate(new = as.character(new),
-                  old = as.character(old)) %>%
+                  old = as.character(old)) |>
     dplyr::filter(new != old)
 
   update_polis_log(.event = paste0("ES New Records: ", nrow(in_new_not_old), "; ",
