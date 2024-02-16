@@ -165,3 +165,55 @@ tidypolis_io <- function(
   }
 
 }
+
+
+#' Transfer preprocessed files to active EDAV download
+#'
+#' @description
+#' Manages read/write/list/create/delete functions for tidypolis
+#' @import sirfunctions dplyr AzurStor readr
+#' @param core_ready_folder str: Local folder with CDC processed files
+#' @param azcontainer Azure Token Container Object
+#' @param output_folder Location to write out Core Files
+#' @returns NULL
+upload_cdc_proc_to_edav <- function(
+    core_ready_folder = file.path(Sys.getenv("POLIS_DATA_CACHE"), "Core_Ready_Files"),
+    azcontainer = sirfunctions::get_azure_storage_connection(),
+    output_folder = "Data/polis"){
+
+  #check to see if folders exist
+  if(tidypolis_io(io = "exists.dir", file_path = core_ready_folder)){
+    cli::cli_alert_info("Core File Identified")
+  }else{
+    cli::cli_abort("No core file identified, please make sure to initialize tidypolis and run CDC preprocessing")
+  }
+
+  #check to see if all files exist
+
+  x <- dplyr::tibble(
+    "full_name" = tidypolis_io(io = "list", file_path = core_ready_folder, full_names = T),
+    "name" = tidypolis_io(io = "list", file_path = core_ready_folder)
+    )
+
+  files <- c("afp_linelist_2001-01-01_2024",
+             "afp_linelist_2019-01-01_2024",
+             "es_2001-01-08_2024",
+             "other_surveillance_type_linelist",
+             "positives_2001-01-01_2024",
+             "sia_2000")
+
+  out.table <- lapply(files, function(y) x |> dplyr::filter(stringr::str_starts(name, pattern = y))) |>
+    bind_rows() |>
+    dplyr::mutate(source = full_name,
+                  dest = paste0(output_folder, "/",name))
+
+
+  #move all files to core polis data folder
+  lapply(1:nrow(out.table), function(i){
+
+    local <- tidypolis_io(io = "read", file_path = dplyr::pull(out.table[i,], source))
+    edav_io(obj = local, io = "write", file_path = dplyr::pull(out.table[i,], dest))
+
+  })
+
+}
