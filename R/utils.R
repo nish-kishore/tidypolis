@@ -2767,7 +2767,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     # Step 11 write R datafiles for use in analyses
     #Compare the final file to last week's final file to identify any differences in var_names, var_classes, or categorical responses
     new_table_metadata <- f.summarise.metadata(head(afp.linelist.02, 1000))
-    old_table_metadata <- f.summarise.metadata(head(readr::read_rds(old.file), 1000))
+    old_table_metadata <- f.summarise.metadata(head(old, 1000))
     afp_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata, "AFP")
 
     #compare obs
@@ -2867,7 +2867,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
     #Compare the final file to last week's final file to identify any differences in var_names, var_classes, or categorical responses
     new_table_metadata <- f.summarise.metadata(not.afp.01)
-    old_table_metadata <- f.summarise.metadata(readr::read_rds(old.file))
+    old_table_metadata <- f.summarise.metadata(old)
     not_afp_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata, "Other Surv")
     #compare obs
     new <- not.afp.01 |>
@@ -3006,11 +3006,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_h1("Step 3/5 - Creating SIA analytic datasets")
 
   # Step 1: Read in "old" data file (System to find "Old" data file)
-  latest_folder_in_archive <- list.files(paste0(polis_data_folder, "/Core_Ready_Files/Archive"), full.names = T) |>
-    file.info() |>
-    dplyr::filter(ctime == max(ctime)) |>
-    row.names()
-
   x <- tidypolis_io(io = "list", file_path = file.path(polis_data_folder, "Core_Ready_Files/Archive", latest_folder_in_archive), full_names = T)
 
   y <- tidypolis_io(io = "list", file_path = file.path(polis_data_folder, "Core_Ready_Files"), full_names = T)
@@ -3262,11 +3257,12 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   if(length(old.file) > 0){
 
     new_table_metadata <- f.summarise.metadata(sia.06)
-    old_table_metadata <- f.summarise.metadata(readr::read_rds(old.file))
+    old <- tidypolis_io(io = "read", file_path = old.file)
+    old_table_metadata <- f.summarise.metadata(old)
     sia_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata, "SIA")
 
     #check obs in new and old
-    old <- tidypolis_io(io = "read", file_path = old.file) |>
+    old <- old |>
       dplyr::mutate_all(as.character)
     new <- sia.06 |>
       dplyr::mutate_all(as.character)
@@ -3533,7 +3529,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   if (nrow(es.00) >= 1) {
     cli::cli_alert_danger("Duplicate ENV sample manual ids. Flag for POLIS. Output in duplicate_ES_sampleID_Polis.csv.")
 
-    readr::write_csv(es.00, paste0(polis_data_folder, "/Core_Ready_Files/duplicate_ES_sampleID_Polis.csv"), na = "")
+    tidypolis_io(obj = es.00, io = "write", file_path =  paste0(polis_data_folder, "/Core_Ready_Files/duplicate_ES_sampleID_Polis.csv"), na = "")
 
   } else {
     cli::cli_alert_info("No duplicates identified")
