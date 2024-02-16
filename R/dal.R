@@ -10,8 +10,16 @@
 #' @param file_path str: absolute path of file
 #' @param edav boolean defaults to FALSE
 #' @param azcontainer AZ container object returned by
+#' @param full_names boolean: If you want to include the full reference path in the response, dfault FALSE
 #' @returns conditional on `io`
-tidypolis_io <- function(obj = NULL, io, file_path, edav = Sys.getenv("POLIS_EDAV_FLAG"), azcontainer = sirfunctions::get_azure_storage_connection()){
+tidypolis_io <- function(
+    obj = NULL,
+    io,
+    file_path,
+    edav = Sys.getenv("POLIS_EDAV_FLAG"),
+    azcontainer = sirfunctions::get_azure_storage_connection(),
+    full_names = F
+                         ){
 
   opts <- c("read", "write", "delete", "list", "exists.dir", "exists.file", "create")
 
@@ -26,11 +34,23 @@ tidypolis_io <- function(obj = NULL, io, file_path, edav = Sys.getenv("POLIS_EDA
   if(io == "list"){
 
     if(edav){
-      return(sirfunctions::edav_io(io = "list", file_loc = file_path, azcontainer = azcontainer) |>
-               dplyr::mutate(name = str_replace(name, paste0("GID/PEB/SIR/",file_path,"/"), "")) |>
-               dplyr::pull(name))
+      out <- sirfunctions::edav_io(io = "list", file_loc = file_path, azcontainer = azcontainer)
+
+      if(full_names){
+        return(
+          out |>
+            dplyr::mutate(name = stringr::str_replace(name, paste0("GID/PEB/SIR/"), "")) |>
+            dplyr::pull(name))
+      }else{
+        return(
+          out |>
+            dplyr::mutate(name = stringr::str_replace(name, paste0("GID/PEB/SIR/",file_path,"/"), "")) |>
+            dplyr::pull(name)
+        )
+      }
+
     }else{
-      return(list.files(file_path))
+      return(list.files(file_path, full.names = full_names))
     }
 
   }
@@ -89,6 +109,23 @@ tidypolis_io <- function(obj = NULL, io, file_path, edav = Sys.getenv("POLIS_EDA
     if(edav){
       sirfunctions::edav_io(io = "write", file_loc = file_path, obj = obj, azcontainer = azcontainer)
     }else{
+
+      if(!grepl(".rds|.rda|.csv",file_path)){
+        stop("At the moment only 'rds' 'rda' and 'csv' are supported for reading.")
+      }
+
+      if(grepl(".rds")){
+        readr::write_rds(x = obj, file = file_path)
+      }
+
+      if(grepl(".rda")){
+        save(list = obj, file = file_path)
+      }
+
+      if(grepl(".csv")){
+        readr::write_csv(x = obj, file = file_path)
+      }
+
 
     }
   }
