@@ -196,7 +196,7 @@ init_tidypolis <- function(
     sum()
 
   if(flag > 0){
-    update_polis_log(.event = "INIT error - flag > 0")
+    update_polis_log(.event = "INIT error - flag > 0", .event_type = "ERROR")
     stop("Cache and environment could not be reconciled, please delete and reinitate folder")
   }else{
     update_polis_log(.event = "INIT completed successfully",
