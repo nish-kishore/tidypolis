@@ -17,7 +17,7 @@ tidypolis_io <- function(
     io,
     file_path,
     edav = Sys.getenv("POLIS_EDAV_FLAG"),
-    azcontainer = sirfunctions::get_azure_storage_connection(),
+    azcontainer = suppressMessages(sirfunctions::get_azure_storage_connection()),
     full_names = F
                          ){
 
