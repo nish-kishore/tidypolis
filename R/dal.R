@@ -4,7 +4,7 @@
 #'
 #' @description
 #' Manages read/write/list/create/delete functions for tidypolis
-#' @import sirfunctions
+#' @import sirfunctions dplyr AzurStor readr
 #' @param obj str: object to be loaded into EDAV
 #' @param io str: read/write/list/exists/create/delete
 #' @param file_path str: absolute path of file
@@ -79,7 +79,25 @@ tidypolis_io <- function(
 
   if(io == "read"){
     if(edav){
-      return(sirfunctions::edav_io(io = "read", file_loc = file_path, azcontainer = azcontainer))
+      tryCatch(
+        {
+          return(sirfunctions::edav_io(io = "read", file_loc = file_path, azcontainer = azcontainer))
+          corrupted.rds <<- FALSE
+          },
+        error = function(e){
+          cli::cli_alert_warning("RDS download from EDAV was corrupted, downloading directly...")
+          corrupted.rds <<- TRUE
+        }
+      )
+
+      if(corrupted.rds){
+        dest <- tempfile()
+        AzureStor::storage_download(container = azcontainer, paste0("GID/PEB/SIR/",file_path), dest)
+        x <- readRDS(dest)
+        unlink(dest)
+        return(x)
+      }
+
     }else{
       if(!grepl(".rds|.rda|.csv",file_path)){
         stop("At the moment only 'rds' 'rda' and 'csv' are supported for reading.")
