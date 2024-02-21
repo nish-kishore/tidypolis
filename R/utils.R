@@ -1941,6 +1941,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
         dplyr::filter(Id %in% new$Id) |>
         dplyr::select(-c(setdiff(colnames(old), colnames(new))))
 
+
+      if(nrow(in_new_and_old_but_modified) >= 1){
+
       in_new_and_old_but_modified <- dplyr::inner_join(in_new_and_old_but_modified, setdiff(x, new |>
                                dplyr::select(-c(setdiff(colnames(new), colnames(old))))), by="Id") |>
         #wide_to_long
@@ -1950,8 +1953,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
         #long_to_wide
         tidyr::pivot_wider(names_from=source, values_from=value) |>
         dplyr::mutate(new = as.character(new), old = as.character(old))
-
-      if(nrow(in_new_and_old_but_modified) >= 1){
 
         in_new_and_old_but_modified <- in_new_and_old_but_modified |>
           dplyr::filter(new != old)
