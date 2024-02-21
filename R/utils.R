@@ -1978,7 +1978,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
       tidypolis_io(io = "read", file_path = (file.path(polis_data_folder, "Core_Ready_Files", most_recent_files[i]))) |>
         tidypolis_io(io = "write", file_path = file.path(polis_data_folder, "Core_Ready_Files", "Archive", timestamp, most_recent_files[i]))
 
-      tidypolis_io(io = "delete", file_path = (file.path(polis_data_folder, "Core_Ready_files", most_recent_files[i])))
+      tidypolis_io(io = "delete", file_path = (file.path(polis_data_folder, "Core_Ready_Files", most_recent_files[i])))
 
       cli::cli_process_done()
     }
@@ -2020,7 +2020,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   rm("change_summary", "crosswalk", "in_new_and_old_but_modified", "in_new_not_old",
      "in_old_not_new", "new", "old", "potential_duplicates_new", "potential_duplicates_old",
      "x", "i", "n_added", "n_deleted", "n_edited", "vars_added", "vars_dropped",
-     "api_activity_sub2", "api_case_sub3", "api_es_sub3", "api_virus_sub3", "long.global.dist.01",
+     "api_activity_sub2", "api_case_sub3", "api_es_sub3", "api_virus_sub3",
      "api_subactivity_sub4", "most_recent_file_01_patterns", "most_recent_file_patterns")
   gc()
   cli::cli_process_done()
@@ -2038,8 +2038,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   names(latest_folder_in_archive) <- c("name")
 
   latest_folder_in_archive <- latest_folder_in_archive |>
-    dplyr::mutate(date_time = as_datetime(name)) |>
-    dplyr::filter(name != timestamp)
+    dplyr::mutate(date_time = as_datetime(name))
 
   if(nrow(latest_folder_in_archive) > 0){
 
@@ -2378,10 +2377,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   gc()
   cli::cli_process_done()
 
-  cli::cli_process_start("Pulling long district spatial file")
-  long.global.dist.01 <-sirfunctions::load_clean_dist_sp(type = "long")
-  cli::cli_process_done()
-
   cli::cli_process_start("Checking GUIDs")
 
 
@@ -2492,7 +2487,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
 
 
-  rm("long.global.dist.01", "afp.linelist.01", "afp.linelist.fixed", "shapes", "shapenames")
+  rm("afp.linelist.01", "afp.linelist.fixed", "shapes", "shapenames")
 
   cli::cli_process_done()
 
@@ -2891,11 +2886,11 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
                           dplyr::setdiff(new |>
                                            dplyr::select(-c(setdiff(colnames(new), colnames(old))))), by="epid") |>
       #wide_to_long
-      dplyr::pivot_longer(cols=-epid) |>
+      tidyr::pivot_longer(cols=-epid) |>
       dplyr::mutate(source = ifelse(str_sub(name, -2) == ".x", "new", "old")) |>
       dplyr::mutate(name = str_sub(name, 1, -3)) |>
       #long_to_wide
-      dplyr::pivot_wider(names_from=source, values_from=value) |>
+      tidyr::pivot_wider(names_from=source, values_from=value) |>
       dplyr::filter(new != old & !name %in% c("lat", "lon"))
 
     update_polis_log(.event = paste0("Other Surveillance New Records: ", nrow(in_new_not_old), "; ",
@@ -3168,10 +3163,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   cli::cli_process_done()
 
-  cli::cli_process_start("Load long global district shapefiles")
-  long.global.dist.01 <- sirfunctions::load_clean_dist_sp(type = "long")
-  cli::cli_process_done()
-
   cli::cli_process_start("Checking GUIDs")
   # SIA file with GUID
   # SIAs match with GUIDs in shapes
@@ -3368,8 +3359,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     'cty.yr.mismatch',
     'dist.sia.mismatch.01', 'endyr',
     'in_new_and_old_but_modified', 'in_new_not_old',
-    'in_old_not_new',
-    'long.global.dist.01', 'new', 'new.df', 'new.file',
+    'in_old_not_new', 'new', 'new.df', 'new.file',
     'new.var.sia.01', 'new_table_metadata', 'old', 'old.file',
     'old_table_metadata', 'savescipen',
     'sia.01.new', 'sia.01.new.compare', 'sia.01.old',
@@ -3721,8 +3711,12 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
       dplyr::mutate(source = ifelse(stringr::str_sub(name, -2) == ".x", "new", "old")) |>
       dplyr::mutate(name = stringr::str_sub(name, 1, -3)) |>
       #long_to_wide
-      tidyr::pivot_wider(names_from=source, values_from=value) |>
-      dplyr::filter(new != old)
+      tidyr::pivot_wider(names_from=source, values_from=value)
+
+    if(nrow(in_new_and_old_but_modified) > 0){
+      in_new_and_old_but_modified <- in_new_and_old_but_modified |>
+        dplyr::filter(new != old)
+    }
 
     update_polis_log(.event = paste0("ES New Records: ", nrow(in_new_not_old), "; ",
                                      "ES Removed Records: ", nrow(in_old_not_new), "; ",
@@ -4249,7 +4243,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
       # Export records for which virus type has changed from last week to this week in the CSV file:
       tidypolis_io(obj = pos_changed_virustype,
                    io = "write",
-                   file_path = paste0(polis_data_folder, "/Core_Ready_Files/Changed_virustype_virusTableData.csv"), na = "")
+                   file_path = paste0(polis_data_folder, "/Core_Ready_Files/Changed_virustype_virusTableData.csv"))
 
     }
 
@@ -4260,7 +4254,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
       # Export records for which virus type has changed from last week to this week in the CSV file:
       tidypolis_io(obj = in_new_not_old,
                    io = "write",
-                   file_path = paste0(polis_data_folder, "/Core_Ready_Files/in_new_not_old_virusTableData.csv"), na = "")
+                   file_path = paste0(polis_data_folder, "/Core_Ready_Files/in_new_not_old_virusTableData.csv"))
     }
 
   }else{
@@ -4313,8 +4307,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_done()
 
   cli::cli_process_start("Checking for positives that don't match to GUIDs")
-
-  long.global.dist.01 <- sirfunctions::load_clean_dist_sp(type = "long")
 
   # AFP and ES that do not match to shape file
   unmatched.afp.es.viruses.01 <- dplyr::anti_join(afp.es.virus.01, long.global.dist.01, by = c("admin2guid" = "GUID", "yronset" = "active.year.01"))
