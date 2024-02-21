@@ -1948,7 +1948,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
         dplyr::mutate(source = ifelse(stringr::str_sub(name, -2) == ".x", "new", "old")) |>
         dplyr::mutate(name = stringr::str_sub(name, 1, -3)) |>
         #long_to_wide
-        tidyr::pivot_wider(names_from=source, values_from=value)
+        tidyr::pivot_wider(names_from=source, values_from=value) |>
+        dplyr::mutate(new = as.character(new), old = as.character(old))
 
       if(nrow(in_new_and_old_but_modified) >= 1){
 
