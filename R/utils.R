@@ -132,7 +132,7 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
     cli::cli_process_done()
 
     cli::cli_process_start("Writing data cache")
-    readr::write_rds(out, file = paste0(
+    tidypolis_io(obj = out, io = "write", file_path = paste0(
       Sys.getenv("POLIS_DATA_CACHE"),
       "/",
       table_data$table,
@@ -229,7 +229,7 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
         #load in cache
         cli::cli_process_start("Loading existing cache")
         old_cache <-
-          readr::read_rds(paste0(
+          tidypolis_io(io = "read", file_path = paste0(
             Sys.getenv("POLIS_DATA_CACHE"),
             "/",
             table_data$table,
@@ -299,7 +299,7 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
         cli::cli_process_done()
 
         cli::cli_process_start("Writing data cache")
-        readr::write_rds(old_cache,
+        tidypolis_io(obj = old_cache, io = "write",
                          file = paste0(
                            Sys.getenv("POLIS_DATA_CACHE"),
                            "/",
@@ -640,41 +640,40 @@ update_polis_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
                              .time = Sys.time(),
                              .user = Sys.getenv("USERNAME"),
                              .event_type = "INIT",
-                             .event) {
+                             .event){
 
+  log_file_path <- log_file
+  log_file <- tidypolis_io(io = "read", file_path = log_file_path)
 
-
-  log_names <- readr::read_rds(log_file) |>
+  log_names <- log_file |>
     names()
 
   if(!"event_type" %in% log_names){
 
-    readr::read_rds(log_file) |>
+    log_file |>
       cbind(event_type = NA) |>
       tibble::add_row(time = .time,
                       user = .user,
                       event_type = "INFO",
                       event = "Updating log format") |>
-      readr::write_rds(log_file)
-
-    readr::read_rds(log_file) |>
       tibble::add_row(time = .time,
                       user = .user,
                       event_type = .event_type,
                       event = .event) |>
-      readr::write_rds(log_file)
+      tidypolis_io(io = "write", file_path = log_file_path)
 
   }else{
 
-  readr::read_rds(log_file) |>
+  log_file |>
     tibble::add_row(time = .time,
                     user = .user,
                     event_type = .event_type,
                     event = .event) |>
-    readr::write_rds(log_file)
-  }
-}
+    tidypolis_io(io = "write", file_path = log_file_path)
 
+
+    }
+}
 
 #### Local Cache ####
 
@@ -687,7 +686,7 @@ update_polis_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
 #' @returns Return tibble with table information
 get_polis_cache <- function(cache_file = Sys.getenv("POLIS_CACHE_FILE"),
                             .table) {
-  cache <- readr::read_rds(cache_file)
+  cache <- tidypolis_io(io = "read", file_path = cache_file)
 
   if (.table %in% dplyr::pull(cache, table)) {
     cache |>
@@ -713,7 +712,7 @@ update_polis_cache <- function(cache_file = Sys.getenv("POLIS_CACHE_FILE"),
                                .table,
                                .nrow,
                                .update_val) {
-  readr::read_rds(cache_file) |>
+  tidypolis_io(io = "read", file_path = cache_file) |>
     dplyr::mutate(
       nrow = ifelse(table == .table, .nrow, nrow),
       last_sync = ifelse(
@@ -730,7 +729,7 @@ update_polis_cache <- function(cache_file = Sys.getenv("POLIS_CACHE_FILE"),
       last_sync = lubridate::as_datetime(last_sync),
       polis_update_value = lubridate::as_datetime(polis_update_value)
     ) |>
-    readr::write_rds(cache_file)
+    tidypolis_io(io = "write", file_path = cache_file)
 
 }
 
@@ -915,13 +914,11 @@ remove_empty_columns <- function(dataframe) {
 #' @import dplyr cli
 #' @return tibble: crosswalk data
 get_crosswalk_data <- function(
-    file_loc = file.path("","", "cdc.gov/project/CGH_GID_Active/PEB/SIR/",
-                         "DATA/Core 2.0/preprocessing/GetPOLIS",
-                         "api_web_core_crosswalk.xlsx")
+    file_loc = "Data/misc/crosswalk.rds"
   ){
   cli::cli_process_start("Import crosswalk")
   crosswalk <-
-    rio::import(file_loc) |>
+    sirfunctions::edav_io(io = "read", file_loc = file_loc) |>
     #TrendID removed from export
     dplyr::filter(!API_Name %in% c("Admin0TrendId", "Admin0Iso2Code"))
   cli::cli_process_done()
@@ -1284,7 +1281,7 @@ f.summarise.metadata <- function(dataframe, categorical_max = 10){
 #' @import readr
 #' @returns tibble: env site list
 get_env_site_data <- function(){
-  envSiteYearList <- readr::read_csv(file.path("", "", "cdc.gov/project/CGH_GID_Active/PEB/SIR/DATA/Core 2.0/preprocessing/datafiles_01/envSiteYearList.csv"))
+  envSiteYearList <- sirfunctions::edav_io(io = "read", file_loc = "Data/misc/env_sites.rds")
   return(envSiteYearList)
 }
 
@@ -1299,7 +1296,7 @@ get_env_site_data <- function(){
 log_report <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
                        polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")){
 
-  log <- readr::read_rds(log_file)
+  log <- tidypolis_io(io = "read", file_path = log_file)
 
   last_start <- log |>
     dplyr::filter(event_type == "START") |>
@@ -1355,11 +1352,16 @@ archive_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
                         polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")){
 
   #create log archive
-  if(!dir.exists(file.path(polis_data_folder, "Log_Archive"))){
-    dir.create(file.path(polis_data_folder, "Log_Archive"))
+
+  archive.path <- file.path(polis_data_folder, "Log_Archive")
+
+  flag.log.exists <- tidypolis_io(io = "exists.dir", file_path = archive.path)
+
+  if(!flag.log.exists){
+    tidypolis_io(io = "create", file_path = file.path(polis_data_folder, "Log_Archive"))
   }
 
-  log <- readr::read_rds(log_file)
+  log <- tidypolis_io(io = "read", file_path = log_file)
 
   log.time.to.arch <- log |>
     dplyr::filter(event_type == "END") |>
@@ -1374,14 +1376,15 @@ archive_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
     dplyr::filter(time > log.time.to.arch)
 
   #check existence of archived log and either create or rbind to it
-  ifelse(!file.exists(file.path(polis_data_folder, "Log_Archive/log_archive.rds")),
-    readr::write_rds(log.to.arch, file.path(polis_data_folder, "Log_Archive/log_archive.rds")),
-    readr::read_rds(file.path(polis_data_folder, "Log_Archive/log_archive.rds")) |>
-      rbind(log.to.arch) |>
-      readr::write_rds(file = file.path(polis_data_folder, "Log_Archive/log_archive.rds"))
-    )
+  flag.log.exists <- tidypolis_io(io = "exists.file", file_path = file.path(polis_data_folder, "Log_Archive/log_archive.rds"))
 
-}
+  ifelse(!flag.log.exists,
+         tidypolis_io(io = "write", obj = log.to.arch, file_path = file.path(polis_data_folder, "Log_Archive/log_archive.rds")),
+         tidypolis_io(io = "read", file_path = file.path(polis_data_folder, "Log_Archive/log_archive.rds")) |>
+           dplyr::bind_rows(log.to.arch) |>
+           tidypolis_io(io = "write", file_path = file.path(polis_data_folder, "Log_Archive/log_archive.rds"))
+         )
+  }
 
 
 #### Pre-processing ####
@@ -1407,31 +1410,31 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   cli::cli_process_start("Case")
   api_case_2019_12_01_onward <-
-    readr::read_rds(paste0(polis_data_folder, "/case.rds")) |>
+    tidypolis_io(io = "read", file_path = paste0(polis_data_folder, "/case.rds")) |>
     dplyr::mutate_all(as.character)
   cli::cli_process_done()
 
   cli::cli_process_start("Environmental Samples")
   api_es_complete <-
-    readr::read_rds(paste0(polis_data_folder, "/environmental_sample.rds")) |>
+    tidypolis_io(io = "read", file_path = paste0(polis_data_folder, "/environmental_sample.rds")) |>
     dplyr::mutate_all(as.character)
   cli::cli_process_done()
 
   cli::cli_process_start("Sub-activity")
   api_subactivity_complete <-
-    readr::read_rds(paste0(polis_data_folder, "/sub_activity.rds")) |>
+    tidypolis_io(io = "read", file_path = paste0(polis_data_folder, "/sub_activity.rds")) |>
     dplyr::mutate_all(as.character)
   cli::cli_process_done()
 
   cli::cli_process_start("Virus")
   api_virus_complete <-
-    readr::read_rds(paste0(polis_data_folder, "/virus.rds")) |>
+    tidypolis_io(io = "read", file_path = paste0(polis_data_folder, "/virus.rds")) |>
     dplyr::mutate_all(as.character)
   cli::cli_process_done()
 
   cli::cli_process_start("Activity")
   api_activity_complete <-
-    readr::read_rds(paste0(polis_data_folder, "/activity.rds")) |>
+    tidypolis_io(io = "read", file_path = paste0(polis_data_folder, "/activity.rds")) |>
     dplyr::mutate_all(as.character)
   cli::cli_process_done()
 
@@ -1830,24 +1833,25 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   timestamp <- paste0(lubridate::date(ts),"_",lubridate::hour(ts),"-",lubridate::minute(ts),"-",round(lubridate::second(ts), 0))
 
   #create directory
-  if(dir.exists(file.path(polis_data_folder, "Core_Ready_Files")) == FALSE){
-    dir.create(file.path(polis_data_folder, "Core_Ready_Files"))
-  }
-  if(dir.exists(file.path(polis_data_folder, "Core_Ready_Files", "Archive")) == FALSE){
-    dir.create(file.path(polis_data_folder, "Core_Ready_Files", "Archive"))
-  }
-  if(dir.exists(file.path(polis_data_folder, "Core_Ready_Files", "Archive", timestamp)) == FALSE){
-    dir.create(file.path(polis_data_folder, "Core_Ready_Files", "Archive", timestamp))
-  }
-  if(dir.exists(file.path(polis_data_folder, "Core_Ready_Files", "Change Log")) == FALSE){
-    dir.create(file.path(polis_data_folder, "Core_Ready_Files", "Change Log"))
-  }
-  if(dir.exists(file.path(polis_data_folder, "Core_Ready_Files", "Change Log", timestamp)) == FALSE){
-    dir.create(file.path(polis_data_folder, "Core_Ready_Files", "Change Log", timestamp))
-  }
+
+  #files in directory
+  c(
+    file.path(polis_data_folder, "Core_Ready_Files"),
+    file.path(polis_data_folder, "Core_Ready_Files", "Archive"),
+    file.path(polis_data_folder, "Core_Ready_Files", "Archive", timestamp),
+    file.path(polis_data_folder, "Core_Ready_Files", "Change Log"),
+    file.path(polis_data_folder, "Core_Ready_Files", "Change Log", timestamp)
+  ) |>
+    sapply(function(x){
+      if(!tidypolis_io(io = "exists.dir", file_path = x)){
+        tidypolis_io(io = "create", file_path = x)
+      }
+    })
+
   cli::cli_process_done()
   #Get list of most recent files
-  most_recent_files <- list.files(file.path(polis_data_folder, "Core_Ready_Files"))[grepl(".rds", list.files(file.path(polis_data_folder, "Core_Ready_Files")))]
+  files_in_core_ready <- tidypolis_io(io = "list", file_path = file.path(polis_data_folder, "Core_Ready_Files"))
+  most_recent_files <- files_in_core_ready[grepl(".rds", files_in_core_ready)]
   most_recent_file_patterns <- c("Activity_Data", "EnvSamples", "Human_Detailed", "Viruses_Detailed")
   most_recent_files <- most_recent_files[grepl(paste(most_recent_file_patterns, collapse = "|"), most_recent_files)]
 
@@ -1856,7 +1860,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     for(i in 1:length(most_recent_files)){
       cli::cli_process_start(paste0("Processing data for: ", most_recent_files[i]))
       #compare current dataset to most recent and save summary to change_log
-      old <- rio::import(file.path(polis_data_folder, "Core_Ready_Files", most_recent_files[i])) |>
+      old <- tidypolis_io(io = "read", file_path = file.path(polis_data_folder, "Core_Ready_Files", most_recent_files[i])) |>
         dplyr::mutate_all(as.character)
 
       if(grepl("EnvSamples", most_recent_files[i])){
@@ -1937,6 +1941,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
         dplyr::filter(Id %in% new$Id) |>
         dplyr::select(-c(setdiff(colnames(old), colnames(new))))
 
+
+      if(nrow(in_new_and_old_but_modified) >= 1){
+
       in_new_and_old_but_modified <- dplyr::inner_join(in_new_and_old_but_modified, setdiff(x, new |>
                                dplyr::select(-c(setdiff(colnames(new), colnames(old))))), by="Id") |>
         #wide_to_long
@@ -1944,9 +1951,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
         dplyr::mutate(source = ifelse(stringr::str_sub(name, -2) == ".x", "new", "old")) |>
         dplyr::mutate(name = stringr::str_sub(name, 1, -3)) |>
         #long_to_wide
-        tidyr::pivot_wider(names_from=source, values_from=value)
-
-      if(nrow(in_new_and_old_but_modified) >= 1){
+        tidyr::pivot_wider(names_from=source, values_from=value) |>
+        dplyr::mutate(new = as.character(new), old = as.character(old))
 
         in_new_and_old_but_modified <- in_new_and_old_but_modified |>
           dplyr::filter(new != old)
@@ -1967,32 +1973,45 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
                              obs_added = in_new_not_old,
                              obs_edited = in_new_and_old_but_modified,
                              obs_deleted = in_old_not_new)
-      readr::write_rds(change_summary, file.path(polis_data_folder, "Core_Ready_Files", "Change Log", timestamp, paste0(substr(most_recent_files[i],1,nchar(most_recent_files[i])-4), ".rds")))
+      tidypolis_io(io = "write",
+                   obj = change_summary,
+                   file_path = file.path(polis_data_folder, "Core_Ready_Files", "Change Log", timestamp, paste0(substr(most_recent_files[i],1,nchar(most_recent_files[i])-4), ".rds")))
       #Move most recent to archive
-      rio::export(rio::import(file.path(polis_data_folder, "Core_Ready_Files", most_recent_files[i])), file.path(polis_data_folder, "Core_Ready_Files", "Archive", timestamp, most_recent_files[i]))
-      unlink(file.path(polis_data_folder, "Core_Ready_files", most_recent_files[i]))
+      tidypolis_io(io = "read", file_path = (file.path(polis_data_folder, "Core_Ready_Files", most_recent_files[i]))) |>
+        tidypolis_io(io = "write", file_path = file.path(polis_data_folder, "Core_Ready_Files", "Archive", timestamp, most_recent_files[i]))
+
+      tidypolis_io(io = "delete", file_path = (file.path(polis_data_folder, "Core_Ready_Files", most_recent_files[i])))
+
       cli::cli_process_done()
     }
+  }else{
+    cli::cli_alert_info("No previous main Core Ready Files found, creating new files")
   }
 
-  most_recent_files_01 <- list.files(file.path(polis_data_folder, "Core_Ready_Files"))
+  most_recent_files_01 <- tidypolis_io(io = "list", file_path = file.path(polis_data_folder, "Core_Ready_Files"))
   most_recent_file_01_patterns <- c(".rds", ".csv", ".xlsx")
   most_recent_files_01 <- most_recent_files_01[grepl(paste(most_recent_file_01_patterns, collapse = "|"), most_recent_files_01)]
 
-  for(i in 1:length(most_recent_files_01)){
-    cli::cli_process_start(paste0("Archiving Data for: ", most_recent_files_01[i]))
-
-    rio::export(rio::import(file.path(polis_data_folder, "Core_Ready_Files", most_recent_files_01[i])), file.path(polis_data_folder, "Core_Ready_Files", "Archive", timestamp, most_recent_files_01[i]))
-    unlink(file.path(polis_data_folder, "Core_Ready_files", most_recent_files_01[i]))
-    cli::cli_process_done()
+  if(length(most_recent_files_01) > 0){
+    for(i in 1:length(most_recent_files_01)){
+      cli::cli_process_start(paste0("Archiving Data for: ", most_recent_files_01[i]))
+      #move file to archive
+      tidypolis_io(io = "read", file_path = file.path(polis_data_folder, "Core_Ready_Files", most_recent_files_01[i])) |>
+        tidypolis_io(io = "write", file_path = file.path(polis_data_folder, "Core_Ready_Files", "Archive", timestamp, most_recent_files_01[i]))
+      #delete file
+      tidypolis_io(io = "delete", file_path = file.path(polis_data_folder, "Core_Ready_Files", most_recent_files_01[i]))
+      cli::cli_process_done()
+    }
+  }else{
+    cli::cli_alert_info("No previous secondary Core Ready Files found, creating new files")
   }
 
   cli::cli_process_start("Writing all final Core Ready files")
   #Export files (as csv) to be used as pre-processing starting points
-  readr::write_rds(api_case_sub3, file.path(polis_data_folder, "Core_Ready_Files", paste0("Human_Detailed_Dataset_",timestamp,"_from_01_Dec_2019_to_",format(ts, "%d_%b_%Y"),".rds")))
-  readr::write_rds(api_subactivity_sub4, file.path(polis_data_folder, "Core_Ready_Files", paste0("Activity_Data_with_All_Sub-Activities_(1_district_per_row)_",timestamp,"_from_01_Jan_2020_to_",format(Sys.Date()+365/2, "%d_%b_%Y"),".rds")))
-  readr::write_rds(api_es_sub3, file.path(polis_data_folder, "Core_Ready_Files", paste0("EnvSamples_Detailed_Dataset_",timestamp,"_from_01_Jan_2000_to_",format(ts, "%d_%b_%Y"),".rds")))
-  readr::write_rds(api_virus_sub3, file.path(polis_data_folder, "Core_Ready_Files", paste0("Viruses_Detailed_Dataset_",timestamp,"_from_01_Dec_1999_to_",format(ts, "%d_%b_%Y"),".rds")))
+  tidypolis_io(obj = api_case_sub3, io = "write", file_path = file.path(polis_data_folder, "Core_Ready_Files", paste0("Human_Detailed_Dataset_",timestamp,"_from_01_Dec_2019_to_",format(ts, "%d_%b_%Y"),".rds")))
+  tidypolis_io(obj = api_subactivity_sub4, io = "write", file_path = file.path(polis_data_folder, "Core_Ready_Files", paste0("Activity_Data_with_All_Sub-Activities_(1_district_per_row)_",timestamp,"_from_01_Jan_2020_to_",format(Sys.Date()+365/2, "%d_%b_%Y"),".rds")))
+  tidypolis_io(obj = api_es_sub3, io = "write", file_path = file.path(polis_data_folder, "Core_Ready_Files", paste0("EnvSamples_Detailed_Dataset_",timestamp,"_from_01_Jan_2000_to_",format(ts, "%d_%b_%Y"),".rds")))
+  tidypolis_io(obj = api_virus_sub3, io = "write", file.path(polis_data_folder, "Core_Ready_Files", paste0("Viruses_Detailed_Dataset_",timestamp,"_from_01_Dec_1999_to_",format(ts, "%d_%b_%Y"),".rds")))
   cli::cli_process_done()
 
   update_polis_log(.event = "CORE Ready files and change logs complete",
@@ -2002,10 +2021,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_start("Clearing memory from first step")
   rm("change_summary", "crosswalk", "in_new_and_old_but_modified", "in_new_not_old",
      "in_old_not_new", "new", "old", "potential_duplicates_new", "potential_duplicates_old",
-     "x", "i", "most_recent_files", "n_added", "n_deleted", "n_edited", "vars_added", "vars_dropped",
-     "api_activity_sub2", "api_case_sub3", "api_es_sub3", "api_virus_sub3", "long.global.dist.01",
-     "api_subactivity_sub4", "most_recent_file_01_patterns", "most_recent_file_patterns",
-     "most_recent_files_01")
+     "x", "i", "n_added", "n_deleted", "n_edited", "vars_added", "vars_dropped",
+     "api_activity_sub2", "api_case_sub3", "api_es_sub3", "api_virus_sub3",
+     "api_subactivity_sub4", "most_recent_file_01_patterns", "most_recent_file_patterns")
   gc()
   cli::cli_process_done()
 
@@ -2016,91 +2034,117 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_h1("Step 2/5 - Creating AFP and Epi analytic datasets")
 
   # Step 1: Read in "old" data file (System to find "Old" data file)
-  latest_folder_in_archive <- list.files(paste0(polis_data_folder, "/Core_Ready_Files/Archive"), full.names = T) |>
-    file.info() |>
-    dplyr::filter(ctime == max(ctime)) |>
-    row.names()
+  latest_folder_in_archive <- tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/Core_Ready_Files/Archive")) |>
+    dplyr::tibble()
 
-  x <- list.files(latest_folder_in_archive, full.names = T)
+  names(latest_folder_in_archive) <- c("name")
 
-  y <- list.files(paste0(polis_data_folder, "/Core_Ready_Files"), full.names = T)
+  latest_folder_in_archive <- latest_folder_in_archive |>
+    dplyr::mutate(date_time = as_datetime(name))
 
-  cli::cli_process_start("Loading old human dataset")
-  afp.raw.old <- readr::read_rds(x[grepl("Human", x)]) |>
-    dplyr::mutate_all(as.character) |>
-    dplyr::rename_all(function(x) gsub(" ", ".", x)) |>
-    dplyr::mutate_all(list(~na_if(.,"")))
-  cli::cli_process_done()
+  if(nrow(latest_folder_in_archive) > 0){
 
+    cli::cli_alert_info("Previous archive found!")
 
-  # Step 2: Read in "new" data file
+    latest_folder_in_archive <- latest_folder_in_archive |>
+      dplyr::filter(date_time == max(date_time)) |>
+      dplyr::pull(name)
+  }else{
+
+    cli::cli_alert_info("No previous archive identified, will not perform any comparisons")
+
+    latest_folder_in_archive <- timestamp
+
+  }
+
+  x <- tidypolis_io(io = "list", file_path = file.path(polis_data_folder, "Core_Ready_Files/Archive", latest_folder_in_archive), full_names = T)
+
+  y <- tidypolis_io(io = "list", file_path = file.path(polis_data_folder, "Core_Ready_Files"), full_names = T)
+
   cli::cli_process_start("Loading new human dataset")
-  afp.raw.new <- readr::read_rds(y[grepl("Human", y)]) |>
+  afp.raw.new <- tidypolis_io(io = "read", file_path = y[grepl("Human", y)]) |>
     dplyr::mutate_all(as.character) |>
     dplyr::rename_all(function(x) gsub(" ", ".", x)) |>
     dplyr::mutate_all(list(~na_if(.,"")))
   cli::cli_process_done()
+
+  names(afp.raw.new) <- stringr::str_to_lower(names(afp.raw.new))
+
 
   cli::cli_process_start("Managing memory load")
   gc()
   cli::cli_process_done()
 
+  if(length(x)>0){
 
-  names(afp.raw.old) <- stringr::str_to_lower(names(afp.raw.old))
+    cli::cli_alert_info("Old AFP dataset identified")
 
-  names(afp.raw.new) <- stringr::str_to_lower(names(afp.raw.new))
+    cli::cli_process_start("Loading old human dataset")
+    afp.raw.old <- tidypolis_io(io = "read", file_path = x[grepl("Human", x)]) |>
+      dplyr::mutate_all(as.character) |>
+      dplyr::rename_all(function(x) gsub(" ", ".", x)) |>
+      dplyr::mutate_all(list(~na_if(.,"")))
+    cli::cli_process_done()
 
+    names(afp.raw.old) <- stringr::str_to_lower(names(afp.raw.old))
 
-  # variables in old dataframe
-  var.names <- afp.raw.old |>
-    purrr::map_df(~ (data.frame(class = class(.x))),
-           .id = "variable"
-    )
+    # variables in old dataframe
+    var.names <- afp.raw.old |>
+      purrr::map_df(~ (data.frame(class = class(.x))),
+                    .id = "variable"
+      )
 
-  var.names.01 <- var.names |>
-    filter(variable != "virus.type(s)" &
-             variable != "specdatereceivedbynatlab" &
-             variable != "vdpv.classification(s)" &
-             variable != "classification" &
-             variable != "surveillance.type" &
-             variable != "stool.1.condition" &
-             variable != "stool.2.condition" &  # list of variables we want evaluated in 2nd QC function
-             !(variable %in% c("afp.reporting.week", "last.updated.by", "total.number.of.ipv./.opv.doses", "npev", "nvaccine.1", "nvaccine.3", "nvdpv.1", "nvdpv.3", "exact.longitude", "exact.latitude", "place.nearest.facility", "source.ri.vaccination.information", "virus.genotypes",
-                               "event.name", "virus.origin", "event.direct.importation", "virus.sequenced", "virus.source.linked.to",
-                               "event.immediate.source", "virus.homology.percent", "virus.is.orphan", "event.comments", "wild.2",
-                               "nvdpv.2", "pv.1", "pv.2", "pv.3", 'pons_patient', 'pons_seqregion', 'pons_reference',
-                               'pons_referencename', 'pons_genotype2', 'pons_serotype2', 'pons_wildclustername')))
+    var.names.01 <- var.names |>
+      filter(variable != "virus.type(s)" &
+               variable != "specdatereceivedbynatlab" &
+               variable != "vdpv.classification(s)" &
+               variable != "classification" &
+               variable != "surveillance.type" &
+               variable != "stool.1.condition" &
+               variable != "stool.2.condition" &  # list of variables we want evaluated in 2nd QC function
+               !(variable %in% c("afp.reporting.week", "last.updated.by", "total.number.of.ipv./.opv.doses", "npev", "nvaccine.1", "nvaccine.3", "nvdpv.1", "nvdpv.3", "exact.longitude", "exact.latitude", "place.nearest.facility", "source.ri.vaccination.information", "virus.genotypes",
+                                 "event.name", "virus.origin", "event.direct.importation", "virus.sequenced", "virus.source.linked.to",
+                                 "event.immediate.source", "virus.homology.percent", "virus.is.orphan", "event.comments", "wild.2",
+                                 "nvdpv.2", "pv.1", "pv.2", "pv.3", 'pons_patient', 'pons_seqregion', 'pons_reference',
+                                 'pons_referencename', 'pons_genotype2', 'pons_serotype2', 'pons_wildclustername')))
 
-  var.list.01 <- as.character(var.names.01$variable)
+    var.list.01 <- as.character(var.names.01$variable)
 
-  afp.raw.old.comp <- afp.raw.old |>
-    dplyr::select(-dplyr::all_of(var.list.01))
+    afp.raw.old.comp <- afp.raw.old |>
+      dplyr::select(-dplyr::all_of(var.list.01))
 
-  afp.raw.new.comp <- afp.raw.new |>
-    dplyr::select(-dplyr::all_of(var.list.01))
+    afp.raw.new.comp <- afp.raw.new |>
+      dplyr::select(-dplyr::all_of(var.list.01))
 
-  f.compare.dataframe.cols(afp.raw.old.comp, afp.raw.new.comp)
+    f.compare.dataframe.cols(afp.raw.old.comp, afp.raw.new.comp)
 
-  new.var.afp.01 <- f.download.compare.01(afp.raw.old.comp, afp.raw.new.comp)
+    new.var.afp.01 <- f.download.compare.01(afp.raw.old.comp, afp.raw.new.comp)
 
-  new.df <- new.var.afp.01 |>
-    dplyr::filter(is.na(old.distinct.01) | diff.distinct.01 >= 1)
+    new.df <- new.var.afp.01 |>
+      dplyr::filter(is.na(old.distinct.01) | diff.distinct.01 >= 1)
 
-  # Step 4: Apply compare variables function
-  if (nrow(new.df) >= 1) {
-    cli::cli_alert_danger("There is either a new variable in the AFP data or new value of an existing variable.
+    # Step 4: Apply compare variables function
+    if (nrow(new.df) >= 1) {
+      cli::cli_alert_danger("There is either a new variable in the AFP data or new value of an existing variable.
        Please run f.download.compare.02 to see what it is. New values of variables are present in log file.")
 
-    afp.new.value <- f.download.compare.02(new.var.afp.01, afp.raw.old.comp, afp.raw.new.comp)
+      afp.new.value <- f.download.compare.02(new.var.afp.01, afp.raw.old.comp, afp.raw.new.comp)
 
-    update_polis_log(.event = sapply(names(afp.new.value), function(x) paste0("New Values in: ", x, " - ", paste0(unique(dplyr::pull(afp.new.value, x)), collapse = ", "))) |>
-                       paste0(collapse = "; "),
-                     .event_type = "ALERT")
+      update_polis_log(.event = sapply(names(afp.new.value), function(x) paste0("New Values in: ", x, " - ", paste0(unique(dplyr::pull(afp.new.value, x)), collapse = ", "))) |>
+                         paste0(collapse = "; "),
+                       .event_type = "ALERT")
 
-  } else {
-    cli::cli_alert_info("New AFP download is comparable to old AFP download")
+    } else {
+      cli::cli_alert_info("New AFP download is comparable to old AFP download")
+    }
+
+  }else{
+    cli::cli_alert_info("No old AFP dataset identified")
   }
 
+  cli::cli_process_start("Managing memory load")
+  gc()
+  cli::cli_process_done()
 
   #Find out if there are duplicate epids.
   cli::cli_process_start("Checking for duplicated EPIDs")
@@ -2118,7 +2162,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   # Script below will stop further execution if there is a duplicate epid
   if (nrow(afp.raw.dup) >= 1) {
     # Export duplicate afp cases in the CSV file:
-    write.csv(afp.raw.dup, paste0(polis_data_folder,"/Core_Ready_Files/", paste("duplicate_AFPcases_Polis",
+    tidypolis_io(io = "write", obj = afp.raw.dup, paste0(polis_data_folder,"/Core_Ready_Files/", paste("duplicate_AFPcases_Polis",
                                                           min(afp.raw.dup$yronset, na.rm = T),
                                                           max(afp.raw.dup$yronset, na.rm = T),
                                                           sep = "_"), ".csv", sep = "")
@@ -2335,10 +2379,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   gc()
   cli::cli_process_done()
 
-  cli::cli_process_start("Pulling long district spatial file")
-  long.global.dist.01 <-sirfunctions::load_clean_dist_sp(type = "long")
-  cli::cli_process_done()
-
   cli::cli_process_start("Checking GUIDs")
 
 
@@ -2449,7 +2489,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
 
 
-  rm("long.global.dist.01", "afp.linelist.01", "afp.linelist.fixed", "shapes", "shapenames")
+  rm("afp.linelist.01", "afp.linelist.fixed", "shapes", "shapenames")
 
   cli::cli_process_done()
 
@@ -2643,10 +2683,10 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     dplyr::distinct() |>
     dplyr::arrange(epid)
 
-  openxlsx::write.xlsx(dup.epid, paste(polis_data_folder, "/Core_Ready_Files/", paste("duplicate_AFP_epids_Polis",
+  tidypolis_io(obj = dup.epid, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/", paste("duplicate_AFP_epids_Polis",
                                                       min(dup.epid$yronset, na.rm = T),
                                                       max(dup.epid$yronset, na.rm = T),
-                                                      sep = "_"), ".xlsx", sep = "")
+                                                      sep = "_"), ".csv", sep = "")
   )
 
   # remove duplicates in afp linelist
@@ -2678,13 +2718,13 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     dplyr::select(polis.case.id, epid, place.admin.0, place.admin.1, place.admin.2,
            date.onset, yronset, adm0guid, adm1guid, admin2guid)
 
-  write.csv(afp.missing.01, paste(polis_data_folder, "/Core_Ready_Files/",
+  tidypolis_io(obj = afp.missing.01, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/",
                                   paste("afp_missing_guid_count", min(afp.linelist.01$dateonset, na.rm = T), max(afp.linelist.01$dateonset, na.rm = T), sep = "_"),
                                   ".csv",
                                   sep = ""
   ))
 
-  write.csv(afp.missing.02, paste(polis_data_folder, "/Core_Ready_Files/",
+  tidypolis_io(obj = afp.missing.02, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/",
                                   paste("afp_missing_guid_epids", min(afp.linelist.01$dateonset, na.rm = T), max(afp.linelist.01$dateonset, na.rm = T), sep = "_"),
                                   ".csv",
                                   sep = ""
@@ -2703,76 +2743,73 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
            results.seq.date.to.program = as.character(as.Date(results.seq.date.to.program, format="%Y-%m-%d"), format="%d/%m/%Y")
     )
 
-  latest_folder_in_archive <- list.files(paste0(polis_data_folder, "/Core_Ready_Files/Archive"), full.names = T) |>
-    file.info() |>
-    dplyr::arrange(desc(ctime)) |>
-    dplyr::slice(1) |>
-    row.names()
-
-  x <- list.files(latest_folder_in_archive, full.names = T)
+  x <- tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/Core_Ready_Files/Archive/", latest_folder_in_archive), full_names = T)
 
   old.file <- x[grepl("afp_linelist_2020", x)]
 
-  old <- readr::read_rds(old.file) |>
-    dplyr::mutate(epid = stringr::str_squish(epid)) |>
-    dplyr::mutate_all(as.character)
+  if(length(old.file) > 0){
+    old <- tidypolis_io(io = "read", file_path = old.file) |>
+      dplyr::mutate(epid = stringr::str_squish(epid)) |>
+      dplyr::mutate_all(as.character)
 
-  old <- old |>
-    dplyr::mutate(yronset = as.numeric(yronset)) |>
-    dplyr::filter(dplyr::between(yronset, startyr, endyr)) |>
-    dplyr::mutate_all(as.character)
+    old <- old |>
+      dplyr::mutate(yronset = as.numeric(yronset)) |>
+      dplyr::filter(dplyr::between(yronset, startyr, endyr)) |>
+      dplyr::mutate_all(as.character)
 
-  afp.linelist.02 <- afp.linelist.02 |>
-    dplyr::ungroup() |>
-    dplyr::select(-c(setdiff(setdiff(colnames(afp.linelist.02), col.afp.raw.01), colnames(old))))
+    afp.linelist.02 <- afp.linelist.02 |>
+      dplyr::ungroup() |>
+      dplyr::select(-c(setdiff(setdiff(colnames(afp.linelist.02), col.afp.raw.01), colnames(old))))
 
-  # Step 11 write R datafiles for use in analyses
-  #Compare the final file to last week's final file to identify any differences in var_names, var_classes, or categorical responses
-  new_table_metadata <- f.summarise.metadata(head(afp.linelist.02, 1000))
-  old_table_metadata <- f.summarise.metadata(head(readr::read_rds(old.file), 1000))
-  afp_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata, "AFP")
+    # Step 11 write R datafiles for use in analyses
+    #Compare the final file to last week's final file to identify any differences in var_names, var_classes, or categorical responses
+    new_table_metadata <- f.summarise.metadata(head(afp.linelist.02, 1000))
+    old_table_metadata <- f.summarise.metadata(head(old, 1000))
+    afp_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata, "AFP")
 
-  #compare obs
-  new <- afp.linelist.02 |>
-    dplyr::mutate(epid = stringr::str_squish(epid)) |>
-    dplyr::mutate_all(as.character)
+    #compare obs
+    new <- afp.linelist.02 |>
+      dplyr::mutate(epid = stringr::str_squish(epid)) |>
+      dplyr::mutate_all(as.character)
 
-  in_new_not_old <- new[!(new$epid %in% old$epid),]
+    in_new_not_old <- new[!(new$epid %in% old$epid),]
 
-  in_old_not_new <- old[!(old$epid %in% new$epid),]
+    in_old_not_new <- old[!(old$epid %in% new$epid),]
 
-  in_new_and_old_but_modified <- ungroup(new) |>
-    dplyr::filter(epid %in% old$epid) |>
-    dplyr::select(-c(setdiff(colnames(new), colnames(old))))
+    in_new_and_old_but_modified <- ungroup(new) |>
+      dplyr::filter(epid %in% old$epid) |>
+      dplyr::select(-c(setdiff(colnames(new), colnames(old))))
 
 
-  in_new_and_old_but_modified <- setdiff(in_new_and_old_but_modified, old |>
-              dplyr::select(-c(setdiff(colnames(old), colnames(new)))))
+    in_new_and_old_but_modified <- setdiff(in_new_and_old_but_modified, old |>
+                                             dplyr::select(-c(setdiff(colnames(old), colnames(new)))))
 
-  if(nrow(in_new_and_old_but_modified) > 0){
-    in_new_and_old_but_modified <- in_new_and_old_but_modified |>
-      dplyr::inner_join(old |>
-                          dplyr::filter(epid %in% in_new_and_old_but_modified$epid) |>
-                          dplyr::select(-c(setdiff(colnames(old), colnames(new)))) |>
-                          setdiff(new |>
-                                    select(-c(setdiff(colnames(new), colnames(old))))), by="epid") |>
-      #wide_to_long
-      tidyr::pivot_longer(cols=-epid) |>
-      dplyr::mutate(source = ifelse(stringr::str_sub(name, -2) == ".x", "new", "old")) |>
-      dplyr::mutate(name = stringr::str_sub(name, 1, -3)) |>
-      #long_to_wide
-      tidyr::pivot_wider(names_from=source, values_from=value) |>
-      dplyr::filter(new != old & !name %in% c("lat", "lon"))
+    if(nrow(in_new_and_old_but_modified) > 0){
+      in_new_and_old_but_modified <- in_new_and_old_but_modified |>
+        dplyr::inner_join(old |>
+                            dplyr::filter(epid %in% in_new_and_old_but_modified$epid) |>
+                            dplyr::select(-c(setdiff(colnames(old), colnames(new)))) |>
+                            setdiff(new |>
+                                      select(-c(setdiff(colnames(new), colnames(old))))), by="epid") |>
+        #wide_to_long
+        tidyr::pivot_longer(cols=-epid) |>
+        dplyr::mutate(source = ifelse(stringr::str_sub(name, -2) == ".x", "new", "old")) |>
+        dplyr::mutate(name = stringr::str_sub(name, 1, -3)) |>
+        #long_to_wide
+        tidyr::pivot_wider(names_from=source, values_from=value) |>
+        dplyr::filter(new != old & !name %in% c("lat", "lon"))
 
+
+    }
+
+    update_polis_log(.event = paste0("AFP New Records: ", nrow(in_new_not_old), "; ",
+                                     "AFP Removed Records: ", nrow(in_old_not_new), "; ",
+                                     "AFP Modified Records: ", length(unique(in_new_and_old_but_modified$epid))),
+                     .event_type = "INFO")
 
   }
 
-  update_polis_log(.event = paste0("AFP New Records: ", nrow(in_new_not_old), "; ",
-                                   "AFP Removed Records: ", nrow(in_old_not_new), "; ",
-                                   "AFP Modified Records: ", length(unique(in_new_and_old_but_modified$epid))),
-                   .event_type = "INFO")
-
-  readr::write_rds(afp.linelist.02, paste(polis_data_folder, "/Core_Ready_Files/",
+  tidypolis_io(obj = afp.linelist.02, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/",
                                    paste("afp_linelist", min(afp.linelist.02$dateonset, na.rm = T), max(afp.linelist.02$dateonset, na.rm = T), sep = "_"),
                                    ".rds",
                                    sep = ""
@@ -2791,7 +2828,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     dplyr::ungroup() |>
     dplyr::select(epid, dateonset, place.admin.0, place.admin.1, place.admin.2, adm0guid, adm1guid, adm2guid, cdc.classification.all, lat, lon)
 
-  write.csv(afp.linelist.latlong, paste(polis_data_folder, "/Core_Ready_Files/",
+  tidypolis_io(obj = afp.linelist.latlong, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/",
                                         paste("afp_lat_long", min(afp.linelist.latlong$dateonset, na.rm = T), max(afp.linelist.latlong$dateonset, na.rm = T), sep = "_"),
                                         ".csv",
                                         sep = ""
@@ -2802,7 +2839,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_start("Comparing data with last non-AFP dataset")
 
   # Step 13 write.rds file for non AFP type cases
-  not.afp.01 <- rbind(not.afp, unknown.afp)
+  not.afp.01 <- dplyr::bind_rows(not.afp, unknown.afp)
   not.afp.01 <- not.afp.01 |>
     dplyr::mutate(polis.latitude = as.character(polis.latitude),
            polis.longitude = as.character(polis.longitude),
@@ -2811,65 +2848,63 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
            results.seq.date.to.program = as.character(as.Date(results.seq.date.to.program, format="%Y-%m-%d"), format="%Y-%m-%d")
     )
 
-  latest_folder_in_archive <- list.files(paste0(polis_data_folder, "/Core_Ready_Files/Archive"), full.names = T) |>
-    file.info() |>
-    dplyr::arrange(desc(ctime)) |>
-    dplyr::slice(1) |>
-    row.names()
-
-  x <- list.files(latest_folder_in_archive, full.names = T)
+  x <- tidypolis_io(io = "list", file_path = file.path(polis_data_folder,"Core_Ready_Files", "Archive", latest_folder_in_archive), full_names = T)
 
   old.file <- x[grepl("other_surveillance_type_linelist_2016", x)]
 
-  old <- readr::read_rds(old.file) |>
-    dplyr::mutate(epid = stringr::str_squish(epid)) |>
-    dplyr::mutate_all(as.character)
+  if(length(old.file)>0){
+    old <- tidypolis_io(io = "read", file_path = old.file) |>
+      dplyr::mutate(epid = stringr::str_squish(epid)) |>
+      dplyr::mutate_all(as.character)
 
-  not.afp.01 <- not.afp.01 |>
-    dplyr::ungroup() |>
-    select(-c(setdiff(setdiff(colnames(not.afp.01), col.afp.raw.01), colnames(old))))
-
-
-  #Compare the final file to last week's final file to identify any differences in var_names, var_classes, or categorical responses
-  new_table_metadata <- f.summarise.metadata(not.afp.01)
-  old_table_metadata <- f.summarise.metadata(readr::read_rds(old.file))
-  not_afp_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata, "Other Surv")
-  #compare obs
-  new <- not.afp.01 |>
-    dplyr::mutate(epid = stringr::str_squish(epid)) |>
-    dplyr::mutate_all(as.character)
-
-  in_new_not_old <- new |>
-    filter(!(epid %in% old$epid))
-
-  in_old_not_new <- old |>
-    filter(!(epid %in% new$epid))
-
-  in_new_and_old_but_modified <- new |>
-    filter(epid %in% old$epid) |>
-    select(-c(setdiff(colnames(new), colnames(old)))) |>
-    setdiff(old |>
-              select(-c(setdiff(colnames(old), colnames(new))))) |>
-    inner_join(old |>
-                 filter(epid %in% new$epid) |>
-                 select(-c(setdiff(colnames(old), colnames(new)))) |>
-                 setdiff(new |>
-                           select(-c(setdiff(colnames(new), colnames(old))))), by="epid") |>
-    #wide_to_long
-    pivot_longer(cols=-epid) |>
-    mutate(source = ifelse(str_sub(name, -2) == ".x", "new", "old")) |>
-    mutate(name = str_sub(name, 1, -3)) |>
-    #long_to_wide
-    pivot_wider(names_from=source, values_from=value) |>
-    filter(new != old & !name %in% c("lat", "lon"))
-
-  update_polis_log(.event = paste0("Other Surveillance New Records: ", nrow(in_new_not_old), "; ",
-                                   "Other Surveillance Removed Records: ", nrow(in_old_not_new), "; ",
-                                   "Other Surveillance Modified Records: ", length(unique(in_new_and_old_but_modified$epid))),
-                   .event_type = "INFO")
+    not.afp.01 <- not.afp.01 |>
+      dplyr::ungroup() |>
+      dplyr::select(-c(setdiff(setdiff(colnames(not.afp.01), col.afp.raw.01), colnames(old))))
 
 
-  readr::write_rds(not.afp.01, paste(polis_data_folder, "/Core_Ready_Files/",
+    #Compare the final file to last week's final file to identify any differences in var_names, var_classes, or categorical responses
+    new_table_metadata <- f.summarise.metadata(not.afp.01)
+    old_table_metadata <- f.summarise.metadata(old)
+    not_afp_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata, "Other Surv")
+    #compare obs
+    new <- not.afp.01 |>
+      dplyr::mutate(epid = stringr::str_squish(epid)) |>
+      dplyr::mutate_all(as.character)
+
+    in_new_not_old <- new |>
+      dplyr::filter(!(epid %in% old$epid))
+
+    in_old_not_new <- old |>
+      dplyr::filter(!(epid %in% new$epid))
+
+    in_new_and_old_but_modified <- new |>
+      dplyr::filter(epid %in% old$epid) |>
+      dplyr::select(-c(setdiff(colnames(new), colnames(old)))) |>
+      setdiff(old |>
+                dplyr::select(-c(setdiff(colnames(old), colnames(new))))) |>
+      dplyr::inner_join(old |>
+                          dplyr::filter(epid %in% new$epid) |>
+                          dplyr::select(-c(setdiff(colnames(old), colnames(new)))) |>
+                          dplyr::setdiff(new |>
+                                           dplyr::select(-c(setdiff(colnames(new), colnames(old))))), by="epid") |>
+      #wide_to_long
+      tidyr::pivot_longer(cols=-epid) |>
+      dplyr::mutate(source = ifelse(str_sub(name, -2) == ".x", "new", "old")) |>
+      dplyr::mutate(name = str_sub(name, 1, -3)) |>
+      #long_to_wide
+      tidyr::pivot_wider(names_from=source, values_from=value) |>
+      dplyr::filter(new != old & !name %in% c("lat", "lon"))
+
+    update_polis_log(.event = paste0("Other Surveillance New Records: ", nrow(in_new_not_old), "; ",
+                                     "Other Surveillance Removed Records: ", nrow(in_old_not_new), "; ",
+                                     "Other Surveillance Modified Records: ", length(unique(in_new_and_old_but_modified$epid))),
+                     .event_type = "INFO")
+
+  }
+
+
+
+  tidypolis_io(obj = not.afp.01, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/",
                               paste("other_surveillance_type_linelist", min(not.afp.01$yronset, na.rm = T), max(not.afp.01$yronset, na.rm = T), sep = "_"),
                               ".rds",
                               sep = ""
@@ -2884,12 +2919,16 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   #move newly created linelists to the "core datafiles to combine" folder within core 2.0
 
   # read AFP surveillance type linelist and combine to make one AFP-linlelist
-  afp.files.01 <- list.files(path=paste0(polis_data_folder, "/Core_Ready_Files"), pattern="^.*(afp_linelist).*(.rds)$", full.names=TRUE)
-  afp.files.02 <- list.files(path=paste0(polis_data_folder, "/Core_Ready_Files/Core Files to Combine"), pattern="^.*(afp_linelist).*(.rds)$", full.names=TRUE)
+  afp.files.01 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path=paste0(polis_data_folder, "/Core_Ready_Files"), full_names=TRUE)) |>
+    dplyr::filter(grepl("^.*(afp_linelist).*(.rds)$", name)) |>
+    dplyr::pull(name)
+  afp.files.02 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path="Data/core_files_to_combine", full_names=TRUE)) |>
+    dplyr::filter(grepl("^.*(afp_linelist).*(.rds)$", name)) |>
+    dplyr::pull(name)
   afp.files.03 <- c(afp.files.01, afp.files.02)
-  afp.clean.01 <- purrr::map_df(afp.files.03, ~readr::read_rds(.x))
+  afp.clean.01 <- purrr::map_df(afp.files.03, ~tidypolis_io(io = "read", file_path = .x))
 
-  write_rds(afp.clean.01, paste(polis_data_folder, "/Core_Ready_Files/",
+  tidypolis_io(obj = afp.clean.01, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/",
                                 paste("afp_linelist", min(afp.clean.01$dateonset, na.rm = T),
                                       max(afp.clean.01$dateonset, na.rm = T),
                                       sep = "_"
@@ -2903,7 +2942,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   afp.clean.light <- afp.clean.01 |>
     dplyr::filter(yronset >= 2019)
 
-  readr::write_rds(afp.clean.light, paste(polis_data_folder, "/Core_Ready_Files/",
+  tidypolis_io(obj = afp.clean.light, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/",
                                    paste("afp_linelist", min(afp.clean.light$dateonset, na.rm = T),
                                          max(afp.clean.light$dateonset, na.rm = T),
                                          sep = "_"
@@ -2916,11 +2955,16 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_start("Creating non-AFP dataset")
 
   #other surveillance linelist combine
-  non.afp.files.01 <- list.files(path=paste0(polis_data_folder, "/Core_Ready_Files"), pattern="^.*(other_surveillance_type_linelist).*(.rds)$", full.names=TRUE)
-  non.afp.files.02 <- list.files(path=paste0(polis_data_folder, "/Core_Ready_Files/Core Files to Combine"), pattern="^.*(other_surveillance_type_linelist).*(.rds)$", full.names=TRUE)
+  non.afp.files.01 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path=paste0(polis_data_folder, "/Core_Ready_Files"), full_names=TRUE)) |>
+    dplyr::filter(grepl("^.*(other_surveillance_type_linelist).*(.rds)$", name)) |>
+    dplyr::pull(name)
+  non.afp.files.02 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path="Data/core_files_to_combine", full_names=TRUE)) |>
+    dplyr::filter(grepl("^.*(other_surveillance_type_linelist).*(.rds)$", name)) |>
+    dplyr::pull(name)
   non.afp.files.03 <- c(non.afp.files.01, non.afp.files.02)
-  non.afp.clean.01 <- purrr::map_df(non.afp.files.03 , ~readr::read_rds(.x))
-  readr::write_rds(non.afp.clean.01, paste(polis_data_folder, "/Core_Ready_Files/",
+  non.afp.clean.01 <- purrr::map_df(non.afp.files.03, ~tidypolis_io(io = "read", file_path = .x))
+
+  tidypolis_io(obj = non.afp.clean.01, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/",
                                     paste("other_surveillance_type_linelist", min(non.afp.clean.01$yronset, na.rm = T),
                                           max(non.afp.clean.01$yronset, na.rm = T),
                                           sep = "_"
@@ -2941,7 +2985,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
      'afp.missing.02', 'afp_metadata_comparison',
      'col.afp.raw.01', 'dup.epid', 'issuesbyCtry', 'issuesbyyear',
      'endyr', 'global.dist.01', 'in_new_and_old_but_modified',
-     'in_new_not_old', 'in_old_not_new', 'latest_folder_in_archive',
+     'in_new_not_old', 'in_old_not_new',
      'new', 'new_table_metadata', 'non.afp.clean.01', 'non.afp.files.01',
      'non.afp.files.02', 'non.afp.files.03', 'non.afp.files.03',
      'not.afp', 'not.afp.01', 'not_afp_metadata_comparison', 'old',
@@ -2959,14 +3003,10 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_h1("Step 3/5 - Creating SIA analytic datasets")
 
   # Step 1: Read in "old" data file (System to find "Old" data file)
-  latest_folder_in_archive <- list.files(paste0(polis_data_folder, "/Core_Ready_Files/Archive"), full.names = T) |>
-    file.info() |>
-    dplyr::filter(ctime == max(ctime)) |>
-    row.names()
+  x <- tidypolis_io(io = "list", file_path = file.path(polis_data_folder, "Core_Ready_Files/Archive", latest_folder_in_archive), full_names = T)
 
-  x <- list.files(latest_folder_in_archive, full.names = T)
+  y <- tidypolis_io(io = "list", file_path = file.path(polis_data_folder, "Core_Ready_Files"), full_names = T)
 
-  y <- list.files(paste0(polis_data_folder, "/Core_Ready_Files"), full.names = T)
 
   old.file <- x[grepl("Activity",x)]
 
@@ -2976,7 +3016,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_start("Loading new SIA data")
   # Step 1: Read in "new" data file
   # Newest downloaded activity file, will be .rds located in Core Ready Files
-  sia.01.new <- readr::read_rds(new.file) |>
+  sia.01.new <- tidypolis_io(io = "read", file_path = new.file) |>
     dplyr::mutate_all(as.character) |>
     dplyr::rename_all(function(x) gsub(" ", ".", x)) |>
     dplyr::mutate_all(list(~dplyr::na_if(.,"")))
@@ -2988,64 +3028,71 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   # QC CHECK
   # This is for checking data across different download options
 
-  cli::cli_process_start("Loading old SIA data")
-  # Old pre-existing download
-  # This is previous Activity .rds that was preprocessed last week, it has been moved to the archive, change archive subfolder and specify last weeks Activity .rds
-  sia.01.old <- readr::read_rds(old.file) |>
-    dplyr::mutate_all(as.character) |>
-    dplyr::rename_all(function(x) gsub(" ", ".", x)) |>
-    dplyr::mutate_all(list(~dplyr::na_if(.,"")))
+  if(length(x) > 0){
 
-  names(sia.01.old) <- stringr::str_to_lower(names(sia.01.old))
-  cli::cli_process_done()
+    cli::cli_process_start("Loading old SIA data")
+    # Old pre-existing download
+    # This is previous Activity .rds that was preprocessed last week, it has been moved to the archive, change archive subfolder and specify last weeks Activity .rds
+    sia.01.old <- tidypolis_io(io = "read", file_path = old.file) |>
+      dplyr::mutate_all(as.character) |>
+      dplyr::rename_all(function(x) gsub(" ", ".", x)) |>
+      dplyr::mutate_all(list(~dplyr::na_if(.,"")))
 
-  # Are there differences in the names of the columns between two downloads?
-  f.compare.dataframe.cols(sia.01.old, sia.01.new)
+    names(sia.01.old) <- stringr::str_to_lower(names(sia.01.old))
+    cli::cli_process_done()
 
-  # If okay with above then proceed to next step
-  # First determine the variables that would be excluded from the comparison
-  # this includes variables such as EPID numbers which would invariably change in values
+    # Are there differences in the names of the columns between two downloads?
+    f.compare.dataframe.cols(sia.01.old, sia.01.new)
 
-  var.list.01 <- c(
-    "sia.code", "sia.sub-activity.code", "country", "country.iso3", "who.region", "ist", "activity.start.date", "activity.end.date",
-    "last.updated.date", "sub-activity.start.date", "sub-activity.end.date", "admin1",
-    "admin2", "delay.reason", "priority", "country.population.%", "unpd.country.population", "targeted.population",
-    "immunized.population", "admin.coverage.%", "area.targeted.%", "area.population", "age.group.%", "wastage.factor",
-    "number.of.doses", "number.of.doses.approved", "im.loaded", "lqas.loaded", "sub-activity.last.updated.date", "admin.2.targeted.population",
-    "admin.2.immunized.population", "admin.2.accessibility.status", "admin.2.comments", "sub-activity.initial.planned.date",
-    "activity.parent.children.inaccessible", "children.inaccessible", "admin2.children.inaccessible", "linked.outbreak(s)",
-    "admin.0.guid", "admin.1.guid", "admin.2.guid"
-  )
+    # If okay with above then proceed to next step
+    # First determine the variables that would be excluded from the comparison
+    # this includes variables such as EPID numbers which would invariably change in values
 
-  cli::cli_process_start("Comparing downloaded variables")
-  # Exclude the variables from
-  sia.01.old.compare <- sia.01.old |>
-    dplyr::select(-var.list.01)
+    var.list.01 <- c(
+      "sia.code", "sia.sub-activity.code", "country", "country.iso3", "who.region", "ist", "activity.start.date", "activity.end.date",
+      "last.updated.date", "sub-activity.start.date", "sub-activity.end.date", "admin1",
+      "admin2", "delay.reason", "priority", "country.population.%", "unpd.country.population", "targeted.population",
+      "immunized.population", "admin.coverage.%", "area.targeted.%", "area.population", "age.group.%", "wastage.factor",
+      "number.of.doses", "number.of.doses.approved", "im.loaded", "lqas.loaded", "sub-activity.last.updated.date", "admin.2.targeted.population",
+      "admin.2.immunized.population", "admin.2.accessibility.status", "admin.2.comments", "sub-activity.initial.planned.date",
+      "activity.parent.children.inaccessible", "children.inaccessible", "admin2.children.inaccessible", "linked.outbreak(s)",
+      "admin.0.guid", "admin.1.guid", "admin.2.guid"
+    )
 
-  sia.01.new.compare <- sia.01.new |>
-    dplyr::select(-var.list.01)
+    cli::cli_process_start("Comparing downloaded variables")
+    # Exclude the variables from
+    sia.01.old.compare <- sia.01.old |>
+      dplyr::select(-var.list.01)
 
-  new.var.sia.01 <- f.download.compare.01(sia.01.old.compare, sia.01.new.compare)
+    sia.01.new.compare <- sia.01.new |>
+      dplyr::select(-var.list.01)
 
-  new.df <- new.var.sia.01 |>
-    dplyr::filter(is.na(old.distinct.01) | diff.distinct.01 >= 1) |>
-    dplyr::filter(!variable %in% c("parentid", "id"))
+    new.var.sia.01 <- f.download.compare.01(sia.01.old.compare, sia.01.new.compare)
 
-  if (nrow(new.df) >= 1) {
-    cli::cli_alert_danger("There is either a new variable in the SIA data or new value of an existing variable.
+    new.df <- new.var.sia.01 |>
+      dplyr::filter(is.na(old.distinct.01) | diff.distinct.01 >= 1) |>
+      dplyr::filter(!variable %in% c("parentid", "id"))
+
+    if (nrow(new.df) >= 1) {
+      cli::cli_alert_danger("There is either a new variable in the SIA data or new value of an existing variable.
        Please run f.download.compare.02 to see what it is. Preprocessing can not continue until this is adressed.")
 
-    sia.new.value <- f.download.compare.02(new.var.sia.01, sia.01.old.compare, sia.01.new.compare)
+      sia.new.value <- f.download.compare.02(new.var.sia.01, sia.01.old.compare, sia.01.new.compare)
 
-    update_polis_log(.event = sapply(names(sia.new.value), function(x) paste0("New values in: ", x, " - ", paste0(unique(dplyr::pull(sia.new.value, x)), collapse = ", "))) |>
-                       paste0(collapse = "; "),
-                     .event_type = "ALERT")
+      update_polis_log(.event = sapply(names(sia.new.value), function(x) paste0("New values in: ", x, " - ", paste0(unique(dplyr::pull(sia.new.value, x)), collapse = ", "))) |>
+                         paste0(collapse = "; "),
+                       .event_type = "ALERT")
 
-  } else {
+    } else {
 
-    cli::cli_alert_info("New SIA download is comparable to old SIA download")
+      cli::cli_alert_info("New SIA download is comparable to old SIA download")
 
+    }
+
+  }else{
+    cli::cli_alert_info("No old SIA data found, will not perform comparisons")
   }
+
   cli::cli_process_done()
 
   # Get the date from 'Mon-year' format of parent start date as a first day of the month.
@@ -3116,10 +3163,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     dplyr::select(-admin.0.guid, -admin.1.guid, -admin.2.guid) |>
     dplyr::distinct()
 
-  cli::cli_process_done()
-
-  cli::cli_process_start("Load long global district shapefiles")
-  long.global.dist.01 <- sirfunctions::load_clean_dist_sp(type = "long")
   cli::cli_process_done()
 
   cli::cli_process_start("Checking GUIDs")
@@ -3202,47 +3245,51 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   sia.06 <- sia.06 |>
     dplyr::select(-dplyr::starts_with("SHAPE"))
 
-  x <- list.files(latest_folder_in_archive, full.names = T)
-
   old.file <- x[grepl("sia_2020", x)]
 
+  if(length(old.file) > 0){
 
-  new_table_metadata <- f.summarise.metadata(sia.06)
-  old_table_metadata <- f.summarise.metadata(readr::read_rds(old.file))
-  sia_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata, "SIA")
+    new_table_metadata <- f.summarise.metadata(sia.06)
+    old <- tidypolis_io(io = "read", file_path = old.file)
+    old_table_metadata <- f.summarise.metadata(old)
+    sia_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata, "SIA")
 
-  #check obs in new and old
-  old <- readr::read_rds(old.file) |>
-    dplyr::mutate_all(as.character)
-  new <- sia.06 |>
-    dplyr::mutate_all(as.character)
-  in_old_not_new <- old |>
-    dplyr::anti_join(new, by=c("sia.sub.activity.code", "adm2guid"))
-  in_new_not_old <- new |>
-    dplyr::anti_join(old, by=c("sia.sub.activity.code", "adm2guid"))
-  in_new_and_old_but_modified <- new |>
-    dplyr::group_by(sia.sub.activity.code, adm2guid) |>
-    dplyr::slice(1) |>
-    dplyr::ungroup() |>
-    dplyr::inner_join(old |>
-                 dplyr::group_by(sia.sub.activity.code, adm2guid) |>
-                 dplyr::slice(1) |>
-                 dplyr::ungroup(), by=c("sia.sub.activity.code", "adm2guid")) |>
-    dplyr::select(-c(setdiff(colnames(new), colnames(old)))) |>
-    # setdiff(., old |>
-    #           select(-c(setdiff(colnames(old), colnames(new))))) |>
-    # #wide_to_long
-    tidyr::pivot_longer(cols=-c("sia.sub.activity.code", "adm2guid")) |>
-    dplyr::mutate(source = ifelse(stringr::str_sub(name, -2) == ".x", "new", "old")) |>
-    dplyr::mutate(name = stringr::str_sub(name, 1, -3)) |>
-    #long_to_wide
-    tidyr::pivot_wider(names_from=source, values_from=value) |>
-    dplyr::filter(new != old)
+    #check obs in new and old
+    old <- old |>
+      dplyr::mutate_all(as.character)
+    new <- sia.06 |>
+      dplyr::mutate_all(as.character)
+    in_old_not_new <- old |>
+      dplyr::anti_join(new, by=c("sia.sub.activity.code", "adm2guid"))
+    in_new_not_old <- new |>
+      dplyr::anti_join(old, by=c("sia.sub.activity.code", "adm2guid"))
+    in_new_and_old_but_modified <- new |>
+      dplyr::group_by(sia.sub.activity.code, adm2guid) |>
+      dplyr::slice(1) |>
+      dplyr::ungroup() |>
+      dplyr::inner_join(old |>
+                          dplyr::group_by(sia.sub.activity.code, adm2guid) |>
+                          dplyr::slice(1) |>
+                          dplyr::ungroup(), by=c("sia.sub.activity.code", "adm2guid")) |>
+      dplyr::select(-c(setdiff(colnames(new), colnames(old)))) |>
+      # setdiff(., old |>
+      #           select(-c(setdiff(colnames(old), colnames(new))))) |>
+      # #wide_to_long
+      tidyr::pivot_longer(cols=-c("sia.sub.activity.code", "adm2guid")) |>
+      dplyr::mutate(source = ifelse(stringr::str_sub(name, -2) == ".x", "new", "old")) |>
+      dplyr::mutate(name = stringr::str_sub(name, 1, -3)) |>
+      #long_to_wide
+      tidyr::pivot_wider(names_from=source, values_from=value) |>
+      dplyr::filter(new != old)
 
-  update_polis_log(.event = paste0("SIA New Records: ", nrow(in_new_not_old), "; ",
-                                   "SIA Removed Records: ", nrow(in_old_not_new), "; ",
-                                   "SIA Modified Records: ", length(unique(in_new_and_old_but_modified$sia.sub.activity.code))),
-                   .event_type = "INFO")
+    update_polis_log(.event = paste0("SIA New Records: ", nrow(in_new_not_old), "; ",
+                                     "SIA Removed Records: ", nrow(in_old_not_new), "; ",
+                                     "SIA Modified Records: ", length(unique(in_new_and_old_but_modified$sia.sub.activity.code))),
+                     .event_type = "INFO")
+
+  }else{
+    cli::cli_alert_info("No old SIA file identified, will not perform comparisons")
+  }
 
   cli::cli_process_done()
 
@@ -3250,7 +3297,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   # Write final SIA file to RDS file
   sia.file.path <- paste(polis_data_folder, "/Core_Ready_Files/", sep = "")
 
-  readr::write_rds(sia.06, paste(sia.file.path,
+  tidypolis_io(obj = sia.06, io = "write", file_path = paste(sia.file.path,
                           paste("sia", min(sia.06$yr.sia, na.rm = T), max(sia.06$yr.sia, na.rm = T), sep = "_"),
                           ".rds",
                           sep = ""
@@ -3259,13 +3306,17 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   #combine SIA pre-2020 with the current rds
   # read SIA and combine to make one SIA dataset
-  sia.files.01 <- list.files(path=paste0(polis_data_folder, "/Core_Ready_Files/"), pattern="^.*(sia).*(.rds)$", full.names=TRUE)
-  sia.files.02 <- list.files(path=paste0(polis_data_folder, "/Core_Ready_Files/Core Files to Combine"), pattern="^.*(sia).*(.rds)$", full.names=TRUE)
+
+  sia.files.01 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path=paste0(polis_data_folder, "/Core_Ready_Files"), full_names=TRUE)) |>
+    dplyr::filter(grepl("^.*(sia).*(.rds)$", name)) |>
+    dplyr::pull(name)
+  sia.files.02 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path="Data/core_files_to_combine", full_names=TRUE)) |>
+    dplyr::filter(grepl("^.*(sia).*(.rds)$", name)) |>
+    dplyr::pull(name)
   sia.files.03 <- c(sia.files.01, sia.files.02)
+  sia.clean.01 <- purrr::map_df(sia.files.03, ~tidypolis_io(io = "read", file_path = .x))
 
-  sia.clean.01 <- purrr::map_df(sia.files.03 , ~readr::read_rds(.x))
-
-  readr::write_rds(sia.clean.01, paste(polis_data_folder, "/Core_Ready_Files/",
+  tidypolis_io(obj = sia.clean.01, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/",
                                 paste("sia", min(sia.clean.01$yr.sia, na.rm = T),
                                       max(sia.clean.01$yr.sia, na.rm = T),
                                       sep = "_"
@@ -3290,7 +3341,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   # excel file summarizing mismatch SIA by country
 
-  readr::write_csv(cty.yr.mismatch, paste(polis_data_folder, "/Core_Ready_Files/",
+  tidypolis_io(obj = cty.yr.mismatch, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/",
                                    paste("ctry_sia_mismatch", min(cty.yr.mismatch$yr.sia, na.rm = T),
                                          max(cty.yr.mismatch$yr.sia, na.rm = T),
                                          sep = "_"
@@ -3310,15 +3361,14 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     'cty.yr.mismatch',
     'dist.sia.mismatch.01', 'endyr',
     'in_new_and_old_but_modified', 'in_new_not_old',
-    'in_old_not_new', 'latest_folder_in_archive',
-    'long.global.dist.01', 'new', 'new.df', 'new.file',
+    'in_old_not_new', 'new', 'new.df', 'new.file',
     'new.var.sia.01', 'new_table_metadata', 'old', 'old.file',
     'old_table_metadata', 'savescipen',
     'sia.01.new', 'sia.01.new.compare', 'sia.01.old',
     'sia.01.old.compare', 'sia.02', 'sia.03', 'sia.04', 'sia.05',
     'sia.06', 'sia.clean.01', 'sia.files.01', 'sia.files.02',
     'sia.files.03', 'sia_metadata_comparison', 'sia.file.path',
-    'startyr', 'tofix', 'var.list.01', 'x', 'y'
+    'startyr', 'tofix', 'var.list.01'
   )
 
   cli::cli_process_done()
@@ -3326,77 +3376,74 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_h1("Step 4/5 - Creating ES analytic datasets")
 
   # Step 1: Read in "old" data file (System to find "Old" data file)
-  latest_folder_in_archive <- list.files(paste0(polis_data_folder, "/Core_Ready_Files/Archive"), full.names = T) |>
-    file.info() |>
-    dplyr::filter(ctime == max(ctime)) |>
-    row.names()
-
-  x <- list.files(latest_folder_in_archive, full.names = T)
-
-  y <- list.files(paste0(polis_data_folder, "/Core_Ready_Files"), full.names = T)
-
   old.file <- x[grepl("EnvSamples",x)]
 
   new.file <- y[grepl("EnvSamples", y)]
 
-
-  es.01.new <- readr::read_rds(new.file) |>
+  es.01.new <- tidypolis_io(io = "read", file_path = new.file) |>
     dplyr::mutate_all(as.character) |>
     dplyr::rename_all(function(x) gsub(" ", ".", x)) |>
     dplyr::mutate_all(list(~dplyr::na_if(.,"")))
 
-  es.01.old <- readr::read_rds(old.file) |>
-    dplyr::mutate_all(as.character) |>
-    dplyr::rename_all(function(x) gsub(" ", ".", x)) |>
-    dplyr::mutate_all(list(~dplyr::na_if(.,"")))
-
-  # Modifing POLIS variable names to make them easier to work with
   names(es.01.new) <- stringr::str_to_lower(names(es.01.new))
-  names(es.01.old) <- stringr::str_to_lower(names(es.01.old))
 
-  # Are there differences in the names of the columns between two downloads?
-  f.compare.dataframe.cols(es.01.old, es.01.new)
+  if(length(old.file) > 0){
+    es.01.old <- tidypolis_io(io = "read", file_path = old.file) |>
+      dplyr::mutate_all(as.character) |>
+      dplyr::rename_all(function(x) gsub(" ", ".", x)) |>
+      dplyr::mutate_all(list(~dplyr::na_if(.,"")))
 
-  var.list.01 <- c(
-    "env.sample.id", "env.sample.manual.edit.id", "sample.id", "worksheet.name", "labid",
-    "site.comment", "y", "x", "collection.date", "npev", "under.process", "is.suspected","advanced.notification",
-    "date.shipped.to.ref.lab", "region.id", "region.official.name", "admin.0.officialname", "admin.1.id",
-    "admin.1.officialname", "admin.2.id", "admin.2.officialname", "updated.date", "publish.date", "uploaded.date",
-    "uploaded.by",  "reporting.year", "date.notification.to.hq", "date.received.in.lab", "created.date", "date.f1.ref.itd",
-    "date.f2.ref.itd", "date.f3.ref.itd","date.f4.ref.itd","date.f5.ref.itd", "date.f6.ref.itd"
-  )
+    # Modifing POLIS variable names to make them easier to work with
+    names(es.01.old) <- stringr::str_to_lower(names(es.01.old))
+
+    # Are there differences in the names of the columns between two downloads?
+    f.compare.dataframe.cols(es.01.old, es.01.new)
+
+    var.list.01 <- c(
+      "env.sample.id", "env.sample.manual.edit.id", "sample.id", "worksheet.name", "labid",
+      "site.comment", "y", "x", "collection.date", "npev", "under.process", "is.suspected","advanced.notification",
+      "date.shipped.to.ref.lab", "region.id", "region.official.name", "admin.0.officialname", "admin.1.id",
+      "admin.1.officialname", "admin.2.id", "admin.2.officialname", "updated.date", "publish.date", "uploaded.date",
+      "uploaded.by",  "reporting.year", "date.notification.to.hq", "date.received.in.lab", "created.date", "date.f1.ref.itd",
+      "date.f2.ref.itd", "date.f3.ref.itd","date.f4.ref.itd","date.f5.ref.itd", "date.f6.ref.itd"
+    )
 
 
-  ## Exclude the variables from
-  es.02.old <- es.01.old |>
-    dplyr::select(-dplyr::all_of(var.list.01))
+    ## Exclude the variables from
+    es.02.old <- es.01.old |>
+      dplyr::select(-dplyr::all_of(var.list.01))
 
-  es.02.new <- es.01.new |>
-    dplyr::select(-dplyr::all_of(var.list.01))
+    es.02.new <- es.01.new |>
+      dplyr::select(-dplyr::all_of(var.list.01))
 
-  new.var.es.01 <- f.download.compare.01(es.02.new, es.02.old)
+    new.var.es.01 <- f.download.compare.01(es.02.new, es.02.old)
 
-  new.df <- new.var.es.01 |>
-    dplyr::filter(is.na(old.distinct.01) | diff.distinct.01 >= 1) |>
-    dplyr::filter(variable != "id")
+    new.df <- new.var.es.01 |>
+      dplyr::filter(is.na(old.distinct.01) | diff.distinct.01 >= 1) |>
+      dplyr::filter(variable != "id")
 
-  if (nrow(new.df) >= 1) {
-    cli::cli_alert_danger("There is either a new variable in the ES data or new value of an existing variable.
+    if (nrow(new.df) >= 1) {
+      cli::cli_alert_danger("There is either a new variable in the ES data or new value of an existing variable.
           Please run f.download.compare.01 to see what it is. Preprocessing can not continue until this is adressed.")
 
 
-    es.new.value <- f.download.compare.02(new.var.es.01 |> filter(!(is.na(old.distinct.01)) & variable != "id"), es.02.old, es.02.new)
+      es.new.value <- f.download.compare.02(new.var.es.01 |> filter(!(is.na(old.distinct.01)) & variable != "id"), es.02.old, es.02.new)
 
 
-    update_polis_log(.event = sapply(names(es.new.value), function(x) paste0("New Values in: ", x, " - ", paste0(unique(dplyr::pull(es.new.value, x)), collapse = ", "))) |>
-                       paste0(collapse = "; "),
-                     .event_type = "ALERT")
+      update_polis_log(.event = sapply(names(es.new.value), function(x) paste0("New Values in: ", x, " - ", paste0(unique(dplyr::pull(es.new.value, x)), collapse = ", "))) |>
+                         paste0(collapse = "; "),
+                       .event_type = "ALERT")
 
+    }else{
+      cli::cli_alert_info("No variable change errors")
+    }
+
+    remove("es.01.old", "es.02.old")
   }else{
-    cli::cli_alert_info("No variable change errors")
+    cli::cli_alert_info("No ES file found in archives")
   }
 
-  remove("es.01.old", "es.02.old")
+
   # Data manipulation
 
   # Renaming and creating variables
@@ -3474,7 +3521,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   if (nrow(es.00) >= 1) {
     cli::cli_alert_danger("Duplicate ENV sample manual ids. Flag for POLIS. Output in duplicate_ES_sampleID_Polis.csv.")
 
-    readr::write_csv(es.00, paste0(polis_data_folder, "/Core_Ready_Files/duplicate_ES_sampleID_Polis.csv"), na = "")
+    tidypolis_io(obj = es.00, io = "write", file_path =  paste0(polis_data_folder, "/Core_Ready_Files/duplicate_ES_sampleID_Polis.csv"), na = "")
 
   } else {
     cli::cli_alert_info("No duplicates identified")
@@ -3499,7 +3546,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     es.dup.01 <- es.dup.01[order(es.dup.01$env.sample.id,es.dup.01$virus.type, es.dup.01$collect.yr),] |> dplyr::select(-es.dups)
 
     # Export duplicate viruses in the CSV file:
-    readr::write_csv(es.dup.01, paste0(polis_data_folder, "/Core_Ready_Files/duplicate_ES_Polis.csv"), na = "")
+    tidypolis_io(obj = es.dup.01, io = "write", file_path = paste0(polis_data_folder, "/Core_Ready_Files/duplicate_ES_Polis.csv"))
 
   } else {
     cli::cli_alert_info("No duplicates identified")
@@ -3624,61 +3671,71 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   # save data
   #Compare the final file to last week's final file to identify any differences in var_names, var_classes, or categorical responses
-  old.es.file <- list.files(latest_folder_in_archive, full.names = T)
+  old.es.file <- tidypolis_io(io = "list", file_path = file.path(polis_data_folder, "Core_Ready_Files/Archive", latest_folder_in_archive), full_names = T)
 
-  old.es.file <- old.es.file[grepl("es_2001-01-08", old.es.file)] |>
-    file.info() |>
-    row.names()
+  old.es.file <- old.es.file[grepl("es_2001-01-08", old.es.file)]
 
-  new_table_metadata <- f.summarise.metadata(es.04)
-  old_table_metadata <- f.summarise.metadata(readr::read_rds(old.es.file))
-  es_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata, "ES")
+  if(length(old.es.file) > 0){
 
-  #compare obs
-  new <- es.04 |>
-    dplyr::mutate(env.sample.manual.edit.id = stringr::str_squish(env.sample.manual.edit.id)) |>
-    dplyr::mutate_all(as.character)
+    old.es <- tidypolis_io(io = "read", file_path = old.es.file)
 
-  old <- readr::read_rds(old.es.file) |>
-    dplyr::mutate(env.sample.manual.edit.id = stringr::str_squish(env.sample.manual.edit.id)) |>
-    dplyr::mutate_all(as.character)
+    new_table_metadata <- f.summarise.metadata(es.04)
+    old_table_metadata <- f.summarise.metadata(old.es)
+    es_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata, "ES")
 
-  in_new_not_old <- new |>
-    dplyr::filter(!(env.sample.manual.edit.id %in% old$env.sample.manual.edit.id))
-
-  in_old_not_new <- old |>
-    dplyr::filter(!(env.sample.manual.edit.id %in% new$env.sample.manual.edit.id))
-
-  in_new_and_old_but_modified <- new |>
-    dplyr::filter(env.sample.manual.edit.id %in% old$env.sample.manual.edit.id) |>
-    dplyr::select(-c(setdiff(colnames(new), colnames(old)))) |>
-    setdiff(old |>
-              dplyr::select(-c(setdiff(colnames(old), colnames(new))))) |>
-    dplyr::inner_join(old |>
-                 dplyr::filter(env.sample.manual.edit.id %in% new$env.sample.manual.edit.id) |>
-                 dplyr::select(-c(setdiff(colnames(old), colnames(new)))) |>
-                 setdiff(new |>
-                           dplyr::select(-c(setdiff(colnames(new), colnames(old))))), by="env.sample.manual.edit.id") |>
-    #wide_to_long
-    tidyr::pivot_longer(cols=-env.sample.manual.edit.id) |>
-    dplyr::mutate(source = ifelse(stringr::str_sub(name, -2) == ".x", "new", "old")) |>
-    dplyr::mutate(name = stringr::str_sub(name, 1, -3)) |>
-    #long_to_wide
-    tidyr::pivot_wider(names_from=source, values_from=value) |>
-    dplyr::mutate(new = as.character(new),
-                  old = as.character(old)) |>
-    dplyr::filter(new != old)
-
-  update_polis_log(.event = paste0("ES New Records: ", nrow(in_new_not_old), "; ",
-                                   "ES Removed Records: ", nrow(in_old_not_new), "; ",
-                                   "ES Modified Records: ", length(unique(in_new_and_old_but_modified$env.sample.manual.edit.id))),
-                   .event_type = "INFO")
+    #compare obs
+    new <- es.04 |>
+      dplyr::mutate(env.sample.manual.edit.id = stringr::str_squish(env.sample.manual.edit.id)) |>
+      dplyr::mutate_all(as.character)
 
 
-  cli::cli_process_done()
+    old <- old.es |>
+      dplyr::mutate(env.sample.manual.edit.id = stringr::str_squish(env.sample.manual.edit.id)) |>
+      dplyr::mutate_all(as.character)
+
+    in_new_not_old <- new |>
+      dplyr::filter(!(env.sample.manual.edit.id %in% old$env.sample.manual.edit.id))
+
+    in_old_not_new <- old |>
+      dplyr::filter(!(env.sample.manual.edit.id %in% new$env.sample.manual.edit.id))
+
+    in_new_and_old_but_modified <- new |>
+      dplyr::filter(env.sample.manual.edit.id %in% old$env.sample.manual.edit.id) |>
+      dplyr::select(-c(setdiff(colnames(new), colnames(old)))) |>
+      setdiff(old |>
+                dplyr::select(-c(setdiff(colnames(old), colnames(new))))) |>
+      dplyr::inner_join(old |>
+                          dplyr::filter(env.sample.manual.edit.id %in% new$env.sample.manual.edit.id) |>
+                          dplyr::select(-c(setdiff(colnames(old), colnames(new)))) |>
+                          setdiff(new |>
+                                    dplyr::select(-c(setdiff(colnames(new), colnames(old))))), by="env.sample.manual.edit.id") |>
+      #wide_to_long
+      tidyr::pivot_longer(cols=-env.sample.manual.edit.id) |>
+      dplyr::mutate(source = ifelse(stringr::str_sub(name, -2) == ".x", "new", "old")) |>
+      dplyr::mutate(name = stringr::str_sub(name, 1, -3)) |>
+      #long_to_wide
+      tidyr::pivot_wider(names_from=source, values_from=value)
+
+    if(nrow(in_new_and_old_but_modified) > 0){
+      in_new_and_old_but_modified <- in_new_and_old_but_modified |>
+        dplyr::filter(new != old)
+    }
+
+    update_polis_log(.event = paste0("ES New Records: ", nrow(in_new_not_old), "; ",
+                                     "ES Removed Records: ", nrow(in_old_not_new), "; ",
+                                     "ES Modified Records: ", length(unique(in_new_and_old_but_modified$env.sample.manual.edit.id))),
+                     .event_type = "INFO")
+
+
+    cli::cli_process_done()
+  }else{
+    cli::cli_process_done()
+    cli::cli_alert_info("No old ES file found")
+  }
+
 
   cli::cli_process_start("Writing out ES datasets")
-  readr::write_rds(es.04, paste(polis_data_folder, "/Core_Ready_Files/",
+  tidypolis_io(obj = es.04, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/",
                          paste("es", min(es.04$collect.date, na.rm = T), max(es.04$collect.date, na.rm = T), sep = "_"),
                          ".rds",
                          sep = ""
@@ -3695,10 +3752,10 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   rm(
     'envSiteYearList', 'es.00', 'es.02', 'es.03', 'es.04', 'es_metadata_comparison', 'global.ctry.01',
-    'in_new_and_old_but_modified', 'in_new_not_old', 'in_old_not_new', 'latest_folder_in_archive',
+    'in_new_and_old_but_modified', 'in_new_not_old', 'in_old_not_new',
     'na.es.01', 'new', 'new.df', 'new.file', 'new.var.es.01', 'new_table_metadata', 'newsites',
     'old', 'old.es.file', 'old.file', 'old_table_metadata', 'savescipen',
-    'shape.name.01', 'truenewsites', 'var.list.01', 'x', 'y', 'sia.new.value'
+    'shape.name.01', 'truenewsites', 'var.list.01', 'sia.new.value'
   )
   gc()
   cli::cli_process_done()
@@ -3715,97 +3772,97 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
 
   # Step 1: Read in "old" data file (System to find "Old" data file)
-  latest_folder_in_archive <- list.files(paste0(polis_data_folder, "/Core_Ready_Files/Archive"), full.names = T) |>
-    file.info() |>
-    dplyr::filter(ctime == max(ctime)) |>
-    row.names()
-
-  x <- list.files(latest_folder_in_archive, full.names = T)
-
-  y <- list.files(paste0(polis_data_folder, "/Core_Ready_Files"), full.names = T)
-
   old.file <- x[grepl("Viruses_",x)]
 
   new.file <- y[grepl("Viruses_", y)]
 
   # Step 1: Read in VIRUS table data from POLIS
-  virus.raw.new <- readr::read_rds(new.file) |>
-    dplyr::mutate_all(as.character) |>
-    dplyr::rename_all(function(x) gsub(" ", ".", x)) |>
-    dplyr::mutate_all(list(~dplyr::na_if(.,"")))
-
-  # Step 2: Read in "old" data file
-  virus.raw.old <- readr::read_rds(old.file) |>
+  virus.raw.new <- tidypolis_io(io = "read", file_path = new.file) |>
     dplyr::mutate_all(as.character) |>
     dplyr::rename_all(function(x) gsub(" ", ".", x)) |>
     dplyr::mutate_all(list(~dplyr::na_if(.,"")))
 
   names(virus.raw.new) <- stringr::str_to_lower(names(virus.raw.new))
 
-  names(virus.raw.old) <- stringr::str_to_lower(names(virus.raw.old))
-
-  cli::cli_process_done()
-  # variables in old dataframe
-
-  var.names <- virus.raw.old |>
-    purrr::map_df(~ (data.frame(class = class(.x))),
-           .id = "variable"
-    )
-
-  var.names.01 <- var.names |>
-    dplyr::filter(variable != "virus.type(s)" & variable != "vdpv.classification(s)" & variable != "nt.changes" & variable != "emergence.group(s)" &
-             variable != "virus.cluster(s)" & variable != "surveillance.type" &
-             !(variable %in% c("exact.longitude", "exact.latitude", "pons.latitude", "pons.longitude", "pons.environment",
-                               "pons.seq.date", "pons.administration.type", "pons.spec.type", "location", "country.iso2"))) # list of variables we want evaluated in 2nd QC function
+  if(length(old.file) > 0){
+    # Step 2: Read in "old" data file
+    virus.raw.old <- tidypolis_io(io = "read", file_path =old.file) |>
+      dplyr::mutate_all(as.character) |>
+      dplyr::rename_all(function(x) gsub(" ", ".", x)) |>
+      dplyr::mutate_all(list(~dplyr::na_if(.,"")))
 
 
-  var.list.01 <- as.character(var.names.01$variable)
+    names(virus.raw.old) <- stringr::str_to_lower(names(virus.raw.old))
 
-  virus.raw.old.comp <- virus.raw.old |>
-    dplyr::select(-c(dplyr::all_of(var.list.01)))
+    cli::cli_process_done()
+    # variables in old dataframe
 
-  virus.raw.new.comp <- virus.raw.new |>
-    dplyr::select(-c(dplyr::all_of(var.list.01)))
+    var.names <- virus.raw.old |>
+      purrr::map_df(~ (data.frame(class = class(.x))),
+                    .id = "variable"
+      )
+
+    var.names.01 <- var.names |>
+      dplyr::filter(variable != "virus.type(s)" & variable != "vdpv.classification(s)" & variable != "nt.changes" & variable != "emergence.group(s)" &
+                      variable != "virus.cluster(s)" & variable != "surveillance.type" &
+                      !(variable %in% c("exact.longitude", "exact.latitude", "pons.latitude", "pons.longitude", "pons.environment",
+                                        "pons.seq.date", "pons.administration.type", "pons.spec.type", "location", "country.iso2"))) # list of variables we want evaluated in 2nd QC function
 
 
-  # Step 3: Apply compare dataframe function
+    var.list.01 <- as.character(var.names.01$variable)
 
-  # Are there differences in the names of the columns between two downloads?
-  f.compare.dataframe.cols(virus.raw.old.comp, virus.raw.new.comp)
+    virus.raw.old.comp <- virus.raw.old |>
+      dplyr::select(-c(dplyr::all_of(var.list.01)))
 
-  new.var.virus.01 <- f.download.compare.01(virus.raw.old.comp, virus.raw.new.comp)
+    virus.raw.new.comp <- virus.raw.new |>
+      dplyr::select(-c(dplyr::all_of(var.list.01)))
 
-  new.df <- new.var.virus.01 |>
-    filter(is.na(old.distinct.01) | diff.distinct.01 >= 1)
 
-  if (nrow(new.df) >= 1) {
-    cli::cli_alert_danger("There is either a new variable in the AFP data or new value of an existing variable.
+    # Step 3: Apply compare dataframe function
+
+    # Are there differences in the names of the columns between two downloads?
+    f.compare.dataframe.cols(virus.raw.old.comp, virus.raw.new.comp)
+
+    new.var.virus.01 <- f.download.compare.01(virus.raw.old.comp, virus.raw.new.comp)
+
+    new.df <- new.var.virus.01 |>
+      filter(is.na(old.distinct.01) | diff.distinct.01 >= 1)
+
+    if (nrow(new.df) >= 1) {
+      cli::cli_alert_danger("There is either a new variable in the AFP data or new value of an existing variable.
        Please run f.download.compare.02 to see what it is.")
 
-    # Step 4: Apply compare variables function
+      # Step 4: Apply compare variables function
 
-    virus.new.value <- f.download.compare.02(new.var.virus.01, virus.raw.old.comp, virus.raw.new.comp)
+      virus.new.value <- f.download.compare.02(new.var.virus.01, virus.raw.old.comp, virus.raw.new.comp)
 
-    update_polis_log(.event = sapply(names(virus.new.value), function(x) paste0("New Values in: ", x, " - ", paste0(unique(dplyr::pull(virus.new.value, x)), collapse = ", "))) |>
-                       paste0(collapse = "; "),
-                     .event_type = "ALERT")
+      update_polis_log(.event = sapply(names(virus.new.value), function(x) paste0("New Values in: ", x, " - ", paste0(unique(dplyr::pull(virus.new.value, x)), collapse = ", "))) |>
+                         paste0(collapse = "; "),
+                       .event_type = "ALERT")
 
-  } else {
-    cli::cli_alert_info("New AFP download is comparable to old AFP download")
+    } else {
+      cli::cli_alert_info("New AFP download is comparable to old AFP download")
+    }
+  } else{
+    cli::cli_process_done()
+
+    cli::cli_alert_info("No previous Virus table identified")
   }
+
+
 
   # Step 5: check virus types and virus type names to ensure that novel derived viruses are properly
   # accounted for
 
   virus.types.names <- virus.raw.new |>
-    count(`virus.type(s)`, virustypename)
+    dplyr::count(`virus.type(s)`, virustypename)
 
   # Step 6: fix all dates from character to ymd format and fix character variables
 
   cli::cli_process_start("Creating CDC variables")
 
   #read in list of novel emergences supplied by ORPG
-  nopv.emrg <- sirfunctions::edav_io(io = "read", file_loc = file.path("GID/PEB/SIR/Data/orpg/nopv_emg.table.rds"), default_dir = NULL) |>
+  nopv.emrg <- sirfunctions::edav_io(io = "read", file_loc = "GID/PEB/SIR/Data/orpg/nopv_emg.table.rds", default_dir = NULL) |>
     dplyr::rename(emergencegroup = emergence_group,
                   vaccine.source = vaccine_source) |>
     dplyr::mutate(vaccine.source = dplyr::if_else(vaccine.source == "novel", "Novel", vaccine.source))
@@ -3892,7 +3949,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   if (nrow(vaccine.6.plus) >= 1) {
     cli::cli_alert_warning("There is a potentially misclassified virus based on ntchanges, check in POLIS and flag on message board. Writing out viruses to check.")
-    readr::write_csv(vaccine.6.plus, paste0(polis_data_folder, "/Core_Ready_Files/virus_large_nt_changes.csv"))
+    tidypolis_io(obj = vaccine.6.plus, io = "write", file_path = paste0(polis_data_folder, "/Core_Ready_Files/virus_large_nt_changes.csv"))
 
     update_polis_log(.event = paste0("Vaccine viruses with 6+ NT changes, flag for POLIS"),
                      .event_type = "ALERT")
@@ -3915,7 +3972,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
           If they are the exact same, then contact Ashley")
     virus.dup.01 <- virus.dup.01[order(virus.dup.01$surveillance.type,virus.dup.01$virustype, virus.dup.01$yronset),] |> select(-virus_dup)
 
-    readr::write_csv(virus.dup.01, paste0(polis_data_folder, "/Core_Ready_Files/duplicate_viruses_Polis_virusTableData.csv"))
+    tidypolis_io(obj = virus.dup.01, io = "write", file_path = paste0(polis_data_folder, "/Core_Ready_Files/duplicate_viruses_Polis_virusTableData.csv"))
 
     update_polis_log(.event = paste0("Duplicate viruses available in duplicate_viruses_Polis_virusTableData.csv"),
                      .event_type = "ALERT")
@@ -3939,15 +3996,21 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_done()
 
   cli::cli_process_start("Processing and cleaning AFP/non-AFP files")
-  afp.files.01 <- list.files(path = paste0(polis_data_folder, "/Core_Ready_Files/"), pattern = "^(afp_linelist_2001-01-01_2024).*(.rds)$", full.names = TRUE)
-  afp.01 <- purrr::map_df(afp.files.01, ~readr::read_rds(.x)) |>
+  afp.files.01 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path = file.path(polis_data_folder, "Core_Ready_Files"), full_names = T)) |>
+    dplyr::mutate(short_name = stringr::str_replace(name, paste0(polis_data_folder, "/Core_Ready_Files/"), "")) |>
+    dplyr::filter(grepl("^(afp_linelist_2001-01-01_2024).*(.rds)$", short_name)) |>
+    dplyr::pull(name)
+  afp.01 <- lapply(afp.files.01, function(x) tidypolis_io(io = "read", file_path = x)) |>
+    dplyr::bind_rows() |>
     dplyr::ungroup() |>
     dplyr::distinct(.keep_all = T)|>
     dplyr::filter(dplyr::between(yronset, startyr, endyr))
 
-
-  non.afp.files.01 <- list.files(path = paste0(polis_data_folder, "/Core_Ready_Files/"), pattern = "^(other_surveillance_type_linelist_2016_2023).*(.rds)$", full.names = TRUE)
-  non.afp.01 <- purrr::map_df(non.afp.files.01, ~ readr::read_rds(.x)) |>
+  non.afp.files.01 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path = file.path(polis_data_folder, "Core_Ready_Files"), full_names = T)) |>
+    dplyr::mutate(short_name = stringr::str_replace(name, paste0(polis_data_folder, "/Core_Ready_Files/"), "")) |>
+    dplyr::filter(grepl("^(other_surveillance_type_linelist_2020_2023).*(.rds)$", short_name)) |>
+    dplyr::pull(name)
+  non.afp.01 <- purrr::map_df(non.afp.files.01, ~ tidypolis_io(io = "read", file_path = .x)) |>
     dplyr::ungroup() |>
     dplyr::distinct(.keep_all = T) |>
     dplyr::filter(dplyr::between(yronset, startyr, endyr))
@@ -4019,13 +4082,17 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
              !virustype %in% c("VACCINE 1", "VACCINE 3", "NPEV") & classificationvdpv != "Pending")
 
   cli::cli_process_done()
+  gc()
   cli::cli_process_start("Adding in ES data")
 
   # read in ES files from cleaned ENV linelist
-  es.files.01 <- list.files(path = paste0(polis_data_folder, "/Core_Ready_Files/"), pattern = "^(es).*(.rds)$", full.names = TRUE)
-  es.01 <- purrr::map_df(es.files.01, ~ readr::read_rds(.x)) |>
+  env.files.01 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path = file.path(polis_data_folder, "Core_Ready_Files"), full_names = T)) |>
+    dplyr::mutate(short_name = stringr::str_replace(name, paste0(polis_data_folder, "/Core_Ready_Files/"), "")) |>
+    dplyr::filter(grepl("^(es).*(.rds)$", short_name)) |>
+    dplyr::pull(name)
+  es.01 <- purrr::map_df(env.files.01, ~ tidypolis_io(io = "read", file_path = .x)) |>
+    dplyr::ungroup() |>
     dplyr::distinct(.keep_all = T)
-
 
   # Make sure 'env.sample.maual.edit.id' is unique for each ENV sample
   es.00 <- es.01[duplicated(es.01$env.sample.manual.edit.id), ]
@@ -4107,78 +4174,101 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   #Compare the final file to last week's final file to identify any differences in var_names, var_classes, or categorical responses
   new_table_metadata <- f.summarise.metadata(afp.es.virus.01)
-  old.file <- list.files(latest_folder_in_archive, full.names = T)
-  old.file <- old.file[grepl("positives_2001-01-01", old.file)]
-  old_table_metadata <- f.summarise.metadata(readr::read_rds(old.file))
-  positives_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata, "POS")
 
-  new <- afp.es.virus.01 |>
-    unique() |>
-    dplyr::mutate(epid = stringr::str_squish(epid)) |>
-    dplyr::group_by(epid)|>
-    dplyr::slice(1) |>
-    dplyr::ungroup() |>
-    dplyr::mutate_all(as.character)
+  x <- tidypolis_io(io = "list", file_path = file.path(polis_data_folder, "Core_Ready_Files/Archive", latest_folder_in_archive), full_names = T)
 
-  old <- readr::read_rds(old.file) |>
-    dplyr::mutate(epid = stringr::str_squish(epid)) |>
-    dplyr::group_by(epid)|>
-    dplyr::slice(1) |>
-    dplyr::ungroup() |>
-    dplyr::mutate_all(as.character)
+  y <- tidypolis_io(io = "list", file_path = file.path(polis_data_folder, "Core_Ready_Files"), full_names = T)
+
+  old.file <- x[grepl("positives_2001-01-01", x)]
+
+  if(length(old.file) > 0){
+
+    old.es <- tidypolis_io(io = "read", file_path = old.file)
+
+    old_table_metadata <- f.summarise.metadata(old.es)
+    positives_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata, "POS")
+
+    new <- afp.es.virus.01 |>
+      unique() |>
+      dplyr::mutate(epid = stringr::str_squish(epid)) |>
+      dplyr::group_by(epid)|>
+      dplyr::slice(1) |>
+      dplyr::ungroup() |>
+      dplyr::mutate_all(as.character)
+
+    old <- old.es |>
+      dplyr::mutate(epid = stringr::str_squish(epid)) |>
+      dplyr::group_by(epid)|>
+      dplyr::slice(1) |>
+      dplyr::ungroup() |>
+      dplyr::mutate_all(as.character)
 
 
-  in_new_not_old <- new |>
-    dplyr::filter(!(epid %in% old$epid))
+    in_new_not_old <- new |>
+      dplyr::filter(!(epid %in% old$epid))
 
-  in_old_not_new <- old |>
-    dplyr::filter(!(epid %in% new$epid))
+    in_old_not_new <- old |>
+      dplyr::filter(!(epid %in% new$epid))
 
-  in_new_and_old_but_modified <- new |>
-    dplyr::filter(epid %in% old$epid) |>
-    dplyr::select(-c(setdiff(colnames(new), colnames(old)))) |>
-    setdiff(old |>
-              dplyr::select(-c(setdiff(colnames(old), colnames(new))))) |>
-    dplyr::inner_join(old |>
-                        dplyr::filter(epid %in% new$epid) |>
-                        dplyr::select(-c(setdiff(colnames(old), colnames(new)))) |>
-                        dplyr::setdiff(new |>
-                           select(-c(setdiff(colnames(new), colnames(old))))), by="epid") |>
-    #wide_to_long
-    tidyr::pivot_longer(cols=-epid) |>
-    dplyr::mutate(source = ifelse(stringr::str_sub(name, -2) == ".x", "new", "old")) |>
-    dplyr::mutate(name = stringr::str_sub(name, 1, -3)) |>
-    #long_to_wide
-    tidyr::pivot_wider(names_from=source, values_from=value)
+    in_new_and_old_but_modified <- new |>
+      dplyr::filter(epid %in% old$epid) |>
+      dplyr::select(-c(setdiff(colnames(new), colnames(old)))) |>
+      setdiff(old |>
+                dplyr::select(-c(setdiff(colnames(old), colnames(new))))) |>
+      dplyr::inner_join(old |>
+                          dplyr::filter(epid %in% new$epid) |>
+                          dplyr::select(-c(setdiff(colnames(old), colnames(new)))) |>
+                          dplyr::setdiff(new |>
+                                           select(-c(setdiff(colnames(new), colnames(old))))), by="epid") |>
+      #wide_to_long
+      tidyr::pivot_longer(cols=-epid) |>
+      dplyr::mutate(source = ifelse(stringr::str_sub(name, -2) == ".x", "new", "old")) |>
+      dplyr::mutate(name = stringr::str_sub(name, 1, -3)) |>
+      #long_to_wide
+      tidyr::pivot_wider(names_from=source, values_from=value)
 
-  if(nrow(in_new_and_old_but_modified) > 0){
-    in_new_and_old_but_modified <- in_new_and_old_but_modified |>
-      dplyr::mutate(new = unlist(new)) |>
-      dplyr::mutate(old = unlist(old)) |>
-      dplyr::filter(new != old & !name %in% c("latitude", "longitude"))
+    if(nrow(in_new_and_old_but_modified) > 0){
+      in_new_and_old_but_modified <- in_new_and_old_but_modified |>
+        dplyr::mutate(new = unlist(new)) |>
+        dplyr::mutate(old = unlist(old)) |>
+        dplyr::filter(new != old & !name %in% c("latitude", "longitude"))
 
-    # list of records for which virus type name has changed from last week to this week.
-    pos_changed_virustype <- in_new_and_old_but_modified |> filter(name=="measurement")
+      # list of records for which virus type name has changed from last week to this week.
+      pos_changed_virustype <- in_new_and_old_but_modified |> filter(name=="measurement")
 
-    if(nrow(pos_changed_virustype) > 0){
+      if(nrow(pos_changed_virustype) > 0){
 
-      update_polis_log(.event = paste0("Virus type has changed for ", nrow(pos_changed_virustype), " records, review in Changed_virustype_virusTableData.csv"),
-                       .event_type = "ALERT")
+        update_polis_log(.event = paste0("Virus type has changed for ", nrow(pos_changed_virustype), " records, review in Changed_virustype_virusTableData.csv"),
+                         .event_type = "ALERT")
+
+      }
+
+      # Export records for which virus type has changed from last week to this week in the CSV file:
+      tidypolis_io(obj = pos_changed_virustype,
+                   io = "write",
+                   file_path = paste0(polis_data_folder, "/Core_Ready_Files/Changed_virustype_virusTableData.csv"))
 
     }
 
-    # Export records for which virus type has changed from last week to this week in the CSV file:
-    readr::write_csv(pos_changed_virustype, paste0(polis_data_folder, "/Core_Ready_Files/Changed_virustype_virusTableData.csv"), na = "")
+    # list of records in new but not in old.
+    in_new_not_old <- in_new_not_old |> select(place.admin.0, epid, dateonset, yronset, source, virustype)
 
+    if(nrow(in_new_not_old) > 0 ){
+      # Export records for which virus type has changed from last week to this week in the CSV file:
+      tidypolis_io(obj = in_new_not_old,
+                   io = "write",
+                   file_path = paste0(polis_data_folder, "/Core_Ready_Files/in_new_not_old_virusTableData.csv"))
+    }
+
+  }else{
+    cli::cli_process_done()
+    cli::cli_alert_info("No previous archive identified")
+    in_new_not_old <- tibble()
+    in_old_not_new <- tibble()
+    in_new_and_old_but_modified <- list()
   }
 
-  # list of records in new but not in old.
-  in_new_not_old <- in_new_not_old |> select(place.admin.0, epid, dateonset, yronset, source, virustype)
 
-  if(nrow(in_new_not_old) > 0 ){
-    # Export records for which virus type has changed from last week to this week in the CSV file:
-    readr::write_csv(in_new_not_old, paste0(polis_data_folder, "/Core_Ready_Files/in_new_not_old_virusTableData.csv"), na = "")
-  }
 
   #identify updated viruses logging change from VDPV to cVDPV
   class.updated <- afp.es.virus.01 |>
@@ -4187,16 +4277,27 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     dplyr::mutate(vdpvclassificationchangedate = as.Date(vdpvclassificationchangedate, "%Y-%m-%d"))
 
   if(nrow(class.updated > 0)){
-    readr::write_csv(class.updated, paste0(polis_data_folder, "/Core_Ready_Files/virus_class_changed_date.csv"), na = "")
+    tidypolis_io(obj = class.updated,
+                 io = "write",
+                 file_path = paste0(polis_data_folder, "/Core_Ready_Files/virus_class_changed_date.csv"))
   }
+
+  log.in.new.and.old.mod <- ifelse(
+    is.list(in_new_and_old_but_modified),
+    NA,
+    length(unique(in_new_and_old_but_modified$epid))
+  )
+
 
   update_polis_log(.event = paste0("POS New Records: ", nrow(in_new_not_old), "; ",
                                    "POS Removed Records: ", nrow(in_old_not_new), "; ",
-                                   "POS Modified Records: ", length(unique(in_new_and_old_but_modified$epid)), "; ",
+                                   "POS Modified Records: ", log.in.new.and.old.mod, "; ",
                                    "POS Class Changed Records: ", length(unique(class.updated$epid))),
                    .event_type = "INFO")
 
-  readr::write_rds(afp.es.virus.01, paste(polis_data_folder, "/Core_Ready_Files/",
+  tidypolis_io(obj = afp.es.virus.01,
+               io = "write",
+               file_path = paste(polis_data_folder, "/Core_Ready_Files/",
                                    paste("positives", min(afp.es.virus.01$dateonset, na.rm = T),
                                          max(afp.es.virus.01$dateonset, na.rm = T),
                                          sep = "_"
@@ -4210,14 +4311,14 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   cli::cli_process_start("Checking for positives that don't match to GUIDs")
 
-  long.global.dist.01 <- sirfunctions::load_clean_dist_sp(type = "long")
-
   # AFP and ES that do not match to shape file
   unmatched.afp.es.viruses.01 <- dplyr::anti_join(afp.es.virus.01, long.global.dist.01, by = c("admin2guid" = "GUID", "yronset" = "active.year.01"))
 
   # CSV file listing out unmatch virus
 
-  readr::write_csv(unmatched.afp.es.viruses.01, paste(polis_data_folder, "/Core_Ready_Files/",
+  tidypolis_io(obj = unmatched.afp.es.viruses.01,
+               io = "write",
+               file_path = paste(polis_data_folder, "/Core_Ready_Files/",
                                                paste("unmatch_positives", min(unmatched.afp.es.viruses.01$yronset, na.rm = T),
                                                      max(unmatched.afp.es.viruses.01$yronset, na.rm = T),
                                                      sep = "_"

@@ -9,6 +9,67 @@
     ]
   },
   "Packages": {
+    "AzureAuth": {
+      "Package": "AzureAuth",
+      "Version": "1.3.3",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "3ce531ce76e84cf7f86c4deb01f225ce",
+      "Requirements": [
+        "R6",
+        "httr",
+        "jose",
+        "jsonlite",
+        "openssl",
+        "rappdirs"
+      ]
+    },
+    "AzureGraph": {
+      "Package": "AzureGraph",
+      "Version": "1.3.4",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "9e5449c6a5d0a7d3a03097667ff63850",
+      "Requirements": [
+        "AzureAuth",
+        "R6",
+        "curl",
+        "httr",
+        "jsonlite",
+        "openssl"
+      ]
+    },
+    "AzureRMR": {
+      "Package": "AzureRMR",
+      "Version": "2.4.4",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "5a24a1da5e363cb279807ccc67af511e",
+      "Requirements": [
+        "AzureAuth",
+        "AzureGraph",
+        "R6",
+        "httr",
+        "jsonlite",
+        "uuid"
+      ]
+    },
+    "AzureStor": {
+      "Package": "AzureStor",
+      "Version": "3.7.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "ddb01acbe698467420adec8580198916",
+      "Requirements": [
+        "AzureRMR",
+        "R6",
+        "httr",
+        "mime",
+        "openssl",
+        "vctrs",
+        "xml2"
+      ]
+    },
     "DBI": {
       "Package": "DBI",
       "Version": "1.1.3",
@@ -528,6 +589,17 @@
       "Hash": "8954069286b4b2b0d023d1b288dce978",
       "Requirements": []
     },
+    "jose": {
+      "Package": "jose",
+      "Version": "1.2.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "acf397c005e2d96a4b7616bf7dfc3112",
+      "Requirements": [
+        "jsonlite",
+        "openssl"
+      ]
+    },
     "jsonlite": {
       "Package": "jsonlite",
       "Version": "1.8.4",
@@ -594,6 +666,18 @@
       "Requirements": [
         "generics",
         "timechange"
+      ]
+    },
+    "lwgeom": {
+      "Package": "lwgeom",
+      "Version": "0.2-13",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "9804362cc0267990ac61a85edeca73ed",
+      "Requirements": [
+        "Rcpp",
+        "sf",
+        "units"
       ]
     },
     "magrittr": {
@@ -673,6 +757,14 @@
       "Hash": "bca377e1c87ec89ebed77bba00635b2e",
       "Requirements": []
     },
+    "pbapply": {
+      "Package": "pbapply",
+      "Version": "1.7-2",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "68a2d681e10cf72f0afa1d84d45380e5",
+      "Requirements": []
+    },
     "pillar": {
       "Package": "pillar",
       "Version": "1.9.0",
@@ -749,6 +841,14 @@
         "rlang",
         "vctrs"
       ]
+    },
+    "rappdirs": {
+      "Package": "rappdirs",
+      "Version": "0.3.3",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "5e3c5dc0b071b21fa128676560dbe94d",
+      "Requirements": []
     },
     "readr": {
       "Package": "readr",
@@ -884,16 +984,18 @@
     },
     "sirfunctions": {
       "Package": "sirfunctions",
-      "Version": "0.1.8",
+      "Version": "0.1.14",
       "Source": "GitHub",
       "RemoteType": "github",
       "RemoteHost": "api.github.com",
       "RemoteRepo": "sirfunctions",
       "RemoteUsername": "nish-kishore",
       "RemoteRef": "HEAD",
-      "RemoteSha": "f75efae5cc24479bee9981e0d3bb39ecc1e9e9bd",
-      "Hash": "5979cd11ce605b7d4c5af98aea18746f",
+      "RemoteSha": "8c4416d03f1af6ddc106520c5c8f510d73c095a5",
+      "Hash": "a2b8c97635d4e33288d1a1916eaf9c1d",
       "Requirements": [
+        "AzureAuth",
+        "AzureStor",
         "cli",
         "dplyr",
         "ggplot2",
@@ -1049,6 +1151,14 @@
       "Hash": "1fe17157424bb09c48a8b3b550c753bc",
       "Requirements": []
     },
+    "uuid": {
+      "Package": "uuid",
+      "Version": "1.1-1",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "3d78edfb977a69fc7a0341bee25e163f",
+      "Requirements": []
+    },
     "vctrs": {
       "Package": "vctrs",
       "Version": "0.6.3",
@@ -1123,6 +1233,14 @@
       "Source": "Repository",
       "Repository": "CRAN",
       "Hash": "be07d23211245fc7d4209f54c4e4ffc8",
+      "Requirements": []
+    },
+    "xml2": {
+      "Package": "xml2",
+      "Version": "1.3.5",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "6c40e5cfcc6aefd88110666e18c31f40",
       "Requirements": []
     },
     "yaml": {
