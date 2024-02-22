@@ -16,7 +16,7 @@ tidypolis_io <- function(
     obj = NULL,
     io,
     file_path,
-    edav = Sys.getenv("POLIS_EDAV_FLAG"),
+    edav = as.logical(Sys.getenv("POLIS_EDAV_FLAG")),
     azcontainer = suppressMessages(sirfunctions::get_azure_storage_connection()),
     full_names = F
                          ){
@@ -103,16 +103,16 @@ tidypolis_io <- function(
         stop("At the moment only 'rds' 'rda' and 'csv' are supported for reading.")
       }
 
-      if(grepl(".rds")){
-        readr::read_rds(file_path)
+      if(grepl(".rds", file_path)){
+        return(readr::read_rds(file_path))
       }
 
-      if(grepl(".rda")){
-        load(file_path)
+      if(grepl(".rda", file_path)){
+        return(load(file_path))
       }
 
-      if(grepl(".csv")){
-        readr::read_csv(file_path)
+      if(grepl(".csv", file_path)){
+        return(readr::read_csv(file_path))
       }
 
     }
@@ -132,15 +132,15 @@ tidypolis_io <- function(
         stop("At the moment only 'rds' 'rda' and 'csv' are supported for reading.")
       }
 
-      if(grepl(".rds")){
+      if(grepl(".rds", file_path)){
         readr::write_rds(x = obj, file = file_path)
       }
 
-      if(grepl(".rda")){
+      if(grepl(".rda", file_path)){
         save(list = obj, file = file_path)
       }
 
-      if(grepl(".csv")){
+      if(grepl(".csv", file_path)){
         readr::write_csv(x = obj, file = file_path)
       }
 

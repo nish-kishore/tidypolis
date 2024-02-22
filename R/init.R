@@ -67,7 +67,7 @@ init_tidypolis <- function(
   cred_file <- file.path(polis_data_folder, "creds.rds")
   cred_file_exists <- tidypolis_io(io = "exists.file", file_path = cred_file)
 
-  if(yaml_cred_file_exists){
+  if(yaml_cred_file_exists & !cred_file_exists){
     yaml::read_yaml(yaml_cred_file) |>
       readr::write_rds(cred_file)
     cli::cli_alert_info("Cred file updated to RDS from YAML")
