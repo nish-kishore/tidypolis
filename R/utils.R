@@ -1395,7 +1395,7 @@ archive_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
 #' @description
 #' Process POLIS data into analytic datasets needed for CDC
 #' @import cli sirfunctions dplyr readr lubridate stringr rio tidyr openxlsx stringi purrr pbapply lwgeom
-#' @param polis_data_folder str: location of the POLIS data folder
+#' @param polis_data_folder str: location of the POLIS data folder, defaults to value stored from init_tidypolis
 #' @return Outputs intermediary core ready files
 preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   #Step 1 - Basic cleaning and crosswalk ======

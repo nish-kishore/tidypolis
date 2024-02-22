@@ -1,5 +1,6 @@
 # tidypolis
-A package to simplify downloading, caching and updating POLIS data
+A package to simplify downloading, caching and updating POLIS data. Functions 
+to clarify agency specific pre-processing and data cleaning steps are also included. 
 
 # Usage
 First make sure you have `devtools` installed. Then run the following command: 
@@ -15,9 +16,15 @@ tidypolis::{function}
 ```
 
 # Quick start 
-- Use the `tidypolis::init_tidypolis()` function to create a local folder to store POLIS
+- Use the `tidypolis::init_tidypolis()` function to create a folder to store and update POLIS data. 
+You must specify if you wish the folder to be stored locally or on the EDAV environment by setting 
+the `edav` parameter in the function to `T` or `F`. 
 - This function will ask for your POLIS API key so please have this ready
-- Use the `tidypolis::get_polis_data()` to pull all POLIS data
+- Use the `tidypolis::get_polis_data()` to pull all POLIS data and reconcile any missing or updated information, 
+the data will be stored in the local folder or in the EDAV environment you've specified. 
+- Use `tidypolis::preprocess_data(type = "cdc")` to process all POLIS data with cleaning methodologies 
+used by the SIR team. This requires access to the CDC EDAV environment. If you do not have this access please 
+contact us to get the pre-requisite data files to run this process locally. 
 
 
 ## Release Schedule

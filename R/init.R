@@ -1,7 +1,7 @@
 #' A function to intitialize a POLIS data folder
 #'
-#' @description Initialize API Key and local data cache for tidypolis. inspiration from
-#' tidycensus process for managing their
+#' @description Initialize API Key and local data cache for tidypolis. Inspired by the
+#' tidycensus process for managing their API secrets.
 #' @import cli yaml tibble dplyr readr lubridate
 #' @param polis_data_folder str: location of folder where to store all information
 #' @param edav boolean: should the system use EDAV as it's cache; default FALSE
@@ -210,8 +210,10 @@ init_tidypolis <- function(
 
 #' Manager function to get and update POLIS data
 #'
-#' @description This function iterates through all tables and loads POLIS data
-#' @param type choose to download population data ("pop") or all other data
+#' @description This function iterates through all tables and loads POLIS data. It
+#' checks to ensure that new rows are created, data are updated accordingly and
+#' deleted rows are reflected in the local system.
+#' @param type choose to download population data ("pop") or all other data. Default's to "all"
 #' @import dplyr
 #' @export
 get_polis_data <- function(type = "all"){
