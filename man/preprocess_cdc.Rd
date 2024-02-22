@@ -7,7 +7,7 @@
 preprocess_cdc(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"))
 }
 \arguments{
-\item{polis_data_folder}{str: location of the POLIS data folder}
+\item{polis_data_folder}{str: location of the POLIS data folder, defaults to value stored from init_tidypolis}
 }
 \value{
 Outputs intermediary core ready files

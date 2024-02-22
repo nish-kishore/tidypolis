@@ -4,8 +4,13 @@
 \alias{get_polis_data}
 \title{Manager function to get and update POLIS data}
 \usage{
-get_polis_data()
+get_polis_data(type = "all")
+}
+\arguments{
+\item{type}{choose to download population data ("pop") or all other data. Default's to "all"}
 }
 \description{
-This function iterates through all tables and loads POLIS data
+This function iterates through all tables and loads POLIS data. It
+checks to ensure that new rows are created, data are updated accordingly and
+deleted rows are reflected in the local system.
 }
