@@ -8,7 +8,7 @@ tidypolis_io(
   obj = NULL,
   io,
   file_path,
-  edav = Sys.getenv("POLIS_EDAV_FLAG"),
+  edav = as.logical(Sys.getenv("POLIS_EDAV_FLAG")),
   azcontainer = suppressMessages(sirfunctions::get_azure_storage_connection()),
   full_names = F
 )
