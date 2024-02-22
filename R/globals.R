@@ -41,5 +41,8 @@ utils::globalVariables(c(
   'variable', 'vdpv.classification(s)', 'vdpv.classification.id(s)', 'virus.cluster',
   'virus.cluster(s)', 'virus.date', 'virus.id', 'virus.type', 'virus.type(s)', 'virus.type.01',
   'virus_dup', 'virustype', 'virustypename', 'vtype', 'vtype.fixed', 'wastage.factor',
-  'who.region', 'whoregion', 'write.csv', 'wrongAdmin1GUID', 'wrongAdmin2GUID', 'yr.sia', 'yr.st', 'yronset'
+  'who.region', 'whoregion', 'write.csv', 'wrongAdmin1GUID', 'wrongAdmin2GUID', 'yr.sia', 'yr.st', 'yronset',
+  'corrupted.rds', 'createddate', 'date_time', 'dest', 'emergence_group', 'event', 'event_type',
+  'full_name', 'measurement', 'short_name', 'time', 'vaccine_source', 'vdpvclassificationchangedate',
+  'vdpvclassificationcode'
 ))

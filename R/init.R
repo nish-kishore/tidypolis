@@ -1,7 +1,7 @@
 #' A function to intitialize a POLIS data folder
 #'
-#' @description Initialize API Key and local data cache for tidypolis. inspiration from
-#' tidycensus process for managing their
+#' @description Initialize API Key and local data cache for tidypolis. Inspired by the
+#' tidycensus process for managing their API secrets.
 #' @import cli yaml tibble dplyr readr lubridate
 #' @param polis_data_folder str: location of folder where to store all information
 #' @param edav boolean: should the system use EDAV as it's cache; default FALSE
@@ -67,7 +67,7 @@ init_tidypolis <- function(
   cred_file <- file.path(polis_data_folder, "creds.rds")
   cred_file_exists <- tidypolis_io(io = "exists.file", file_path = cred_file)
 
-  if(yaml_cred_file_exists){
+  if(yaml_cred_file_exists & !cred_file_exists){
     yaml::read_yaml(yaml_cred_file) |>
       readr::write_rds(cred_file)
     cli::cli_alert_info("Cred file updated to RDS from YAML")
@@ -210,8 +210,10 @@ init_tidypolis <- function(
 
 #' Manager function to get and update POLIS data
 #'
-#' @description This function iterates through all tables and loads POLIS data
-#' @param type choose to download population data ("pop") or all other data
+#' @description This function iterates through all tables and loads POLIS data. It
+#' checks to ensure that new rows are created, data are updated accordingly and
+#' deleted rows are reflected in the local system.
+#' @param type choose to download population data ("pop") or all other data. Default's to "all"
 #' @import dplyr
 #' @export
 get_polis_data <- function(type = "all"){
