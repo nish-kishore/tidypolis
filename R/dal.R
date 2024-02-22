@@ -4,7 +4,7 @@
 #'
 #' @description
 #' Manages read/write/list/create/delete functions for tidypolis
-#' @import sirfunctions dplyr AzurStor readr
+#' @import sirfunctions dplyr AzureStor readr
 #' @param obj str: object to be loaded into EDAV
 #' @param io str: read/write/list/exists/create/delete
 #' @param file_path str: absolute path of file
@@ -171,7 +171,7 @@ tidypolis_io <- function(
 #'
 #' @description
 #' Manages read/write/list/create/delete functions for tidypolis
-#' @import sirfunctions dplyr AzurStor readr
+#' @import sirfunctions dplyr AzureStor readr
 #' @param core_ready_folder str: Local folder with CDC processed files
 #' @param azcontainer Azure Token Container Object
 #' @param output_folder Location to write out Core Files
@@ -212,7 +212,7 @@ upload_cdc_proc_to_edav <- function(
   lapply(1:nrow(out.table), function(i){
 
     local <- tidypolis_io(io = "read", file_path = dplyr::pull(out.table[i,], source))
-    edav_io(obj = local, io = "write", file_path = dplyr::pull(out.table[i,], dest))
+    tidypolis_io(obj = local, io = "write", file_path = dplyr::pull(out.table[i,], dest))
 
   })
 

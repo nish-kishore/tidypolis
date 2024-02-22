@@ -4,12 +4,14 @@
 \alias{f.compare.metadata}
 \title{Compare meta data outputs between two datasets}
 \usage{
-f.compare.metadata(new_table_metadata, old_table_metadata)
+f.compare.metadata(new_table_metadata, old_table_metadata, table)
 }
 \arguments{
 \item{new_table_metadata}{tibble}
 
 \item{old_table_metadata}{tibble}
+
+\item{table}{str: "AFP", "Other Surv", "SIA", "ES", "POS"}
 }
 \value{
 meta data comparisons

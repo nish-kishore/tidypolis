@@ -300,7 +300,7 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
 
         cli::cli_process_start("Writing data cache")
         tidypolis_io(obj = old_cache, io = "write",
-                         file = paste0(
+                         file_path = paste0(
                            Sys.getenv("POLIS_DATA_CACHE"),
                            "/",
                            table_data$table,
@@ -3521,7 +3521,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   if (nrow(es.00) >= 1) {
     cli::cli_alert_danger("Duplicate ENV sample manual ids. Flag for POLIS. Output in duplicate_ES_sampleID_Polis.csv.")
 
-    tidypolis_io(obj = es.00, io = "write", file_path =  paste0(polis_data_folder, "/Core_Ready_Files/duplicate_ES_sampleID_Polis.csv"), na = "")
+    tidypolis_io(obj = es.00, io = "write", file_path =  paste0(polis_data_folder, "/Core_Ready_Files/duplicate_ES_sampleID_Polis.csv"))
 
   } else {
     cli::cli_alert_info("No duplicates identified")

@@ -4,15 +4,17 @@
 \alias{init_tidypolis}
 \title{A function to intitialize a POLIS data folder}
 \usage{
-init_tidypolis(polis_data_folder)
+init_tidypolis(polis_data_folder, edav = F)
 }
 \arguments{
 \item{polis_data_folder}{str: location of folder where to store all information}
+
+\item{edav}{boolean: should the system use EDAV as it's cache; default FALSE}
 }
 \value{
 Messages on process
 }
 \description{
-Initialize API Key and local data cache for tidypolis. inspiration from
-tidycensus process for managing their
+Initialize API Key and local data cache for tidypolis. Inspired by the
+tidycensus process for managing their API secrets.
 }

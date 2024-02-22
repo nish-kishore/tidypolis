@@ -33,4 +33,5 @@ Imports:
   openxlsx, 
   tidyselect, 
   pbapply, 
-  lwgeom
+  lwgeom,
+  AzureStor

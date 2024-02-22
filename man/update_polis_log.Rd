@@ -8,6 +8,7 @@ update_polis_log(
   log_file = Sys.getenv("POLIS_LOG_FILE"),
   .time = Sys.time(),
   .user = Sys.getenv("USERNAME"),
+  .event_type = "INIT",
   .event
 )
 }
@@ -17,6 +18,8 @@ update_polis_log(
 \item{.time}{dttm: time of update}
 
 \item{.user}{double: user who conducted the action}
+
+\item{.event_type}{str: INIT, START, PROCESS, INFO, ERROR, ALERT, END}
 
 \item{.event}{str: event to be logged}
 }

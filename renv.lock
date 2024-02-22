@@ -1367,15 +1367,15 @@
     },
     "sirfunctions": {
       "Package": "sirfunctions",
-      "Version": "1.0.0",
+      "Version": "1.0.2",
       "Source": "GitHub",
       "RemoteType": "github",
       "RemoteHost": "api.github.com",
       "RemoteRepo": "sirfunctions",
       "RemoteUsername": "nish-kishore",
       "RemoteRef": "HEAD",
-      "RemoteSha": "994452ce930e6a5dd21eac6ca9285db85763431b",
-      "Hash": "cbc7913dac8e31b25284f966312b4808",
+      "RemoteSha": "a04af908a90f99e1252a0d977209e85681030e58",
+      "Hash": "e330e84e56f0358ad18476ab6a08fa18",
       "Requirements": [
         "AzureAuth",
         "AzureStor",
