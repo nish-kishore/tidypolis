@@ -2461,7 +2461,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   # the province level of district level guid was incorrect.
 
   #var names created from guid checking
-  guid.check.vars <- c("Admin0GUID", "Admin1GUID", "Admin2GUID", "wrongAdmin1GUID", "WrongAdmin2GUID")
+  guid.check.vars <- c("Admin0GUID", "Admin1GUID", "Admin2GUID", "wrongAdmin1GUID", "wrongAdmin2GUID")
 
   # some info about number of errors
   #table(afp.linelist.fixed.02$wrongAdmin1GUID)
@@ -2517,6 +2517,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   afp.linelist.fixed.04 <- f.pre.stsample.01(afp.linelist.fixed.03, global.dist.01)
   sf::sf_use_s2(T)
   rm("afp.linelist.fixed.03")
+
+  #vars created during stsample
+  stsample.vars <- c("id", "empty.01", "geometry")
 
   cli::cli_process_done()
 
