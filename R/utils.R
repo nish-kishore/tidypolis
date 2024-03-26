@@ -2505,6 +2505,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
 
   global.dist.01 <- sirfunctions::load_clean_dist_sp()
+  shape.file.names <- names(global.dist.01)
   col.afp.raw.01 <- colnames(afp.raw.01)
   rm("afp.raw.01")
   gc()
