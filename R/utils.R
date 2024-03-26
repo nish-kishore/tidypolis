@@ -2526,6 +2526,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_start("Creating key AFP variables")
 
   afp.linelist.01 <- afp.linelist.fixed.04 |>
+    ungroup() |>
     dplyr::mutate(
       bad.onset = dplyr::case_when(
         is.na(dateonset) == T ~ "Missing",
@@ -2666,7 +2667,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
          virus.cluster = `virus.cluster(s)`,
          emergence.group = `emergence.group(s)`
   ) |>
-    dplyr::filter(!is.na(epid))
+    dplyr::filter(!is.na(epid)) |>
+    dplyr::select(-c(shape.file.names, guid.check.vars, stsample.vars))
 
   rm("afp.linelist.fixed.04")
   gc()
