@@ -2460,6 +2460,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   # the district and province level. There are also two new columns added to indicate wether
   # the province level of district level guid was incorrect.
 
+  #var names created from guid checking
+  guid.check.vars <- c("Admin0GUID", "Admin1GUID", "Admin2GUID", "wrongAdmin1GUID", "wrongAdmin2GUID")
 
   # some info about number of errors
   #table(afp.linelist.fixed.02$wrongAdmin1GUID)
@@ -2505,6 +2507,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
 
   global.dist.01 <- sirfunctions::load_clean_dist_sp()
+  shape.file.names <- names(global.dist.01)
+  shape.file.names <- shape.file.names[!shape.file.names %in% c("SHAPE")]
   col.afp.raw.01 <- colnames(afp.raw.01)
   rm("afp.raw.01")
   gc()
@@ -2514,11 +2518,15 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   sf::sf_use_s2(T)
   rm("afp.linelist.fixed.03")
 
+  #vars created during stsample
+  stsample.vars <- c("id", "empty.01", "geometry")
+
   cli::cli_process_done()
 
   cli::cli_process_start("Creating key AFP variables")
 
   afp.linelist.01 <- afp.linelist.fixed.04 |>
+    ungroup() |>
     dplyr::mutate(
       bad.onset = dplyr::case_when(
         is.na(dateonset) == T ~ "Missing",
@@ -2659,7 +2667,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
          virus.cluster = `virus.cluster(s)`,
          emergence.group = `emergence.group(s)`
   ) |>
-    dplyr::filter(!is.na(epid))
+    dplyr::filter(!is.na(epid)) |>
+    dplyr::select(-c(shape.file.names, guid.check.vars, stsample.vars))
 
   rm("afp.linelist.fixed.04")
   gc()
