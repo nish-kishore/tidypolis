@@ -2526,7 +2526,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_start("Creating key AFP variables")
 
   afp.linelist.01 <- afp.linelist.fixed.04 |>
-    ungroup() |>
+    dplyr::ungroup() |>
     dplyr::mutate(
       bad.onset = dplyr::case_when(
         is.na(dateonset) == T ~ "Missing",
@@ -2859,7 +2859,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   x <- tidypolis_io(io = "list", file_path = file.path(polis_data_folder,"Core_Ready_Files", "Archive", latest_folder_in_archive), full_names = T)
 
-  old.file <- x[grepl("other_surveillance_type_linelist_2016", x)]
+  old.file <- x[grepl("other_surveillance_type_linelist_2020", x)]
 
   if(length(old.file)>0){
     old <- tidypolis_io(io = "read", file_path = old.file) |>
@@ -4017,7 +4017,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   non.afp.files.01 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path = file.path(polis_data_folder, "Core_Ready_Files"), full_names = T)) |>
     dplyr::mutate(short_name = stringr::str_replace(name, paste0(polis_data_folder, "/Core_Ready_Files/"), "")) |>
-    dplyr::filter(grepl("^(other_surveillance_type_linelist_2020_2023).*(.rds)$", short_name)) |>
+    dplyr::filter(grepl("^(other_surveillance_type_linelist_2020_2024).*(.rds)$", short_name)) |>
     dplyr::pull(name)
   non.afp.01 <- purrr::map_df(non.afp.files.01, ~ tidypolis_io(io = "read", file_path = .x)) |>
     dplyr::ungroup() |>
