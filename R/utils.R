@@ -2271,7 +2271,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   # vtype assigns the polioviruses found in stool excluding sabin
 
   endyr <- year(format(Sys.time()))
-  startyr <- 2020
+  startyr <- 2001
 
   afp.raw.01 <- afp.raw.01 |>
   dplyr::mutate(vtype = ifelse(stringr::str_detect(poliovirustypes, "WILD1"), "WILD 1", "none"),
