@@ -2521,10 +2521,17 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
       vtype = ifelse(vtype == "cCombinationWild1-VDPV 1", "CombinationWild1-cVDPV 1", vtype),
       vtype = ifelse(vtype == "cVDPV2andVDPV3", "cVDPV2andcVDPV3", vtype),
 
-      # creating vtype.fixed that hard codes a fix for Congo 2010 WPV1 cases that were not tested by lab
+      # creating vtype.fixed that hard codes a fixes for cases with incorrect/incomplete info
 
+      #hard fix for Yemen case (YEM-SAD-2021-457-33) where classified as vdpv1andvdpv2 instead of cvdpv2
+      vtype.fixed = ifelse(vtype == "cVDPV1andVDPV2" & stringr::str_detect(poliovirustypes, "cVDPV2"), "VDPV1andcVDPV2", vtype),
+
+      #further fixing classification for cases with multiple vdpvs
+      vtype.fixed = ifelse(vtype == "cVDPV1andVDPV2" & (stringr::str_detect(poliovirustypes, "cVDPV2") & stringr::str_detect(poliovirustypes, "cVDPV1")), "cVDPV1andcVDPV2", vtype.fixed),
+
+      #Congo 2010 WPV1 cases that were not tested by lab
       vtype.fixed = ifelse((classification == "Confirmed (wild)" & place.admin.0 == "CONGO" & yronset == "2010"),
-                           "WILD 1", vtype
+                           "WILD 1", vtype.fixed
       ),
 
       # hard coding a fix for a Nigeria case that is WPV1 but missing from the lab data
@@ -2537,12 +2544,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
       vtype.fixed = ifelse((is.na(vtype) == T & yronset < "2010" & classification == "Confirmed (wild)"), "WILD 1", vtype.fixed),
 
       # note POLIS data undercounts the total WPV1 cases in 2011, in 2012 we have one extra WPV3 and one less WPV1
-
-      #hard fix for Yemen case (YEM-SAD-2021-457-33) where classified as vdpv1andvdpv2 instead of cvdpv2
-      vtype.fixed = ifelse(vtype == "cVDPV1andVDPV2" & stringr::str_detect(poliovirustypes, "cVDPV2"), "VDPV1andcVDPV2", vtype.fixed),
-
-      #further fixing classification for cases with multiple vdpvs
-      vtype.fixed = ifelse(vtype == "cVDPV1andVDPV2" & (stringr::str_detect(poliovirustypes, "cVDPV2") & stringr::str_detect(poliovirustypes, "cVDPV1")), "cVDPV1andcVDPV2", vtype.fixed),
 
       # now creating cdc.classification.all categories includes non-AFP, NPAFP, all vtypes and polio compatibles, pending, etc
       # CDC.classification is based first on lab, then on epi data. If the epi data and lab data disagree, we default to lab classification
