@@ -1072,6 +1072,7 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
   df01.shape <- dplyr::right_join(global.dist.01, df01 |> dplyr::filter(!is.na(Admin2GUID)), by=c("GUID"="Admin2GUID"))
 
   df01.shape$empty.01 <- sf::st_is_empty(df01.shape)
+  df01.empty.shape <- dplyr::filter(df01.shape, empty.01)
   df01.shape <- dplyr::filter(df01.shape, !empty.01)
 
   df02.ref <- df01.shape |>
@@ -1165,8 +1166,9 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
   sf::st_geometry(df05) <- NULL
 
   df06 <- dplyr::bind_rows(df05, df01.noshape)
+  df07 <- dplyr::bind_rows(df06, df01.empty.shape)
 
-  return(df06)
+  return(df07)
 }
 
 
