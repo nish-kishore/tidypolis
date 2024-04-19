@@ -1571,6 +1571,19 @@ remove_character_dates <- function(type,
 }
 
 
+#' function to hard code incomplete or incorrect POLIS records that are GPEI confirmed viruses
+#'
+#' @description
+#' Function to hard code POLIS records to align counts w/ global program
+#'
+#' @import
+#' @param df df: dataframe to create cdc.classification.all from
+
+hard_code_cases <- function(df){
+
+}
+
+
 #### Pre-processing ####
 
 
