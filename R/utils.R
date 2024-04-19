@@ -1581,6 +1581,60 @@ remove_character_dates <- function(type,
 
 hard_code_cases <- function(df){
 
+  df.01 <- df |>
+    dplyr::mutate(
+      # creating vtype.fixed that hard codes a fixes for cases with incorrect/incomplete info
+
+      #hard fix for Yemen case (YEM-SAD-2021-457-33) where classified as vdpv1andvdpv2 instead of cvdpv2
+      vtype.fixed = ifelse(vtype == "cVDPV1andVDPV2" & stringr::str_detect(poliovirustypes, "cVDPV2"), "VDPV1andcVDPV2", vtype),
+
+      #further fixing classification for cases with multiple vdpvs
+      vtype.fixed = ifelse(vtype == "cVDPV1andVDPV2" & (stringr::str_detect(poliovirustypes, "cVDPV2") & stringr::str_detect(poliovirustypes, "cVDPV1")), "cVDPV1andcVDPV2", vtype.fixed),
+
+      #Congo 2010 WPV1 cases that were not tested by lab
+      vtype.fixed = ifelse((classification == "Confirmed (wild)" & place.admin.0 == "CONGO" & yronset == "2010"),
+                           "WILD 1", vtype.fixed
+      ),
+
+      # hard coding a fix for a Nigeria case that is WPV1 but missing from the lab data
+      vtype.fixed = ifelse((is.na(vtype) & place.admin.0 == "NIGERIA" & yronset == "2011" & classification == "Confirmed (wild)"),
+                           "WILD 1", vtype.fixed
+      ),
+
+      # NEW hard coding to deal with WPV1 cases from before 2010 that have no lab data assuming these are WPV 1
+
+      vtype.fixed = ifelse((is.na(vtype) & yronset < "2010" & classification == "Confirmed (wild)"), "WILD 1", vtype.fixed),
+
+      cdc.classification.all = vtype.fixed,
+      cdc.classification.all = ifelse((vtype.fixed == "none" | is.na(vtype.fixed)) & classification == "Compatible",
+                                      "COMPATIBLE", cdc.classification.all
+      ),
+      cdc.classification.all = ifelse((vtype.fixed == "none" | is.na(vtype.fixed)) & classification == "Discarded",
+                                      "NPAFP", cdc.classification.all
+      ),
+      cdc.classification.all = ifelse((vtype.fixed == "none" | is.na(vtype.fixed)) & classification == "Not an AFP",
+                                      "NOT-AFP", cdc.classification.all
+      ),
+      cdc.classification.all = ifelse((vtype.fixed == "none" | is.na(vtype.fixed)) & classification == "Pending",
+                                      "PENDING", cdc.classification.all
+      ),
+      cdc.classification.all = ifelse((vtype.fixed == "none" | is.na(vtype.fixed)) & classification == "VAPP", "VAPP",
+                                      cdc.classification.all
+      ),
+      cdc.classification.all = ifelse((vtype.fixed == "none" | is.na(vtype.fixed)) &
+                                        (classification == "Not Applicable" | classification == "Others" | classification == "VDPV"),
+                                      "UNKNOWN", cdc.classification.all
+      ),
+
+      cdc.classification.all = ifelse(
+        final.cell.culture.result == "Not received in lab" &
+          cdc.classification.all == "PENDING",
+        "LAB PENDING",
+        cdc.classification.all
+      ))
+
+  return(df.01)
+
 }
 
 
