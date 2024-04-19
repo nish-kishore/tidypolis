@@ -213,7 +213,7 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
         update_polis_log(.event = paste0(
           "Downloaded ",
           table_size,
-          "rows of ",
+          " rows of ",
           table_data$table,
           " data"
         ),
