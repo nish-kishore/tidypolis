@@ -307,7 +307,7 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
                            ".rds"
                          ))
         update_polis_log(.event = paste0(table_data$table, " data saved locally"),
-                         .event_type = "END")
+                         .event_type = "PROCESS")
         cli::cli_process_done()
 
         #garbage clean
