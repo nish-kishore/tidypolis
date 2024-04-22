@@ -2447,7 +2447,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   virus.tocheck <- c("cVDPV1, VACCINE1, VDPV1")
   classification.tocheck <- c("Circulating, Pending")
   cdc.classification.tocheck <- c("none")
-  tocheck <- afp.raw.01 |>
+  tocheck <- afp.raw.02 |>
     dplyr::filter(vtype %in% vtype.tocheck |
              cdc.classification.all %in% cdc.classification.tocheck |
              poliovirustypes %in% virus.tocheck |
@@ -2474,7 +2474,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   cli::cli_process_done()
 
-  afp.raw.01 <- afp.raw.01 |>
+  afp.raw.02 <- afp.raw.02 |>
     filter(cdc.classification.all != "none")
 
   cli::cli_process_start("Clearing memory")
@@ -2487,7 +2487,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_start("Checking GUIDs")
 
 
-  afp.linelist.01 <- afp.raw.01 |>
+  afp.linelist.01 <- afp.raw.02 |>
     dplyr::mutate(
       Admin2GUID = paste0("{", toupper(admin2guid), "}"),
       Admin1GUID = paste0("{", toupper(admin1guid), "}"),
