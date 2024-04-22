@@ -1438,10 +1438,10 @@ archive_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
 #' @description
 #' Function to hard code POLIS records to align counts w/ global program
 #'
-#' @import
+#' @import dplyr stringr
 #' @param df df: dataframe to create cdc.classification.all from
 
-hard_code_cases <- function(df){
+hard_coded_cases <- function(df){
 
   df.01 <- df |>
     dplyr::mutate(
@@ -2382,50 +2382,28 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
       vtype = ifelse(vtype == "cCombinationWild1-VDPV 1", "CombinationWild1-cVDPV 1", vtype),
       vtype = ifelse(vtype == "cVDPV2andVDPV3", "cVDPV2andcVDPV3", vtype),
 
-      # creating vtype.fixed that hard codes a fixes for cases with incorrect/incomplete info
-
-      #hard fix for Yemen case (YEM-SAD-2021-457-33) where classified as vdpv1andvdpv2 instead of cvdpv2
-      vtype.fixed = ifelse(vtype == "cVDPV1andVDPV2" & stringr::str_detect(poliovirustypes, "cVDPV2"), "VDPV1andcVDPV2", vtype),
-
-      #further fixing classification for cases with multiple vdpvs
-      vtype.fixed = ifelse(vtype == "cVDPV1andVDPV2" & (stringr::str_detect(poliovirustypes, "cVDPV2") & stringr::str_detect(poliovirustypes, "cVDPV1")), "cVDPV1andcVDPV2", vtype.fixed),
-
-      #Congo 2010 WPV1 cases that were not tested by lab
-      vtype.fixed = ifelse((classification == "Confirmed (wild)" & place.admin.0 == "CONGO" & yronset == "2010"),
-                           "WILD 1", vtype.fixed
-      ),
-
-      # hard coding a fix for a Nigeria case that is WPV1 but missing from the lab data
-      vtype.fixed = ifelse((is.na(vtype) == T & place.admin.0 == "NIGERIA" & yronset == "2011" & classification == "Confirmed (wild)"),
-                           "WILD 1", vtype.fixed
-      ),
-
-      # NEW hard coding to deal with WPV1 cases from before 2010 that have no lab data assuming these are WPV 1
-
-      vtype.fixed = ifelse((is.na(vtype) == T & yronset < "2010" & classification == "Confirmed (wild)"), "WILD 1", vtype.fixed),
-
       # note POLIS data undercounts the total WPV1 cases in 2011, in 2012 we have one extra WPV3 and one less WPV1
 
       # now creating cdc.classification.all categories includes non-AFP, NPAFP, all vtypes and polio compatibles, pending, etc
       # CDC.classification is based first on lab, then on epi data. If the epi data and lab data disagree, we default to lab classification
 
-      cdc.classification.all = vtype.fixed,
-      cdc.classification.all = ifelse((vtype.fixed == "none" | is.na(vtype.fixed)) & classification == "Compatible",
+      cdc.classification.all = vtype,
+      cdc.classification.all = ifelse((vtype == "none" | is.na(vtype)) & classification == "Compatible",
                                       "COMPATIBLE", cdc.classification.all
       ),
-      cdc.classification.all = ifelse((vtype.fixed == "none" | is.na(vtype.fixed)) & classification == "Discarded",
+      cdc.classification.all = ifelse((vtype == "none" | is.na(vtype)) & classification == "Discarded",
                                       "NPAFP", cdc.classification.all
       ),
-      cdc.classification.all = ifelse((vtype.fixed == "none" | is.na(vtype.fixed)) & classification == "Not an AFP",
+      cdc.classification.all = ifelse((vtype == "none" | is.na(vtype)) & classification == "Not an AFP",
                                       "NOT-AFP", cdc.classification.all
       ),
-      cdc.classification.all = ifelse((vtype.fixed == "none" | is.na(vtype.fixed)) & classification == "Pending",
+      cdc.classification.all = ifelse((vtype == "none" | is.na(vtype)) & classification == "Pending",
                                       "PENDING", cdc.classification.all
       ),
-      cdc.classification.all = ifelse((vtype.fixed == "none" | is.na(vtype.fixed)) & classification == "VAPP", "VAPP",
+      cdc.classification.all = ifelse((vtype == "none" | is.na(vtype)) & classification == "VAPP", "VAPP",
                                       cdc.classification.all
       ),
-      cdc.classification.all = ifelse((vtype.fixed == "none" | is.na(vtype.fixed)) &
+      cdc.classification.all = ifelse((vtype == "none" | is.na(vtype)) &
                                         (classification == "Not Applicable" | classification == "Others" | classification == "VDPV"),
                                       "UNKNOWN", cdc.classification.all
       ),
@@ -2456,6 +2434,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     dplyr::mutate(yronset=ifelse(is.na(yronset)==T, lubridate::year(datestool1), yronset),
            yronset = ifelse(is.na(datestool1) == T & is.na(yronset)==T, lubridate::year(datenotify), yronset)) |> #adding year onset correction for nonAFP
     dplyr::filter(dplyr::between(yronset, startyr, endyr))
+
+  #
 
   cli::cli_process_done()
 
