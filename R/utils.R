@@ -2435,7 +2435,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
            yronset = ifelse(is.na(datestool1) == T & is.na(yronset)==T, lubridate::year(datenotify), yronset)) |> #adding year onset correction for nonAFP
     dplyr::filter(dplyr::between(yronset, startyr, endyr))
 
-  #
+  #apply hard coding in hard_coded_case function
+  afp.raw.02 <- hard_coded_cases(afp.raw.01)
 
   cli::cli_process_done()
 
