@@ -1604,8 +1604,9 @@ hard_coded_cases <- function(df){
       # hard coding to deal with WPV1 cases from before 2010 that have no lab data assuming these are WPV 1
       vtype.fixed = ifelse((is.na(vtype) & yronset < "2010" & classification == "Confirmed (wild)"), "WILD 1", vtype.fixed),
 
-      # hard coding for EPIDs NIG-MAR-TES-19-224, CAF-RS5-HKO-19-177 w/ missing lab data
-      vtype.fixed = ifelse(epid %in% c("NIG-MAR-TES-19-224", "CAF-RS5-HKO-19-177"), "VDPV 2"),
+      # hard coding for EPIDs NIG-MAR-TES-19-224, CAF-RS5-HKO-19-177 w/ missing lab data (VDPV 2s)
+      vtype.fixed = ifelse(epid %in% c("NIG-MAR-TES-19-224", "CAF-RS5-HKO-19-177"), "VDPV 2", vtype.fixed),
+
 
 
       cdc.classification.all = vtype.fixed,
