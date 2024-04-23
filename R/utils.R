@@ -1591,7 +1591,7 @@ hard_coded_cases <- function(df){
       #further fixing classification for cases with multiple vdpvs
       vtype.fixed = ifelse(vtype == "cVDPV1andVDPV2" & (stringr::str_detect(poliovirustypes, "cVDPV2") & stringr::str_detect(poliovirustypes, "cVDPV1")), "cVDPV1andcVDPV2", vtype.fixed),
 
-      #Congo 2010 WPV1 cases that were not tested by lab
+      #Congo 2010 WPV1 cases that were not tested by lab, cases confirmed by GPEI
       vtype.fixed = ifelse((classification == "Confirmed (wild)" & place.admin.0 == "CONGO" & yronset == "2010"),
                            "WILD 1", vtype.fixed
       ),
@@ -1601,7 +1601,7 @@ hard_coded_cases <- function(df){
                            "WILD 1", vtype.fixed
       ),
 
-      # hard coding to deal with WPV1 cases from before 2010 that have no lab data assuming these are WPV 1
+      # further hard coding to deal with WPV1 cases from before 2010 that have no lab data
       vtype.fixed = ifelse((is.na(vtype) & yronset < "2010" & classification == "Confirmed (wild)"), "WILD 1", vtype.fixed),
 
       # hard coding for EPIDs NIG-MAR-TES-19-224, CAF-RS5-HKO-19-177 w/ missing lab data (VDPV 2s)
