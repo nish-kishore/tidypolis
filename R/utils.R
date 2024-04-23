@@ -1469,7 +1469,8 @@ hard_coded_cases <- function(df){
       # hard coding for EPIDs NIG-MAR-TES-19-224, CAF-RS5-HKO-19-177 w/ missing lab data (VDPV 2s)
       vtype.fixed = ifelse(epid %in% c("NIG-MAR-TES-19-224", "CAF-RS5-HKO-19-177"), "VDPV 2", vtype.fixed),
 
-
+      #hard coding for EPIDs CAF-RS4-KEM-19-103, RDC-TPA-LGM-19-002, RDC-SAN-WEM-19-006 (cVDPV 2s)
+      vtype.fixed = ifelse(epid %in% c("CAF-RS4-KEM-19-103", "RDC-TPA-LGM-19-002", "RDC-SAN-WEM-19-006"), "cVDPV 2", vtype.fixed),
 
       cdc.classification.all = vtype.fixed,
       cdc.classification.all = ifelse((vtype.fixed == "none" | is.na(vtype.fixed)) & classification == "Compatible",
