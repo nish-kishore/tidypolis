@@ -1822,6 +1822,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   #if nVaccine 2 is removed recreate with empty values so downstream code doesn't break
 
+  es_names <- api_es_sub3 |>
+    names()
+
   cli::cli_h3("Virus")
   api_virus_sub3 <- remove_empty_columns(api_virus_sub3)
 
