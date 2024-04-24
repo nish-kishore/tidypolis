@@ -62,6 +62,7 @@ init_tidypolis <- function(
     tidypolis_io(io = "create", file_path = paste0(polis_data_folder, "/spatial"))
   }
   Sys.setenv(POLIS_DATA_CACHE = paste0(polis_data_folder,"/data"))
+  Sys.setenv(POLIS_SPATIAL_CACHE = paste0(polis_data_folder,"/spatial"))
 
   #check if key details exist, if not ask for them, test them and store them
   #if they exist, check the key
