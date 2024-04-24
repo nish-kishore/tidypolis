@@ -1764,7 +1764,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
 
   #Get geodatabase to auto-fill missing GUIDs
   cli::cli_process_start("Long district spatial file")
-  long.global.dist.01 <- tidypolis_io(io = "read", file_path = paste0(polis_spatial_folder, "/spatial/global.dist.rds"))
+  long.global.dist.01 <- tidypolis_io(io = "read", file_path = paste0(polis_spatial_folder, "/global.dist.rds"))
   cli::cli_process_done()
 
 
