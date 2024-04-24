@@ -1515,8 +1515,10 @@ hard_coded_cases <- function(df){
 #' Process POLIS data into analytic datasets needed for CDC
 #' @import cli sirfunctions dplyr readr lubridate stringr rio tidyr openxlsx stringi purrr pbapply lwgeom
 #' @param polis_data_folder str: location of the POLIS data folder, defaults to value stored from init_tidypolis
+#' @param polis_spatial_folder str: location of the POLIS spatial folder, defaults to value stored from init_tidypolis
 #' @return Outputs intermediary core ready files
-preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
+preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
+                           polis_spatial_folder = Sys.getenv("POLIS_SPATIAL_CACHE")) {
   #Step 1 - Basic cleaning and crosswalk ======
   cli::cli_h1("Step 1/5: Basic cleaning and crosswalk across datasets")
 
@@ -1560,8 +1562,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   #Get geodatabase to auto-fill missing GUIDs
   cli::cli_process_start("Long district spatial file")
-  long.global.dist.01 <-
-    sirfunctions::load_clean_dist_sp(type = "long")
+  long.global.dist.01 <- tidypolis_io(io = "read", file_path = paste0(polis_spatial_folder, "/spatial/global.dist.rds"))
   cli::cli_process_done()
 
 
