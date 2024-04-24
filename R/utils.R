@@ -1562,7 +1562,42 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
 
   #Get geodatabase to auto-fill missing GUIDs
   cli::cli_process_start("Long district spatial file")
-  long.global.dist.01 <- tidypolis_io(io = "read", file_path = paste0(polis_spatial_folder, "/global.dist.rds"))
+  df.list <- list()
+  startyr <- 2000
+  endyr <- year(format(Sys.time()))
+  for (i in startyr:endyr) {
+    df02 <- f.yrs.01(tidypolis_io(io = "read", file_path = paste0(polis_spatial_folder, "/global.dist.rds")) |>
+                       dplyr::mutate(
+                         STARTDATE = lubridate::as_date(STARTDATE),
+                         # Typo in the dist start date (year) in shapefiles. Temporary correcting the start date for South Darfur in Sudan
+                         STARTDATE = if_else(ADM0_GUID =="{3050873E-F010-4C4F-82D1-541E3C4FD887}" & ADM1_GUID =="{0836D898-32B9-4912-AEA2-D07BD6E50ED8}"
+                                             & STARTDATE=='2018-01-01',
+                                             STARTDATE+365, STARTDATE),
+
+                         # Error in shapes of LAR district in FARS province of IRAN.
+                         # Received confirmation from WHO - Start date should be '2021-01-01'.
+                         # Manually making corrections until WHO fix it in the original geodatabase.
+                         STARTDATE = if_else(ADM0_GUID =="{2EEA3A5C-8A36-4A18-A7AB-1B927A092A60}" & ADM1_GUID =="{76F33E17-ADB9-4582-A533-4C96286864E3}" &
+                                               GUID == "{54464216-2BD3-4F30-BF2C-3846BEE6805D}" & STARTDATE=='2020-01-01',
+                                             STARTDATE+366, STARTDATE),
+
+                         yr.st = lubridate::year(STARTDATE),
+                         yr.end = lubridate::year(ENDDATE),
+                         ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"),"COTE D IVOIRE", ADM0_NAME)
+                       ) |>
+
+                       # remove the ouad eddahab in Morocco which started and ended the same year and causes overlap
+                       dplyr::filter(!GUID=="{AE526BC0-8DC3-411C-B82E-75259AD3598C}") |>
+                       # this filters based on dates set in RMD
+                       dplyr::filter(yr.st <= endyr & (endyr >= startyr | yr.end == 9999)), i)
+
+    df.list[[i]] <- df02
+  }
+
+  long.global.dist.01 <- do.call(rbind, df.list)
+
+  rm(endyr, startyr, df.list, df02)
+
   cli::cli_process_done()
 
 
