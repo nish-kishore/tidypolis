@@ -55,6 +55,12 @@ init_tidypolis <- function(
     cli::cli_alert_success("- Creating 'data' folder")
     tidypolis_io(io = "create", file_path = paste0(polis_data_folder, "/data"))
   }
+  if("spatial" %in% tidypolis_io(io = "list", file_path = polis_data_folder)){
+    cli::cli_alert_success("- Spatial folder identified")
+  }else{
+    cli::cli_alert_success("- Creating 'spatial' folder")
+    tidypolis_io(io = "create", file_path = paste0(polis_data_folder, "/spatial"))
+  }
   Sys.setenv(POLIS_DATA_CACHE = paste0(polis_data_folder,"/data"))
 
   #check if key details exist, if not ask for them, test them and store them
