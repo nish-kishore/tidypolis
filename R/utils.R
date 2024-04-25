@@ -4050,7 +4050,17 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
   es.03 = es.03|>
     dplyr::mutate(ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"),"COTE D IVOIRE",ADM0_NAME))
 
-  global.ctry.01 <- sirfunctions::load_clean_ctry_sp()
+  startyr <- 2000
+  end.yr <- year(format(Sys.time()))
+  global.ctry.01 <- tidypolis_io(io = "read", file_path = paste0(polis_spatial_folder, "/global.ctry.rds")) |>
+    dplyr::mutate(
+      yr.st = lubridate::year(STARTDATE),
+      yr.end = lubridate::year(ENDDATE),
+      ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"),"COTE D IVOIRE", ADM0_NAME)
+    ) %>%
+    # this filters based on dates set in RMD
+    dplyr::filter(yr.st <= end.yr & (yr.end >= startyr | yr.end == 9999))
+  rm(startyr, end.yr)
 
   sf::sf_use_s2(F)
   shape.name.01 <- global.ctry.01 |>
