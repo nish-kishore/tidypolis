@@ -1790,7 +1790,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
 
                        # remove the ouad eddahab in Morocco which started and ended the same year and causes overlap
                        dplyr::filter(!GUID=="{AE526BC0-8DC3-411C-B82E-75259AD3598C}") |>
-                       # this filters based on dates set in RMD
+                       # this filters based on valid shape years (2000 - present)
                        dplyr::filter(yr.st <= endyr & (endyr >= startyr | yr.end == 9999)), i)
 
     df.list[[i]] <- df02
@@ -2883,7 +2883,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
 
     # remove the ouad eddahab in Morocco which started and ended the same year and causes overlap
     dplyr::filter(!GUID=="{AE526BC0-8DC3-411C-B82E-75259AD3598C}") |>
-    # this filters based on dates set in RMD
+    # this filters based on valid shape years (2000 - present)
     dplyr::filter(yr.st <= endyr & (endyr >= startyr | yr.end == 9999))
   rm(startyr, endyr)
   shape.file.names <- names(global.dist.01)
@@ -4058,7 +4058,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
       yr.end = lubridate::year(ENDDATE),
       ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"),"COTE D IVOIRE", ADM0_NAME)
     ) %>%
-    # this filters based on dates set in RMD
+    # this filters based on valid shape years (2000 - present)
     dplyr::filter(yr.st <= end.yr & (yr.end >= startyr | yr.end == 9999))
   rm(startyr, end.yr)
 
