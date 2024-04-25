@@ -1566,7 +1566,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
   startyr <- 2000
   endyr <- year(format(Sys.time()))
   for (i in startyr:endyr) {
-    df02 <- f.yrs.01(tidypolis_io(io = "read", file_path = paste0(polis_spatial_folder, "/global.dist.rds")) |>
+    df02 <- sirfunctions:::f.yrs.01(tidypolis_io(io = "read", file_path = paste0(polis_spatial_folder, "/global.dist.rds")) |>
                        dplyr::mutate(
                          STARTDATE = lubridate::as_date(STARTDATE),
                          # Typo in the dist start date (year) in shapefiles. Temporary correcting the start date for South Darfur in Sudan
