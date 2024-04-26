@@ -65,7 +65,16 @@ init_tidypolis <- function(
   Sys.setenv(POLIS_SPATIAL_CACHE = paste0(polis_data_folder,"/spatial"))
 
   #if edav is true, automatically pull spatial files from EDAV into spatial folder
-  if(edav = T){
+  if(edav == T){
+
+    global.dist <- sirfunctions::edav_io(io = "read", file_loc = "Data/spatial/global.dist.rds")
+    sirfunctions::edav_io(io = "write", obj = global.dist, file_loc = paste0(POLIS_SPATIAL_CACHE, "/global.dist.rds"))
+
+    global.prov <- sirfunctions::edav_io(io = "read", file_loc = "Data/spatial/global.prov.rds")
+    sirfunctions::edav_io(io = "write", obj = global.prov, file_loc = paste0(POLIS_SPATIAL_CACHE, "/global.prov.rds"))
+
+    global.ctry <- sirfunctions::edav_io(io = "read", file_loc = "Data/spatial/global.ctry.rds")
+    sirfunctions::edav_io(io = "write", obj = global.ctry, file_loc = paste0(POLIS_SPATIAL_CACHE, "/global.ctry.rds"))
 
   }else{
 
