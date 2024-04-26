@@ -64,6 +64,13 @@ init_tidypolis <- function(
   Sys.setenv(POLIS_DATA_CACHE = paste0(polis_data_folder,"/data"))
   Sys.setenv(POLIS_SPATIAL_CACHE = paste0(polis_data_folder,"/spatial"))
 
+  #if edav is true, automatically pull spatial files from EDAV into spatial folder
+  if(edav = T){
+
+  }else{
+
+  }
+
   #check if key details exist, if not ask for them, test them and store them
   #if they exist, check the key
   #if key doesn't work ask for another one
