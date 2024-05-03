@@ -1090,6 +1090,33 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
   cli::cli_process_start("Placing random points")
   pt01 <- suppressMessages(sf::st_sample(df02, df02$nperarm,
                                          exact = T, progress = T))
+
+  pt01 <- lapply(1:nrow(df02), function(x){
+
+    tryCatch(
+      expr = {suppressMessages(sf::st_sample(df02[x,], pull(df02[x,], "nperarm"),
+                                            exact = T)) |> st_as_sf()},
+      error = function(e) {
+
+        suppressWarnings(
+          {
+          sf_use_s2(F)
+          x <- df02[x,] |> st_centroid(of_largest_polygon = T)
+          sf_use_s2(T)
+
+          return(st_buffer(x, dist = 3000) |>
+                   st_sample(slice(df02,4) |>
+                               pull(nperarm)) |>
+                   st_as_sf())
+          }
+        )
+
+      }
+    )
+
+  }) |>
+    bind_rows()
+
   cli::cli_process_done()
 
   pt01_sf <- sf::st_sf(pt01)
