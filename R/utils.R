@@ -1105,7 +1105,7 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
           sf_use_s2(T)
 
           return(st_buffer(x, dist = 3000) |>
-                   st_sample(slice(df02,4) |>
+                   st_sample(df02 |>
                                pull(nperarm)) |>
                    st_as_sf())
           }
