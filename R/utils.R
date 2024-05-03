@@ -1101,13 +1101,13 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
         suppressWarnings(
           {
           sf_use_s2(F)
-          x <- df02[x,] |> st_centroid(of_largest_polygon = T)
+          int <- df02[x,] |> st_centroid(of_largest_polygon = T)
           sf_use_s2(T)
 
-          return(st_buffer(x, dist = 3000) |>
-                   st_sample(df02 |>
+          st_buffer(int, dist = 3000) |>
+                   st_sample(slice(df02, x) |>
                                pull(nperarm)) |>
-                   st_as_sf())
+                   st_as_sf()
           }
         )
 
