@@ -1097,6 +1097,11 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
       expr = {suppressMessages(sf::st_sample(df02[x,], pull(df02[x,], "nperarm"),
                                             exact = T)) |> st_as_sf()},
       error = function(e) {
+        guid = df02[x, ]$GUID[1]
+        prov_name = global.dist.01 |> filter(GUID == guid) |> select(ADM0_NAME, ADM1_NAME)
+        cli::cli_alert_warning(paste0("Fixing errors for:\n",
+                                      "Country: ", prov_name$ADM0_NAME,"\n",
+                                      "District: ", prov_name$ADM1_NAME))
 
         suppressWarnings(
           {
@@ -2536,9 +2541,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   rm("afp.raw.01")
   gc()
   # Function to create lat & long for AFP cases
-  sf::sf_use_s2(F)
   afp.linelist.fixed.04 <- f.pre.stsample.01(afp.linelist.fixed.03, global.dist.01)
-  sf::sf_use_s2(T)
   rm("afp.linelist.fixed.03")
 
   cli::cli_process_done()
