@@ -1088,8 +1088,8 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
     dplyr::left_join(df02.ref, by = "GUID")
 
   cli::cli_process_start("Placing random points")
-  pt01 <- suppressMessages(sf::st_sample(df02, df02$nperarm,
-                                         exact = T, progress = T))
+ # pt01 <- suppressMessages(sf::st_sample(df02, df02$nperarm,
+  #                                       exact = T, progress = T))
 
   pt01 <- lapply(1:nrow(df02), function(x){
 
