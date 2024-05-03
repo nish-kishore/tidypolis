@@ -1119,7 +1119,7 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
 
   cli::cli_process_done()
 
-  pt01_sf <- sf::st_sf(pt01)
+  pt01_sf <- pt01
 
   pt01_joined <- dplyr::bind_cols(
     pt01_sf,
@@ -1132,7 +1132,7 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
 
 
 
-  pt01_joined <- sf::st_join(pt01_sf, df02)
+  #pt01_joined <- sf::st_join(pt01_sf, df02)
 
   pt01_joined <- dplyr::bind_cols(
     tibble::as_tibble(pt01_joined),
