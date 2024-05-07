@@ -1101,7 +1101,8 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
         prov_name = global.dist.01 |> filter(GUID == guid) |> select(ADM0_NAME, ADM1_NAME)
         cli::cli_alert_warning(paste0("Fixing errors for:\n",
                                       "Country: ", prov_name$ADM0_NAME,"\n",
-                                      "District: ", prov_name$ADM1_NAME))
+                                      "Province: ", prov_name$ADM1_NAME, "\n",
+                                      "District: ", prov_name$ADM2_NAME))
 
         suppressWarnings(
           {
