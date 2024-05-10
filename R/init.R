@@ -108,6 +108,24 @@ init_tidypolis <- function(
 
   }else{
 
+    if("global.ctry.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/spatial"))){
+      print("Global country shapefile found")
+    }else{
+      print("Please request global country shapefile from SIR team")
+    }
+
+    if("global.prov.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/spatial"))){
+      print("Global province shapefile found")
+    }else{
+      print("Please request global province shapefile from SIR team")
+    }
+
+    if("global.dist.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/spatial"))){
+      print("Global district shapefile found")
+    }else{
+      print("Please request global district shapefile from SIR team")
+    }
+
   }
 
   #check if key details exist, if not ask for them, test them and store them
