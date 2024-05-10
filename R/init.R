@@ -67,14 +67,39 @@ init_tidypolis <- function(
   #if edav is true, automatically pull spatial files from EDAV into spatial folder
   if(edav == T){
 
-    global.dist <- sirfunctions::edav_io(io = "read", file_loc = "Data/spatial/global.dist.rds")
-    sirfunctions::edav_io(io = "write", obj = global.dist, file_loc = paste0(POLIS_SPATIAL_CACHE, "/global.dist.rds"))
+    if("global.ctry.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/spatial"))){
 
-    global.prov <- sirfunctions::edav_io(io = "read", file_loc = "Data/spatial/global.prov.rds")
-    sirfunctions::edav_io(io = "write", obj = global.prov, file_loc = paste0(POLIS_SPATIAL_CACHE, "/global.prov.rds"))
+      print("Global country shapefile found")
 
-    global.ctry <- sirfunctions::edav_io(io = "read", file_loc = "Data/spatial/global.ctry.rds")
-    sirfunctions::edav_io(io = "write", obj = global.ctry, file_loc = paste0(POLIS_SPATIAL_CACHE, "/global.ctry.rds"))
+    }else{
+
+      global.ctry <- sirfunctions::edav_io(io = "read", file_loc = "Data/spatial/global.ctry.rds")
+      sirfunctions::edav_io(io = "write", obj = global.ctry, file_loc = paste0(polis_data_folder, "/spatial/global.ctry.rds"))
+
+    }
+
+    if("global.prov.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/spatial"))){
+
+      print("Global province shapefile found")
+
+    }else{
+
+      global.prov <- sirfunctions::edav_io(io = "read", file_loc = "Data/spatial/global.prov.rds")
+      sirfunctions::edav_io(io = "write", obj = global.prov, file_loc = paste0(polis_data_folder, "/spatial/global.prov.rds"))
+
+    }
+
+
+    if("global.dist.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/spatial"))){
+
+      print("Global district shapefile found")
+
+    }else{
+
+      global.dist <- sirfunctions::edav_io(io = "read", file_loc = "Data/spatial/global.dist.rds")
+      sirfunctions::edav_io(io = "write", obj = global.dist, file_loc = paste0(polis_data_folder, "/spatial/global.dist.rds"))
+
+    }
 
   }else{
 
