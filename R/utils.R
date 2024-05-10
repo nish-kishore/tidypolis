@@ -1098,11 +1098,11 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
                                             exact = T)) |> st_as_sf()},
       error = function(e) {
         guid = df02[x, ]$GUID[1]
-        prov_name = global.dist.01 |> filter(GUID == guid) |> select(ADM0_NAME, ADM1_NAME)
+        ctry_prov_dist_name = global.dist.01 |> filter(GUID == guid) |> select(ADM0_NAME, ADM1_NAME, ADM2_NAME)
         cli::cli_alert_warning(paste0("Fixing errors for:\n",
-                                      "Country: ", prov_name$ADM0_NAME,"\n",
-                                      "Province: ", prov_name$ADM1_NAME, "\n",
-                                      "District: ", prov_name$ADM2_NAME))
+                                      "Country: ", ctry_prov_dist_name$ADM0_NAME,"\n",
+                                      "Province: ", ctry_prov_dist_name$ADM1_NAME, "\n",
+                                      "District: ", ctry_prov_dist_name$ADM2_NAME))
 
         suppressWarnings(
           {
