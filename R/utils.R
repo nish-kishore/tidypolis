@@ -3283,7 +3283,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
 
   cli::cli_process_start("Create CDC variables")
   endyr <- year(format(Sys.time()))
-  startyr <- 2020
+  startyr <- 2000
   sia.02 <- sia.01.new |>
     dplyr::rename(linked.obx=`linked.outbreak(s)`,
            sia.sub.activity.code = `sia.sub-activity.code`,
