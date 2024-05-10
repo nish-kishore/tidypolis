@@ -67,12 +67,15 @@ init_tidypolis <- function(
   #if edav is true, automatically pull spatial files from EDAV into spatial folder
   if(edav == T){
 
+    print("Checking for global shapefiles")
+
     if("global.ctry.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/spatial"))){
 
       print("Global country shapefile found")
 
     }else{
 
+      print("Writing global country shapefile into spatial folder")
       global.ctry <- sirfunctions::edav_io(io = "read", file_loc = "Data/spatial/global.ctry.rds")
       sirfunctions::edav_io(io = "write", obj = global.ctry, file_loc = paste0(polis_data_folder, "/spatial/global.ctry.rds"))
 
@@ -84,6 +87,7 @@ init_tidypolis <- function(
 
     }else{
 
+      print("Writing global province shapefile into spatial folder")
       global.prov <- sirfunctions::edav_io(io = "read", file_loc = "Data/spatial/global.prov.rds")
       sirfunctions::edav_io(io = "write", obj = global.prov, file_loc = paste0(polis_data_folder, "/spatial/global.prov.rds"))
 
@@ -96,6 +100,7 @@ init_tidypolis <- function(
 
     }else{
 
+      print("Writing global district shapefile into spatial folder")
       global.dist <- sirfunctions::edav_io(io = "read", file_loc = "Data/spatial/global.dist.rds")
       sirfunctions::edav_io(io = "write", obj = global.dist, file_loc = paste0(polis_data_folder, "/spatial/global.dist.rds"))
 
