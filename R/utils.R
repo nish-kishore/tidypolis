@@ -3346,19 +3346,22 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
 
   # identify potential duplicates
   potential.duplicates <- sia.04 |>
-    group_by(adm2guid, sub.activity.start.date, vaccine.type, age.group, status, lqas.loaded, im.loaded) |>
-    mutate(n = n()) |>
-    ungroup() |>
-    filter(n > 1) |>
-    select(sia.code, sia.sub.activity.code, adm2guid, sub.activity.start.date, vaccine.type, age.group, status, lqas.loaded, im.loaded) |>
-    group_by(adm2guid) |>
-    arrange(sub.activity.start.date, .by_group = T) |>
-    ungroup()
+    dplyr::group_by(adm2guid, sub.activity.start.date, vaccine.type, age.group, status, lqas.loaded, im.loaded) |>
+    dplyr::mutate(n = n()) |>
+    dplyr::ungroup() |>
+    dplyr::filter(n > 1) |>
+    dplyr::select(sia.code, sia.sub.activity.code, adm2guid, sub.activity.start.date, vaccine.type, age.group, status, lqas.loaded, im.loaded) |>
+    dplyr::group_by(adm2guid) |>
+    dplyr::arrange(sub.activity.start.date, .by_group = T) |>
+    dplyr::ungroup()
 
   # write out potential duplicates to POLIS data folder
   tidypolis_io(obj = potential.duplicates, io = "write", file_path = paste0(polis_data_folder, "/Core_Ready_Files/sia_duplicates.csv"))
 
   #want to differentiate between duplicate rounds within a SIA code and different SIA codes with same district, vax, startdate, etc.
+  potential.duplicates.01 <- potential.duplicates |>
+    group_by(adm2guid, sub.activity.start.date, vaccine.type, age.group, status, lqas.loaded, im.loaded) |>
+
 
     # Next step is to remove duplicates:
   sia.05 <- dplyr::distinct(sia.04, adm2guid, sub.activity.start.date, vaccine.type, age.group, status, lqas.loaded, im.loaded, .keep_all= TRUE)
