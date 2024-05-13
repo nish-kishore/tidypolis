@@ -3567,9 +3567,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
     dplyr::ungroup() |>
     dplyr::filter(n > 1) |>
     dplyr::select(sia.code, sia.sub.activity.code, adm2guid, sub.activity.start.date, vaccine.type, age.group, status, lqas.loaded, im.loaded) |>
-    dplyr::group_by(adm2guid) |>
-    dplyr::arrange(sub.activity.start.date, .by_group = T) |>
-    dplyr::ungroup()
+    dplyr::arrange(sub.activity.start.date)
 
   # write out potential duplicates to POLIS data folder
   tidypolis_io(obj = potential.duplicates, io = "write", file_path = paste0(polis_data_folder, "/Core_Ready_Files/sia_duplicates.csv"))
@@ -3579,13 +3577,24 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
     dplyr::group_by(adm2guid, sub.activity.start.date, vaccine.type, age.group, status, lqas.loaded, im.loaded) |>
     dplyr::mutate(last.sia.code = dplyr::lag(sia.code, n = 1L),
                   last.sia.code = ifelse(is.na(last.sia.code), sia.code, last.sia.code)) |>
+    dplyr::ungroup() |>
     dplyr::filter(sia.code != last.sia.code)
 
 
   #identify all sia.codes that may be duplicated
   potential.duplicates.02 <- sia.04 |>
     dplyr::filter(sia.code %in% potential.duplicates.01$sia.code |
-                    sia.code %in% potential.duplicates.01$last.sia.code)
+                    sia.code %in% potential.duplicates.01$last.sia.code) |>
+    dplyr::select(sia.code, sia.sub.activity.code, adm2guid, sub.activity.start.date, vaccine.type, age.group, status, lqas.loaded, im.loaded) |>
+    dplyr::select(-adm2guid, -sia.sub.activity.code) |>
+    dplyr::distinct() |>
+    dplyr::group_by(sub.activity.start.date, vaccine.type, age.group, status, lqas.loaded, im.loaded) |>
+    dplyr::mutate(n = n()) |>
+    dplyr::filter(n > 1) |>
+    dplyr::ungroup() |>
+    dplyr::arrange(sub.activity.start.date) |>
+    dplyr::select(-n)
+
 
   # Next step is to remove duplicates:
   sia.05 <- dplyr::distinct(sia.04, adm2guid, sub.activity.start.date, vaccine.type, age.group, status, lqas.loaded, im.loaded, .keep_all= TRUE)
