@@ -3379,6 +3379,15 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
     dplyr::arrange(sub.activity.start.date) |>
     dplyr::select(-n)
 
+  #duplicate campaigns identified, count sub activities by campaign
+  potential.duplicates.03 <- dplyr::left_join(potential.duplicates.02, sia.04 |>
+                                                dplyr::select(sia.code, vaccine.type, adm2guid)) |>
+    dplyr::group_by(sia.code) |>
+    dplyr::mutate(n = n()) |>
+    dplyr::ungroup() |>
+    dplyr::select(-adm2guid) |>
+    dplyr::distinct()
+
 
   # Next step is to remove duplicates:
   sia.05 <- dplyr::distinct(sia.04, adm2guid, sub.activity.start.date, vaccine.type, age.group, status, lqas.loaded, im.loaded, .keep_all= TRUE)
