@@ -3560,7 +3560,20 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
            place.admin.2=ifelse(is.na(place.admin.2)==T, ADM2_NAME, place.admin.2)) |>
     dplyr::select(-no_match)
 
-  # Next step is to remove duplicates:
+  # identify potential duplicates
+  potential.duplicates <- sia.04 |>
+    group_by(adm2guid, sub.activity.start.date, vaccine.type, age.group, status, lqas.loaded, im.loaded) |>
+    mutate(n = n()) |>
+    ungroup() |>
+    filter(n > 1) |>
+    select(sia.code, sia.sub.activity.code, adm2guid, sub.activity.start.date, vaccine.type, age.group, status, lqas.loaded, im.loaded) |>
+    group_by(adm2guid) |>
+    arrange(sub.activity.start.date, .by_group = T) |>
+    ungroup()
+
+  #want to differentiate between duplicate rounds within a SIA code and different SIA codes with same district, vax, startdate, etc.
+
+    # Next step is to remove duplicates:
   sia.05 <- dplyr::distinct(sia.04, adm2guid, sub.activity.start.date, vaccine.type, age.group, status, lqas.loaded, im.loaded, .keep_all= TRUE)
 
   cli::cli_process_done()
