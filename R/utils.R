@@ -3576,10 +3576,18 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
 
   #want to differentiate between duplicate rounds within a SIA code and different SIA codes with same district, vax, startdate, etc.
   potential.duplicates.01 <- potential.duplicates |>
-    group_by(adm2guid, sub.activity.start.date, vaccine.type, age.group, status, lqas.loaded, im.loaded) |>
+    dplyr::group_by(adm2guid, sub.activity.start.date, vaccine.type, age.group, status, lqas.loaded, im.loaded) |>
+    dplyr::mutate(last.sia.code = dplyr::lag(sia.code, n = 1L),
+                  last.sia.code = ifelse(is.na(last.sia.code), sia.code, last.sia.code)) |>
+    dplyr::filter(sia.code != last.sia.code)
 
 
-    # Next step is to remove duplicates:
+  #identify all sia.codes that may be duplicated
+  potential.duplicates.02 <- sia.04 |>
+    dplyr::filter(sia.code %in% potential.duplicates.01$sia.code |
+                    sia.code %in% potential.duplicates.01$last.sia.code)
+
+  # Next step is to remove duplicates:
   sia.05 <- dplyr::distinct(sia.04, adm2guid, sub.activity.start.date, vaccine.type, age.group, status, lqas.loaded, im.loaded, .keep_all= TRUE)
 
   cli::cli_process_done()
