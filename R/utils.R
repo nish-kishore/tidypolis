@@ -3355,6 +3355,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
     arrange(sub.activity.start.date, .by_group = T) |>
     ungroup()
 
+  # write out potential duplicates to POLIS data folder
+  tidypolis_io(obj = potential.duplicates, io = "write", file_path = paste0(polis_data_folder, "/Core_Ready_Files/sia_duplicates.csv"))
+
   #want to differentiate between duplicate rounds within a SIA code and different SIA codes with same district, vax, startdate, etc.
 
     # Next step is to remove duplicates:
