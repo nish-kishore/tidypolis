@@ -3549,7 +3549,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
     dplyr::left_join(long.global.dist.01 |> dplyr::select(ADM0_NAME, ADM1_NAME, ADM2_NAME, active.year.01, GUID),
               by = c("place.admin.0" = "ADM0_NAME", "place.admin.1" = "ADM1_NAME", "place.admin.2" = "ADM2_NAME", "yr.sia" = "active.year.01")) |>
     dplyr::mutate(missing.guid = ifelse(is.na(GUID)==T, 1, 0),
-           adm2guid = ifelse(missing.guid==0, GUID, adm2guid)) |>
+           adm2guid = ifelse(!is.na(GUID), GUID, adm2guid))|>
     dplyr::select(-GUID, -no_match)
 
   # Combine SIAs matched with prov, dist with shapes
