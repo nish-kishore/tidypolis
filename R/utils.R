@@ -3395,9 +3395,12 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
     dplyr::mutate(last.vax = dplyr::lag(vaccine.type, n = 1L),
                   last.vax = ifelse(is.na(last.vax), vaccine.type, last.vax)) |>
     dplyr::group_by(adm2guid, sub.activity.start.date) |>
-    dplyr::filter(any(vaccine.type != last.vax))
-    dplyr::ungroup()
+    dplyr::filter(any(vaccine.type != last.vax)) |>
+    dplyr::ungroup() |>
+    dplyr::select(-n, -last.vax)
 
+  # write out all sia parent codes that are potential duplicates
+  tidypolis_io(obj = potential.duplicates.03, io = "write", file_path = paste0(polis_data_folder, "/Core_Ready_Files/sia_duplicates_different_vax.csv"))
 
   # Next step is to remove duplicates:
   sia.05 <- dplyr::distinct(sia.04, adm2guid, sub.activity.start.date, vaccine.type, age.group, status, lqas.loaded, im.loaded, .keep_all= TRUE)
