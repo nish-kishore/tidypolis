@@ -3349,9 +3349,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
     dplyr::group_by(adm2guid, sub.activity.start.date, vaccine.type, age.group, status, lqas.loaded, im.loaded) |>
     dplyr::mutate(n = n()) |>
     dplyr::ungroup() |>
-    dplyr::filter(n > 1) |>
+    dplyr::filter(n > 1 & !is.na(adm2guid) & adm2guid != "{NA}") |>
     dplyr::select(sia.code, sia.sub.activity.code, adm2guid, sub.activity.start.date, vaccine.type, age.group, status, lqas.loaded, im.loaded) |>
-    dplyr::arrange(sub.activity.start.date)
+    dplyr::arrange(sub.activity.start.date, adm2guid)
 
   # write out potential duplicates to POLIS data folder
   tidypolis_io(obj = potential.duplicates, io = "write", file_path = paste0(polis_data_folder, "/Core_Ready_Files/sia_duplicates.csv"))
