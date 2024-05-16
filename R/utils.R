@@ -3384,7 +3384,19 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
 
 
   #identify rounds that start on same date w/ different vaccines to flag for POLIS
-
+  potential.duplicates.03 <- sia.04 |>
+    dplyr::select(sia.code, adm2guid, sub.activity.start.date, vaccine.type, age.group, status, lqas.loaded, im.loaded) |>
+    dplyr::group_by(adm2guid, sub.activity.start.date, age.group, status, lqas.loaded, im.loaded) |>
+    dplyr::mutate(n = n()) |>
+    dplyr::ungroup() |>
+    dplyr::filter(n > 1 & !is.na(adm2guid) & adm2guid != "{NA}") |>
+    dplyr::arrange(sub.activity.start.date, adm2guid) |>
+    dplyr::group_by(adm2guid, sub.activity.start.date) |>
+    dplyr::mutate(last.vax = dplyr::lag(vaccine.type, n = 1L),
+                  last.vax = ifelse(is.na(last.vax), vaccine.type, last.vax)) |>
+    dplyr::group_by(adm2guid, sub.activity.start.date) |>
+    dplyr::filter(any(vaccine.type != last.vax))
+    dplyr::ungroup()
 
 
   # Next step is to remove duplicates:
