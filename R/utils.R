@@ -3595,6 +3595,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
     dplyr::arrange(sub.activity.start.date, sia.code) |>
     dplyr::select(-n)
 
+  # write out all sia parent codes that are potential duplicates
+  tidypolis_io(obj = potential.duplicates.02, io = "write", file_path = paste0(polis_data_folder, "/Core_Ready_Files/sia_duplicate_codes.csv"))
 
 
   #identify rounds that start on same date w/ different vaccines to flag for POLIS
