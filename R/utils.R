@@ -3077,34 +3077,14 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
 
   }
 
+  cli::cli_process_done()
 
+  cli::cli_process_start("Creating non-AFP dataset")
 
   tidypolis_io(obj = not.afp.01, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/",
                               paste("other_surveillance_type_linelist", min(not.afp.01$yronset, na.rm = T), max(not.afp.01$yronset, na.rm = T), sep = "_"),
                               ".rds",
                               sep = ""
-  ))
-
-  cli::cli_process_done()
-
-  cli::cli_process_start("Creating non-AFP dataset")
-
-  #other surveillance linelist combine
-  non.afp.files.01 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path=paste0(polis_data_folder, "/Core_Ready_Files"), full_names=TRUE)) |>
-    dplyr::filter(grepl("^.*(other_surveillance_type_linelist).*(.rds)$", name)) |>
-    dplyr::pull(name)
-  non.afp.files.02 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path="Data/core_files_to_combine", full_names=TRUE)) |>
-    dplyr::filter(grepl("^.*(other_surveillance_type_linelist).*(.rds)$", name)) |>
-    dplyr::pull(name)
-  non.afp.files.03 <- c(non.afp.files.01, non.afp.files.02)
-  non.afp.clean.01 <- purrr::map_df(non.afp.files.03, ~tidypolis_io(io = "read", file_path = .x))
-
-  tidypolis_io(obj = non.afp.clean.01, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/",
-                                    paste("other_surveillance_type_linelist", min(non.afp.clean.01$yronset, na.rm = T),
-                                          max(non.afp.clean.01$yronset, na.rm = T),
-                                          sep = "_"
-                                    ),".rds",
-                                    sep = ""
   ))
 
   cli::cli_process_done()
