@@ -3167,12 +3167,31 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
 
   }
 
+  cli::cli_process_done()
+
+  cli::cli_process_start("Generating AFP dataset")
+
   tidypolis_io(obj = afp.linelist.02, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/",
                                    paste("afp_linelist", min(afp.linelist.02$dateonset, na.rm = T), max(afp.linelist.02$dateonset, na.rm = T), sep = "_"),
                                    ".rds",
                                    sep = ""
   ))
 
+
+  cli::cli_process_done()
+
+  cli::cli_process_start("Creating light AFP dataset for WHO")
+  #outputting lighter file for WHO
+  afp.clean.light <- afp.linelist.02 |>
+    dplyr::filter(yronset >= 2019)
+
+  tidypolis_io(obj = afp.clean.light, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/",
+                                                                      paste("afp_linelist", min(afp.clean.light$dateonset, na.rm = T),
+                                                                            max(afp.clean.light$dateonset, na.rm = T),
+                                                                            sep = "_"
+                                                                      ),".rds",
+                                                                      sep = ""
+  ))
 
   cli::cli_process_done()
 
@@ -3193,6 +3212,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
   ))
 
   cli::cli_process_done()
+
+
 
   cli::cli_process_start("Comparing data with last non-AFP dataset")
 
@@ -3264,52 +3285,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
                               paste("other_surveillance_type_linelist", min(not.afp.01$yronset, na.rm = T), max(not.afp.01$yronset, na.rm = T), sep = "_"),
                               ".rds",
                               sep = ""
-  ))
-
-  cli::cli_process_done()
-
-
-  cli::cli_process_start("Generating AFP dataset")
-  # AFP cases with EPIDs ("14070210003" "50023710003" "Per 011-21"  "53060210001") got removed from original POLIS download "Cases_30-04-2020_20-15-38_from_01_Jan_2000_to_31_Dec_2018.csv"
-
-  #move newly created linelists to the "core datafiles to combine" folder within core 2.0
-
-  # read AFP surveillance type linelist and combine to make one AFP-linlelist
-  afp.files.01 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path=paste0(polis_data_folder, "/Core_Ready_Files"), full_names=TRUE)) |>
-    dplyr::filter(grepl("^.*(afp_linelist).*(.rds)$", name)) |>
-    dplyr::pull(name)
-  afp.files.02 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path=paste0(polis_data_folder, "/core_files_to_combine"), full_names=TRUE)) |>
-    dplyr::filter(grepl("^.*(afp_linelist).*(.rds)$", name)) |>
-    dplyr::pull(name)
-  afp.to.combine <- purrr::map_df(afp.files.02, ~tidypolis_io(io = "read", file_path = .x)) |>
-    dplyr::mutate(stool1tostool2 = as.numeric(stool1tostool2),
-                  datenotificationtohq =  lubridate::parse_date_time(datenotificationtohq, c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S")))
-  afp.new <- purrr::map_df(afp.files.01, ~tidypolis_io(io = "read", file_path = .x))
-
-  afp.clean.01 <- dplyr::bind_rows(afp.new, afp.to.combine)
-
-
-
-  tidypolis_io(obj = afp.clean.01, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/",
-                                paste("afp_linelist", min(afp.clean.01$dateonset, na.rm = T),
-                                      max(afp.clean.01$dateonset, na.rm = T),
-                                      sep = "_"
-                                ),".rds",
-                                sep = ""
-  ))
-  cli::cli_process_done()
-
-  cli::cli_process_start("Creating light AFP dataset for WHO")
-  #outputting lighter file for WHO
-  afp.clean.light <- afp.clean.01 |>
-    dplyr::filter(yronset >= 2019)
-
-  tidypolis_io(obj = afp.clean.light, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/",
-                                   paste("afp_linelist", min(afp.clean.light$dateonset, na.rm = T),
-                                         max(afp.clean.light$dateonset, na.rm = T),
-                                         sep = "_"
-                                   ),".rds",
-                                   sep = ""
   ))
 
   cli::cli_process_done()
