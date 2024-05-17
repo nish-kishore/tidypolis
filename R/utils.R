@@ -1088,11 +1088,44 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
     dplyr::left_join(df02.ref, by = "GUID")
 
   cli::cli_process_start("Placing random points")
-  pt01 <- suppressMessages(sf::st_sample(df02, df02$nperarm,
-                                         exact = T, progress = T))
+ # pt01 <- suppressMessages(sf::st_sample(df02, df02$nperarm,
+  #                                       exact = T, progress = T))
+
+  pt01 <- lapply(1:nrow(df02), function(x){
+
+    tryCatch(
+      expr = {suppressMessages(sf::st_sample(df02[x,], pull(df02[x,], "nperarm"),
+                                            exact = T)) |> st_as_sf()},
+      error = function(e) {
+        guid = df02[x, ]$GUID[1]
+        ctry_prov_dist_name = global.dist.01 |> filter(GUID == guid) |> select(ADM0_NAME, ADM1_NAME, ADM2_NAME)
+        cli::cli_alert_warning(paste0("Fixing errors for:\n",
+                                      "Country: ", ctry_prov_dist_name$ADM0_NAME,"\n",
+                                      "Province: ", ctry_prov_dist_name$ADM1_NAME, "\n",
+                                      "District: ", ctry_prov_dist_name$ADM2_NAME))
+
+        suppressWarnings(
+          {
+          sf_use_s2(F)
+          int <- df02[x,] |> st_centroid(of_largest_polygon = T)
+          sf_use_s2(T)
+
+          st_buffer(int, dist = 3000) |>
+                   st_sample(slice(df02, x) |>
+                               pull(nperarm)) |>
+                   st_as_sf()
+          }
+        )
+
+      }
+    )
+
+  }) |>
+    bind_rows()
+
   cli::cli_process_done()
 
-  pt01_sf <- sf::st_sf(pt01)
+  pt01_sf <- pt01
 
   pt01_joined <- dplyr::bind_cols(
     pt01_sf,
@@ -1105,7 +1138,7 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
 
 
 
-  pt01_joined <- sf::st_join(pt01_sf, df02)
+  #pt01_joined <- sf::st_join(pt01_sf, df02)
 
   pt01_joined <- dplyr::bind_cols(
     tibble::as_tibble(pt01_joined),
@@ -2513,9 +2546,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   rm("afp.raw.01")
   gc()
   # Function to create lat & long for AFP cases
-  sf::sf_use_s2(F)
   afp.linelist.fixed.04 <- f.pre.stsample.01(afp.linelist.fixed.03, global.dist.01)
-  sf::sf_use_s2(T)
   rm("afp.linelist.fixed.03")
 
   #vars created during stsample
