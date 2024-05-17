@@ -3623,7 +3623,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
   sia.06 <- sia.06 |>
     dplyr::select(-dplyr::starts_with("SHAPE"))
 
-  old.file <- x[grepl("sia_2020", x)]
+  old.file <- x[grepl("sia_2000", x)]
 
   if(length(old.file) > 0){
 
@@ -3681,34 +3681,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
                           sep = ""
   ))
   cli::cli_process_done()
-
-  #combine SIA pre-2020 with the current rds
-  # read SIA and combine to make one SIA dataset
-
-  sia.files.01 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path=paste0(polis_data_folder, "/Core_Ready_Files"), full_names=TRUE)) |>
-    dplyr::filter(grepl("^.*(sia).*(.rds)$", name)) |>
-    dplyr::pull(name)
-  sia.files.02 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path=paste0(polis_data_folder, "/core_files_to_combine"), full_names=TRUE)) |>
-    dplyr::filter(grepl("^.*(sia).*(.rds)$", name)) |>
-    dplyr::pull(name)
-  sia.to.combine <- purrr::map_df(sia.files.02, ~tidypolis_io(io = "read", file_path = .x)) |>
-    dplyr::mutate(sub.activity.initial.planned.date = lubridate::parse_date_time(sub.activity.initial.planned.date, c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S")),
-                  last.updated.date = lubridate::parse_date_time(last.updated.date, c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S")),
-                  sub.activity.last.updated.date = as.Date(lubridate::parse_date_time(sub.activity.last.updated.date, c("dmY", "bY", "Ymd", "%d-%m-%Y %H:%M"))))
-  sia.new <- purrr::map_df(sia.files.01, ~tidypolis_io(io = "read", file_path = .x))
-
-  sia.clean.01 <- dplyr::bind_rows(sia.new, sia.to.combine) |>
-    mutate(sub.activity.last.updated.date = as.Date(sub.activity.last.updated.date),
-           last.updated.date = as.Date(last.updated.date)) |>
-    dplyr::select(sia.code, sia.sub.activity.code, everything())
-
-  tidypolis_io(obj = sia.clean.01, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/",
-                                paste("sia", min(sia.clean.01$yr.sia, na.rm = T),
-                                      max(sia.clean.01$yr.sia, na.rm = T),
-                                      sep = "_"
-                                ),".rds",
-                                sep = ""
-  ))
 
   cli::cli_process_start("Evaluating unmatched SIAs")
 
