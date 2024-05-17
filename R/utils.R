@@ -1853,6 +1853,16 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_h3("ES")
   api_es_sub3 <- remove_empty_columns(api_es_sub3)
 
+  #if nVaccine 2 is removed recreate with empty values so downstream code doesn't break
+
+  es_names <- api_es_sub3 |>
+    names()
+
+  if(!"nVaccine 2" %in% es_names){
+    api_es_sub3 <- api_es_sub3 |>
+      cbind("nVaccine 2" = NA)
+  }
+
   cli::cli_h3("Virus")
   api_virus_sub3 <- remove_empty_columns(api_virus_sub3)
 
