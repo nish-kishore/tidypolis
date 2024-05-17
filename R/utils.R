@@ -3103,7 +3103,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
 
   x <- tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/Core_Ready_Files/Archive/", latest_folder_in_archive), full_names = T)
 
-  old.file <- x[grepl("afp_linelist_2020", x)]
+  old.file <- x[grepl("afp_linelist_2001", x)]
 
   if(length(old.file) > 0){
     old <- tidypolis_io(io = "read", file_path = old.file) |>
@@ -3206,7 +3206,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
 
   x <- tidypolis_io(io = "list", file_path = file.path(polis_data_folder,"Core_Ready_Files", "Archive", latest_folder_in_archive), full_names = T)
 
-  old.file <- x[grepl("other_surveillance_type_linelist_2020", x)]
+  old.file <- x[grepl("other_surveillance_type_linelist_2016", x)]
 
   if(length(old.file)>0){
     old <- tidypolis_io(io = "read", file_path = old.file) |>
