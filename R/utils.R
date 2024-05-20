@@ -2664,7 +2664,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
   rm("afp.linelist.fixed.03")
 
   #vars created during stsample
-  stsample.vars <- c("id", "empty.01", "geometry")
+  stsample.vars <- c("id", "empty.01", "x", "SHAPE")
 
   cli::cli_process_done()
 
