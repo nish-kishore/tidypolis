@@ -2653,7 +2653,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
   rm("afp.linelist.fixed.02")
   gc()
 
-  rm(startyr, endyr)
   shape.file.names <- names(global.dist.01)
   shape.file.names <- shape.file.names[!shape.file.names %in% c("SHAPE")]
   col.afp.raw.01 <- colnames(afp.raw.01)
