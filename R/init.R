@@ -75,15 +75,15 @@ init_tidypolis <- function(
   #if edav is true, automatically pull spatial files from EDAV into spatial folder
   if(edav == T){
 
-    print("Checking for global shapefiles")
+    cli::cli_alert_info("Checking for global shapefiles")
 
     if("global.ctry.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/spatial"))){
 
-      print("Global country shapefile found")
+      cli::cli_alert_success("Global country shapefile found")
 
     }else{
 
-      print("Writing global country shapefile into spatial folder")
+      cli::cli_alert_success("Writing global country shapefile into spatial folder")
       global.ctry <- sirfunctions::edav_io(io = "read", file_loc = "Data/spatial/global.ctry.rds")
       sirfunctions::edav_io(io = "write", obj = global.ctry, file_loc = paste0(polis_data_folder, "/spatial/global.ctry.rds"))
 
@@ -91,11 +91,11 @@ init_tidypolis <- function(
 
     if("global.prov.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/spatial"))){
 
-      print("Global province shapefile found")
+      cli::cli_alert_success("Global province shapefile found")
 
     }else{
 
-      print("Writing global province shapefile into spatial folder")
+      cli::cli_alert_success("Writing global province shapefile into spatial folder")
       global.prov <- sirfunctions::edav_io(io = "read", file_loc = "Data/spatial/global.prov.rds")
       sirfunctions::edav_io(io = "write", obj = global.prov, file_loc = paste0(polis_data_folder, "/spatial/global.prov.rds"))
 
@@ -103,11 +103,11 @@ init_tidypolis <- function(
 
     if("global.dist.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/spatial"))){
 
-      print("Global district shapefile found")
+      cli::cli_alert_success("Global district shapefile found")
 
     }else{
 
-      print("Writing global district shapefile into spatial folder")
+      cli::cli_alert_success("Writing global district shapefile into spatial folder")
       global.dist <- sirfunctions::edav_io(io = "read", file_loc = "Data/spatial/global.dist.rds")
       sirfunctions::edav_io(io = "write", obj = global.dist, file_loc = paste0(polis_data_folder, "/spatial/global.dist.rds"))
 
@@ -115,11 +115,11 @@ init_tidypolis <- function(
 
     if("crosswalk.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/misc"))){
 
-      print("Crosswalk found")
+      cli::cli_alert_success("Crosswalk found")
 
     }else{
 
-      print("Writing crosswalk into miscellaneous folder")
+      cli::cli_alert_success("Writing crosswalk into miscellaneous folder")
       crosswalk <- sirfunctions::edav_io(io = "read", file_loc = "Data/misc/crosswalk.rds")
       sirfunctions::edav_io(io = "write", obj = crosswalk, file_loc = paste0(polis_data_folder, "/misc/crosswalk.rds"))
 
@@ -127,11 +127,11 @@ init_tidypolis <- function(
 
     if("env_sites.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/misc"))){
 
-      print("Environmental sites data found")
+      cli::cli_alert_success("Environmental sites data found")
 
     }else{
 
-      print("Writing environmental sites data into miscellaneous folder")
+      cli::cli_alert_success("Writing environmental sites data into miscellaneous folder")
       env_sites <- sirfunctions::edav_io(io = "read", file_loc = "Data/misc/env_sites.rds")
       sirfunctions::edav_io(io = "write", obj = env_sites, file_loc = paste0(polis_data_folder, "/misc/env_sites.rds"))
 
@@ -140,33 +140,33 @@ init_tidypolis <- function(
   }else{
 
     if("global.ctry.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/spatial"))){
-      print("Global country shapefile found")
+      cli::cli_alert_success("Global country shapefile found")
     }else{
-      print("Please request global country shapefile from SIR team")
+      cli::cli_alert_success("Please request global country shapefile from SIR team")
     }
 
     if("global.prov.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/spatial"))){
-      print("Global province shapefile found")
+      cli::cli_alert_success("Global province shapefile found")
     }else{
-      print("Please request global province shapefile from SIR team")
+      cli::cli_alert_success("Please request global province shapefile from SIR team")
     }
 
     if("global.dist.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/spatial"))){
-      print("Global district shapefile found")
+      cli::cli_alert_success("Global district shapefile found")
     }else{
-      print("Please request global district shapefile from SIR team")
+      cli::cli_alert_success("Please request global district shapefile from SIR team")
     }
 
     if("crosswalk.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/misc"))){
-      print("Crosswalk found")
+      cli::cli_alert_success("Crosswalk found")
     }else{
-      print("Please request crosswalk data from SIR team")
+      cli::cli_alert_success("Please request crosswalk data from SIR team")
     }
 
     if("env_sites.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/misc"))){
-      print("Environmental site data found")
+      cli::cli_alert_success("Environmental site data found")
     }else{
-      print("Please request environmental site data from SIR team")
+      cli::cli_alert_success("Please request environmental site data from SIR team")
     }
 
   }
