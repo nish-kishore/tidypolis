@@ -157,6 +157,18 @@ init_tidypolis <- function(
       print("Please request global district shapefile from SIR team")
     }
 
+    if("crosswalk.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/misc"))){
+      print("Crosswalk found")
+    }else{
+      print("Please request crosswalk data from SIR team")
+    }
+
+    if("env_sites.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/misc"))){
+      print("Environmental site data found")
+    }else{
+      print("Please request environmental site data from SIR team")
+    }
+
   }
 
   #check if key details exist, if not ask for them, test them and store them
