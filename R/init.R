@@ -61,8 +61,16 @@ init_tidypolis <- function(
     cli::cli_alert_success("- Creating 'spatial' folder")
     tidypolis_io(io = "create", file_path = paste0(polis_data_folder, "/spatial"))
   }
+  if("misc" %in% tidypolis_io(io = "list", file_path = polis_data_folder)){
+    cli::cli_alert_success("- Miscellaneous folder identified")
+  }else{
+    cli::cli_alert_success("- Creating 'misc' folder")
+    tidypolis_io(io = "create", file_path = paste0(polis_data_folder, "/misc"))
+  }
+
   Sys.setenv(POLIS_DATA_CACHE = paste0(polis_data_folder,"/data"))
   Sys.setenv(POLIS_SPATIAL_CACHE = paste0(polis_data_folder,"/spatial"))
+  Sys.setenv(POLIS_MISC_CACHE = paste0(polis_data_folder, "/misc"))
 
   #if edav is true, automatically pull spatial files from EDAV into spatial folder
   if(edav == T){
@@ -92,7 +100,6 @@ init_tidypolis <- function(
       sirfunctions::edav_io(io = "write", obj = global.prov, file_loc = paste0(polis_data_folder, "/spatial/global.prov.rds"))
 
     }
-
 
     if("global.dist.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/spatial"))){
 
