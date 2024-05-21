@@ -1428,7 +1428,19 @@ archive_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
            dplyr::bind_rows(log.to.arch) |>
            tidypolis_io(io = "write", file_path = file.path(polis_data_folder, "Log_Archive/log_archive.rds"))
          )
-  }
+}
+
+#' function to remove original character formatted date vars from data tables
+#'
+#' @description
+#' remove original date variables from POLIS tables
+#' @import
+#' @param data_table str: the table on which to remove original date vars, "AFP", "SIA", "ES", "POS"
+#' @return outputs a saved reference table of original date vars and a smaller
+#' core ready file
+remove_character_dates <- function(){
+
+}
 
 
 #### Pre-processing ####
