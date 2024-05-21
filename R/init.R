@@ -113,6 +113,30 @@ init_tidypolis <- function(
 
     }
 
+    if("crosswalk.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/misc"))){
+
+      print("Crosswalk found")
+
+    }else{
+
+      print("Writing crosswalk into miscellaneous folder")
+      crosswalk <- sirfunctions::edav_io(io = "read", file_loc = "Data/misc/crosswalk.rds")
+      sirfunctions::edav_io(io = "write", obj = crosswalk, file_loc = paste0(polis_data_folder, "/misc/crosswalk.rds"))
+
+    }
+
+    if("env_sites.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/misc"))){
+
+      print("Environmental sites data found")
+
+    }else{
+
+      print("Writing environmental sites data into miscellaneous folder")
+      env_sites <- sirfunctions::edav_io(io = "read", file_loc = "Data/misc/env_sites.rds")
+      sirfunctions::edav_io(io = "write", obj = env_sites, file_loc = paste0(polis_data_folder, "/misc/env_sites.rds"))
+
+    }
+
   }else{
 
     if("global.ctry.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/spatial"))){
