@@ -1316,7 +1316,7 @@ f.summarise.metadata <- function(dataframe, categorical_max = 10){
 #' @import readr
 #' @returns tibble: env site list
 get_env_site_data <- function(polis_misc_folder = Sys.getenv("POLIS_MISC_CACHE")){
-  envSiteYearList <- tidypolis_io(io = "read", file_loc = paste0(polis_misc_folder, "/env_sites.rds"))
+  envSiteYearList <- tidypolis_io(io = "read", file_path = paste0(polis_misc_folder, "/env_sites.rds"))
   return(envSiteYearList)
 }
 
