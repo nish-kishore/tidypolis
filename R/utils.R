@@ -913,12 +913,10 @@ remove_empty_columns <- function(dataframe) {
 #' @param file_loc str: location of crosswalk file
 #' @import dplyr cli
 #' @return tibble: crosswalk data
-get_crosswalk_data <- function(
-    file_loc = "Data/misc/crosswalk.rds"
-  ){
+get_crosswalk_data <- function(polis_misc_folder = Sys.getenv("POLIS_MISC_CACHE")){
   cli::cli_process_start("Import crosswalk")
   crosswalk <-
-    sirfunctions::edav_io(io = "read", file_loc = file_loc) |>
+    tidypolis_io(io = "read", file_path = paste0(polis_misc_folder, "/crosswalk.rds")) |>
     #TrendID removed from export
     dplyr::filter(!API_Name %in% c("Admin0TrendId", "Admin0Iso2Code"))
   cli::cli_process_done()
