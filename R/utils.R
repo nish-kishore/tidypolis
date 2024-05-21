@@ -1315,8 +1315,8 @@ f.summarise.metadata <- function(dataframe, categorical_max = 10){
 #' @description Function to get cached env site data
 #' @import readr
 #' @returns tibble: env site list
-get_env_site_data <- function(){
-  envSiteYearList <- sirfunctions::edav_io(io = "read", file_loc = "Data/misc/env_sites.rds")
+get_env_site_data <- function(polis_misc_folder = Sys.getenv("POLIS_MISC_CACHE")){
+  envSiteYearList <- tidypolis_io(io = "read", file_loc = paste0(polis_misc_folder, "/env_sites.rds"))
   return(envSiteYearList)
 }
 
