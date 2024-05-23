@@ -1438,17 +1438,22 @@ archive_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
 #' @param type str: the table on which to remove original date vars, "AFP", "SIA", "ES", "POS"
 #' @param df df: the dataframe from which to remove character formatted dates
 #' @return outputs a saved reference table of original date vars and a smaller
-#' core ready file
+#' core ready file without character dates
 remove_character_dates <- function(type,
                                    df){
 
   if(type %in% c("AFP")){
     df.01 <- df |>
       select(epid, (contains("date") & where(is.character)))
+
+    df.02 <- df |>
+      select((-contains("date") & where(is.character)))
   }
 
 
   tidypolis_io(io = "write", obj = df.01, file_path = paste0(polis_data_folder, "/Core_Ready_Files/", type, "_orig_char_dates.rds"))
+
+  return(df.02)
 }
 
 
