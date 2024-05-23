@@ -2268,6 +2268,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
       datenotificationtohq = lubridate::ymd(as.Date(datenotificationtohq, "%Y-%m-%dT%H:%M:%S")),
       results.seq.date.to.program = lubridate::ymd(as.Date(results.seq.date.to.program, "%Y-%m-%dT%H:%M:%S")),
       specimen.date = lubridate::ymd(as.Date(specimen.date, "%Y-%m-%dT%H:%M:%S")),
+      casedate = lubridate::ymd(as.Date(case.date, "%Y-%m-%dT%H:%M:%S"))
       ontostool2 = as.numeric(datestool2 - dateonset),
       ontostool1 = as.numeric(datestool1 - dateonset),
       age.months = as.numeric(`calculated.age.(months)`),
