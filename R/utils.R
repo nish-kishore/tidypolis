@@ -1435,7 +1435,7 @@ archive_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
 #' @description
 #' remove original date variables from POLIS tables
 #' @import
-#' @param type str: the table on which to remove original date vars, "AFP", "SIA", "ES", "POS"
+#' @param type str: the table on which to remove original date vars, "AFP", "ES", "POS"
 #' @param df df: the dataframe from which to remove character formatted dates
 #' @return outputs a saved reference table of original date vars and a smaller
 #' core ready file without character dates
@@ -3215,8 +3215,10 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     ) |>
     dplyr::mutate_at(
       dplyr::vars(
+        sub.activity.initial.planned.date, sub.activity.last.updated.date,
         activity.start.date, activity.end.date,
-        sub.activity.start.date, sub.activity.end.date
+        sub.activity.start.date, sub.activity.end.date,
+        last.updated.date
       ), ~ lubridate::parse_date_time(., c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S"))
     ) |>
     dplyr::mutate(
