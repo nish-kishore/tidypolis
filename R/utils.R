@@ -1455,10 +1455,10 @@ remove_character_dates <- function(type,
       select(env.sample.manual.edit.id, env.sample.id, (contains("date") & where(is.character)))
 
     df.01.fixed <- df.01 |>
-      select()
+      dplyr::mutate(dplyr::across(contains("date") & where(is.character),
+                    ~lubridate::parse_date_time(., c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S"))))
 
-    df.02 <- df.01.fixed |>
-      select()
+
   }
 
   tidypolis_io(io = "write", obj = df.01, file_path = paste0(polis_data_folder, "/Core_Ready_Files/", type, "_orig_char_dates.rds"))
