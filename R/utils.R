@@ -1452,7 +1452,7 @@ remove_character_dates <- function(type,
 
   if(type == "ES"){
     df.01 <- df |>
-      select(epid, (contains("date") & where(is.character)))
+      select(env.sample.manual.edit.id, env.sample.id, (contains("date") & where(is.character)))
 
     df.01.fixed <- df.01 |>
       select()
