@@ -2265,7 +2265,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
       dateinvest = lubridate::ymd(as.Date(investigation.date, "%Y-%m-%dT%H:%M:%S")),
       datestool1 = lubridate::ymd(as.Date(stool.1.collection.date, "%Y-%m-%dT%H:%M:%S")),
       datestool2 = lubridate::ymd(as.Date(stool.2.collection.date, "%Y-%m-%dT%H:%M:%S")),
-      datenotificationtohq = lubridate::ymd(as.Date(datenotificationtohq, "%Y-%m-%dT%H:%M:%S")),
+      datenotificationtohq = lubridate::ymd(as.Date(date.notification.to.hq, "%Y-%m-%dT%H:%M:%S")),
       results.seq.date.to.program = lubridate::ymd(as.Date(results.seq.date.to.program, "%Y-%m-%dT%H:%M:%S")),
       specimen.date = lubridate::ymd(as.Date(specimen.date, "%Y-%m-%dT%H:%M:%S")),
       casedate = lubridate::ymd(as.Date(case.date, "%Y-%m-%dT%H:%M:%S")),
@@ -2590,7 +2590,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   rm("afp.linelist.fixed.03")
 
   #vars created during stsample
-  stsample.vars <- c("id", "empty.01", "geometry")
+  stsample.vars <- c("id", "empty.01", "x")
 
   cli::cli_process_done()
 
@@ -2731,7 +2731,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   # renaming POLIS original variables to match the variables in afp line list for CORE analysis
   dplyr::rename(adequate.stool = stool.adequacy,
-         datenotificationtohq = date.notification.to.hq,
          datasetlab = dataset.lab,
          doses.total = doses,
          # totalnumberofdosesipvopv = `total.number.of.ipv./.opv.doses`,
