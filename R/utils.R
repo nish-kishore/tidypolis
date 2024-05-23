@@ -2265,6 +2265,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
       dateinvest = lubridate::ymd(as.Date(investigation.date, "%Y-%m-%dT%H:%M:%S")),
       datestool1 = lubridate::ymd(as.Date(stool.1.collection.date, "%Y-%m-%dT%H:%M:%S")),
       datestool2 = lubridate::ymd(as.Date(stool.2.collection.date, "%Y-%m-%dT%H:%M:%S")),
+      datenotificationtohq = lubridate::ymd(as.Date(datenotificationtohq, "%Y-%m-%dT%H:%M:%S")),
+      results.seq.date.to.program = lubridate::ymd(as.Date(results.seq.date.to.program, "%Y-%m-%dT%H:%M:%S")),
       ontostool2 = as.numeric(datestool2 - dateonset),
       ontostool1 = as.numeric(datestool1 - dateonset),
       age.months = as.numeric(`calculated.age.(months)`),
@@ -2813,10 +2815,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   afp.linelist.02 <- afp.linelist.02 |>
     dplyr::mutate(polis.latitude = as.character(polis.latitude),
            polis.longitude = as.character(polis.longitude),
-           doses.total = as.numeric(doses.total),
+           doses.total = as.numeric(doses.total)
            # virus.sequenced = as.logical(virus.sequenced),
-           datenotificationtohq = as.character(as.Date(datenotificationtohq, format="%Y-%m-%d"), format="%d/%m/%Y"),
-           results.seq.date.to.program = as.character(as.Date(results.seq.date.to.program, format="%Y-%m-%d"), format="%d/%m/%Y")
     )
 
   x <- tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/Core_Ready_Files/Archive/", latest_folder_in_archive), full_names = T)
@@ -2919,9 +2919,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   not.afp.01 <- not.afp.01 |>
     dplyr::mutate(polis.latitude = as.character(polis.latitude),
            polis.longitude = as.character(polis.longitude),
-           doses.total = as.numeric(doses.total),
-           datenotificationtohq = as.character(as.Date(datenotificationtohq, format="%Y-%m-%d"), format="%Y-%m-%d"),
-           results.seq.date.to.program = as.character(as.Date(results.seq.date.to.program, format="%Y-%m-%d"), format="%Y-%m-%d")
+           doses.total = as.numeric(doses.total)
     )
 
   x <- tidypolis_io(io = "list", file_path = file.path(polis_data_folder,"Core_Ready_Files", "Archive", latest_folder_in_archive), full_names = T)
