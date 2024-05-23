@@ -1435,11 +1435,14 @@ archive_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
 #' @description
 #' remove original date variables from POLIS tables
 #' @import
-#' @param data_table str: the table on which to remove original date vars, "AFP", "SIA", "ES", "POS"
+#' @param type str: the table on which to remove original date vars, "AFP", "SIA", "ES", "POS"
 #' @return outputs a saved reference table of original date vars and a smaller
 #' core ready file
-remove_character_dates <- function(){
+remove_character_dates <- function(type){
 
+  if(df %in% c(""))
+  df.01 <- df |>
+      select()
 }
 
 
