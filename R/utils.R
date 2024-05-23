@@ -1442,14 +1442,24 @@ archive_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
 remove_character_dates <- function(type,
                                    df){
 
-  if(type %in% c("AFP")){
+  if(type %in% c("AFP", "POS")){
     df.01 <- df |>
       select(epid, (contains("date") & where(is.character)))
 
-    df.02 <- df |>
+    df.02 <- df.01.fixed |>
       select((-contains("date") & where(is.character)))
   }
 
+  if(type == "ES"){
+    df.01 <- df |>
+      select(epid, (contains("date") & where(is.character)))
+
+    df.01.fixed <- df.01 |>
+      select()
+
+    df.02 <- df.01.fixed |>
+      select()
+  }
 
   tidypolis_io(io = "write", obj = df.01, file_path = paste0(polis_data_folder, "/Core_Ready_Files/", type, "_orig_char_dates.rds"))
 
