@@ -1510,21 +1510,30 @@ archive_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
     dplyr::slice(10) |>
     dplyr::pull(time)
 
-  log.to.arch <- log |>
-    dplyr::filter(time <= log.time.to.arch)
 
-  log.current <- log |>
-    dplyr::filter(time > log.time.to.arch)
+  if(is.null(nrow(log.time.to.arch))){
 
-  #check existence of archived log and either create or rbind to it
-  flag.log.exists <- tidypolis_io(io = "exists.file", file_path = file.path(polis_data_folder, "Log_Archive/log_archive.rds"))
+    cli::cli_alert_success("Log doesn't need archiving")
 
-  ifelse(!flag.log.exists,
-         tidypolis_io(io = "write", obj = log.to.arch, file_path = file.path(polis_data_folder, "Log_Archive/log_archive.rds")),
-         tidypolis_io(io = "read", file_path = file.path(polis_data_folder, "Log_Archive/log_archive.rds")) |>
-           dplyr::bind_rows(log.to.arch) |>
-           tidypolis_io(io = "write", file_path = file.path(polis_data_folder, "Log_Archive/log_archive.rds"))
-         )
+  }else{
+
+    log.to.arch <- log |>
+      dplyr::filter(time <= log.time.to.arch)
+
+    log.current <- log |>
+      dplyr::filter(time > log.time.to.arch)
+
+    #check existence of archived log and either create or rbind to it
+    flag.log.exists <- tidypolis_io(io = "exists.file", file_path = file.path(polis_data_folder, "Log_Archive/log_archive.rds"))
+
+    ifelse(!flag.log.exists,
+           tidypolis_io(io = "write", obj = log.to.arch, file_path = file.path(polis_data_folder, "Log_Archive/log_archive.rds")),
+           tidypolis_io(io = "read", file_path = file.path(polis_data_folder, "Log_Archive/log_archive.rds")) |>
+             dplyr::bind_rows(log.to.arch) |>
+             tidypolis_io(io = "write", file_path = file.path(polis_data_folder, "Log_Archive/log_archive.rds"))
+    )
+  }
+
 }
 
 #' function to remove original character formatted date vars from data tables
