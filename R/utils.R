@@ -4271,6 +4271,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
            env.sample.id = as.numeric(env.sample.id),
            polis.case.id = as.numeric(polis.case.id))
 
+  afp.es.virus.02 <- remove_character_dates(type = "POS", df = afp.es.virus.01)
+
   cli::cli_process_done()
 
   cli::cli_process_start("Checking for variables that don't match last weeks pull")
