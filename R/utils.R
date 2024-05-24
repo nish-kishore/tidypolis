@@ -1434,7 +1434,7 @@ archive_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
 #'
 #' @description
 #' remove original date variables from POLIS tables
-#' @import
+#' @import dplyr
 #' @param type str: the table on which to remove original date vars, "AFP", "ES", "POS"
 #' @param df df: the dataframe from which to remove character formatted dates
 #' @return outputs a saved reference table of original date vars and a smaller
@@ -1444,23 +1444,23 @@ remove_character_dates <- function(type,
 
   if(type %in% c("AFP", "POS")){
     df.01 <- df |>
-      select(epid, (contains("date") & where(is.character)))
+      dplyr::select(epid, (dplyr::contains("date") & dplyr::where(is.character)))
 
     df.02 <- df |>
-      select(!(contains("date") & where(is.character)))
+      dplyr::select(!(dplyr::contains("date") & dplyr::where(is.character)))
   }
 
   if(type == "ES"){
     df.01 <- df |>
-      select(env.sample.manual.edit.id, env.sample.id, (contains("date") & where(is.character)))
+      dplyr::select(env.sample.manual.edit.id, env.sample.id, (dplyr::contains("date") & dplyr::where(is.character)))
 
     df.01.fixed <- df.01 |>
-      dplyr::mutate(dplyr::across(contains("date") & where(is.character),
+      dplyr::mutate(dplyr::across(dplyr::contains("date") & dplyr::where(is.character),
                     ~lubridate::parse_date_time(., c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S"))))
 
     df.02 <- df |>
-      select(env.sample.manual.edit.id, env.sample.id, !(contains("date") & where(is.character))) |>
-      left_join(df.01.fixed)
+      dplyr::select(env.sample.manual.edit.id, env.sample.id, !(dplyr::contains("date") & dplyr::where(is.character))) |>
+      dplyr::left_join(df.01.fixed)
 
   }
 
