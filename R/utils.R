@@ -4278,7 +4278,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_start("Checking for variables that don't match last weeks pull")
 
   #Compare the final file to last week's final file to identify any differences in var_names, var_classes, or categorical responses
-  new_table_metadata <- f.summarise.metadata(afp.es.virus.01)
+  new_table_metadata <- f.summarise.metadata(afp.es.virus.02)
 
   x <- tidypolis_io(io = "list", file_path = file.path(polis_data_folder, "Core_Ready_Files/Archive", latest_folder_in_archive), full_names = T)
 
@@ -4293,7 +4293,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     old_table_metadata <- f.summarise.metadata(old.es)
     positives_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata, "POS")
 
-    new <- afp.es.virus.01 |>
+    new <- afp.es.virus.02 |>
       unique() |>
       dplyr::mutate(epid = stringr::str_squish(epid)) |>
       dplyr::group_by(epid)|>
@@ -4400,7 +4400,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
                                    "POS Class Changed Records: ", length(unique(class.updated$epid))),
                    .event_type = "INFO")
 
-  tidypolis_io(obj = afp.es.virus.01,
+  tidypolis_io(obj = afp.es.virus.02,
                io = "write",
                file_path = paste(polis_data_folder, "/Core_Ready_Files/",
                                    paste("positives", min(afp.es.virus.01$dateonset, na.rm = T),
@@ -4417,7 +4417,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_start("Checking for positives that don't match to GUIDs")
 
   # AFP and ES that do not match to shape file
-  unmatched.afp.es.viruses.01 <- dplyr::anti_join(afp.es.virus.01, long.global.dist.01, by = c("admin2guid" = "GUID", "yronset" = "active.year.01"))
+  unmatched.afp.es.viruses.01 <- dplyr::anti_join(afp.es.virus.02, long.global.dist.01, by = c("admin2guid" = "GUID", "yronset" = "active.year.01"))
 
   # CSV file listing out unmatch virus
 
