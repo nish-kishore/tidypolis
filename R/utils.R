@@ -3782,12 +3782,12 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
     old.es <- tidypolis_io(io = "read", file_path = old.es.file)
 
-    new_table_metadata <- f.summarise.metadata(es.04)
+    new_table_metadata <- f.summarise.metadata(es.05)
     old_table_metadata <- f.summarise.metadata(old.es)
     es_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata, "ES")
 
     #compare obs
-    new <- es.04 |>
+    new <- es.05 |>
       dplyr::mutate(env.sample.manual.edit.id = stringr::str_squish(env.sample.manual.edit.id)) |>
       dplyr::mutate_all(as.character)
 
@@ -3838,7 +3838,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
 
   cli::cli_process_start("Writing out ES datasets")
-  tidypolis_io(obj = es.04, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/",
+  tidypolis_io(obj = es.05, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/",
                          paste("es", min(es.04$collect.date, na.rm = T), max(es.04$collect.date, na.rm = T), sep = "_"),
                          ".rds",
                          sep = ""
@@ -3854,7 +3854,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_start("Clearing memory")
 
   rm(
-    'envSiteYearList', 'es.00', 'es.02', 'es.03', 'es.04', 'es_metadata_comparison', 'global.ctry.01',
+    'envSiteYearList', 'es.00', 'es.02', 'es.03', 'es.04', 'es.05', 'es_metadata_comparison', 'global.ctry.01',
     'in_new_and_old_but_modified', 'in_new_not_old', 'in_old_not_new',
     'na.es.01', 'new', 'new.df', 'new.file', 'new.var.es.01', 'new_table_metadata', 'newsites',
     'old', 'old.es.file', 'old.file', 'old_table_metadata', 'savescipen',
