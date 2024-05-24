@@ -1458,6 +1458,9 @@ remove_character_dates <- function(type,
       dplyr::mutate(dplyr::across(contains("date") & where(is.character),
                     ~lubridate::parse_date_time(., c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S"))))
 
+    df.02 <- df |>
+      select(env.sample.manual.edit.id, env.sample.id, !(contains("date") & where(is.character))) |>
+      left_join(df.01.fixed)
 
   }
 
@@ -3760,6 +3763,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     dplyr::mutate_at(c("admin.2.id", "region.id", "reporting.week", "reporting.year",
                 "env.sample.manual.edit.id", "site.id", "sample.id", "admin.0.id", "admin.1.id"), ~as.numeric(.)) |>
     dplyr::distinct()
+
+  es.05 <- remove_character_dates(type = "ES", df = es.04)
 
   options(scipen = savescipen)
 
