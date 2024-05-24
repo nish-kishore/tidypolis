@@ -1446,8 +1446,8 @@ remove_character_dates <- function(type,
     df.01 <- df |>
       select(epid, (contains("date") & where(is.character)))
 
-    df.02 <- df.01.fixed |>
-      select((-contains("date") & where(is.character)))
+    df.02 <- df |>
+      select(!(contains("date") & where(is.character)))
   }
 
   if(type == "ES"){
