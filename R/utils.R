@@ -1164,9 +1164,12 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
 
   df01.noshape <- dplyr::anti_join(df01, global.dist.01, by=c("Admin2GUID"="GUID"))
 
-  df01.shape <- dplyr::right_join(global.dist.01, df01 |> dplyr::filter(!is.na(Admin2GUID)), by=c("GUID"="Admin2GUID"))
+  global.dist.01$empty.01 <- sf::st_is_empty(global.dist.01)
 
-  df01.shape$empty.01 <- sf::st_is_empty(df01.shape)
+  df01.shape <- dplyr::right_join(global.dist.01,
+                                  df01 |> dplyr::filter(!is.na(Admin2GUID)),
+                                  by = c("GUID" = "Admin2GUID"))
+
   df01.empty.shape <- dplyr::filter(df01.shape, empty.01)
   df01.shape <- dplyr::filter(df01.shape, !empty.01)
 
