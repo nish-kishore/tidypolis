@@ -113,6 +113,8 @@ init_tidypolis <- function(
 
     }
 
+    cli::cli_alert_success("Checking for other necessary files for pre-processing")
+
     if("crosswalk.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/misc"))){
 
       cli::cli_alert_success("Crosswalk found")
@@ -137,7 +139,17 @@ init_tidypolis <- function(
 
     }
 
-  }else{
+    if("nopv_emg.table.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/misc"))){
+
+      cli::cli_alert_success("nOPV emergence table found")
+
+    }else{
+
+      cli::cli_alert_success("Writing nOPV emergence table into miscellaneous folder")
+      nopv_emg.table <- sirfunctions::edav_io(io = "read", file_loc = "Data/orpg/nopv_emg.table.rds")
+      sirfunctions::edav_io(io = "write", obj = nopv_emg.table, file_loc = paste0(polis_data_folder, "/misc/nopv_emg.table.rds"))
+
+    }}else{
 
     if("global.ctry.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/spatial"))){
       cli::cli_alert_success("Global country shapefile found")
@@ -169,8 +181,13 @@ init_tidypolis <- function(
       cli::cli_alert_success("Please request environmental site data from SIR team")
     }
 
-  }
+    if("nopv_emg.table.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/misc"))){
+      cli::cli_alert_success("nOPV emergence table found")
+    }else{
+      cli::cli_alert_success("Please request nOPV emergence table from SIR team")
+    }
 
+}
   #check if key details exist, if not ask for them, test them and store them
   #if they exist, check the key
   #if key doesn't work ask for another one
