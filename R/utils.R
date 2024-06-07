@@ -2869,10 +2869,34 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
   rm("afp.linelist.fixed.02")
   gc()
 
+  cli::cli_process_start("Checking duplicated AFP EPIDs")
+  #identify duplicate EPIDs with differing place and onsets
+  dup.epid <- afp.linelist.fixed.03 |>
+    dplyr::group_by(epid) |>
+    dplyr::mutate(dup_epid = dplyr::n()) |>
+    dplyr::filter(dup_epid > 1) |>
+    dplyr::ungroup() |>
+    dplyr::select(epid, date.onset, yronset, diagnosis.final, classification, classificationvdpv,
+                  final.cell.culture.result, poliovirustypes, person.sex, place.admin.0,
+                  place.admin.1, place.admin.2) |>
+    dplyr::distinct() |>
+    dplyr::arrange(epid)
+
+  tidypolis_io(obj = dup.epid, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/", paste("duplicate_AFP_epids_Polis",
+                                                                                                              min(dup.epid$yronset, na.rm = T),
+                                                                                                              max(dup.epid$yronset, na.rm = T),
+                                                                                                              sep = "_"), ".csv", sep = "")
+  )
+
+  # remove duplicates in afp linelist
+  afp.linelist.fixed.03 <- afp.linelist.fixed.03[!duplicated(afp.linelist.fixed.03$epid), ]
+
+  cli::cli_process_done()
+
   shape.file.names <- names(global.dist.01)
   shape.file.names <- shape.file.names[!shape.file.names %in% c("SHAPE")]
   col.afp.raw.01 <- colnames(afp.raw.01)
-  rm("afp.raw.01")
+  rm("afp.raw.01", "dup.epid")
   gc()
   # Function to create lat & long for AFP cases
   afp.linelist.fixed.04 <- f.pre.stsample.01(afp.linelist.fixed.03, global.dist.01)
@@ -3034,34 +3058,11 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
   gc()
   cli::cli_process_done()
 
-  cli::cli_process_start("Checking duplicated AFP EPIDs")
 
   afp.linelist.02 <- afp.linelist.01 |>
     dplyr::filter(surveillancetypename == "AFP") |>
     dplyr::distinct()# this gives us an AFP line list
 
-  #identify duplicate EPIDs with differing place and onsets
-  dup.epid <- afp.linelist.02 |>
-    dplyr::group_by(epid) |>
-    dplyr::mutate(dup_epid = dplyr::n()) |>
-    dplyr::filter(dup_epid > 1) |>
-    dplyr::ungroup() |>
-    dplyr::select(epid, date.onset, yronset, diagnosis.final, classification, classificationvdpv,
-           final.cell.culture.result, poliovirustypes, person.sex, place.admin.0,
-           place.admin.1, place.admin.2) |>
-    dplyr::distinct() |>
-    dplyr::arrange(epid)
-
-  tidypolis_io(obj = dup.epid, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/", paste("duplicate_AFP_epids_Polis",
-                                                      min(dup.epid$yronset, na.rm = T),
-                                                      max(dup.epid$yronset, na.rm = T),
-                                                      sep = "_"), ".csv", sep = "")
-  )
-
-  # remove duplicates in afp linelist
-  afp.linelist.02 <- afp.linelist.02[!duplicated(afp.linelist.02$epid), ]
-
-  cli::cli_process_done()
 
   cli::cli_process_start("Checking Missing AFP EPIDs and GUIDs")
 
