@@ -2893,6 +2893,13 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
 
   cli::cli_process_done()
 
+  #identify afp cases w/ bad adm2guids
+  cli::cli_process_start("Checking District GUIDs")
+  afp.noshape <- dplyr::anti_join(afp.linelist.fixed.03, global.dist.01, by=c("Admin2GUID"="GUID"))
+
+  tidypolis_io(obj = afp.noshape, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/AFP_epids_bad_guid.csv"))
+
+
   shape.file.names <- names(global.dist.01)
   shape.file.names <- shape.file.names[!shape.file.names %in% c("SHAPE")]
   col.afp.raw.01 <- colnames(afp.raw.01)
