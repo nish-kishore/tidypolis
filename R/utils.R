@@ -2903,7 +2903,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
   shape.file.names <- names(global.dist.01)
   shape.file.names <- shape.file.names[!shape.file.names %in% c("SHAPE")]
   col.afp.raw.01 <- colnames(afp.raw.01)
-  rm("afp.raw.01", "dup.epid")
+  rm("afp.raw.01", "afp.raw.02", "dup.epid", "afp.noshape")
   gc()
   # Function to create lat & long for AFP cases
   afp.linelist.fixed.04 <- f.pre.stsample.01(afp.linelist.fixed.03, global.dist.01)
