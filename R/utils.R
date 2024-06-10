@@ -1188,6 +1188,18 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
     dplyr::slice(row.num.2) |>
     dplyr::select(GUID, yr.st, yr.end, SHAPE)
 
+  #do 2 seperate st_joins the first, df02, is for valid shapes and those attached cases
+  df02 <- sf::st_join(df01.sf |> dplyr::filter(!Admin2GUID %in% invalid.shapes$GUID), valid.shapes, left = T) |>
+    dplyr::filter(yronset >= yr.st & yronset <= yr.end)
+
+  #second st_join is for invalid shapes and those attached cases, turning off s2
+  sf_use_s2(F)
+  df03 <- sf::st_join(df01.sf |> dplyr::filter(!Admin2GUID %in% invalid.shapes$GUID), invalid.shapes, left = T) |>
+    dplyr::filter(yronset >= yr.st & yronset <= yr.end)
+  sf_use_s2(T)
+
+
+
 }
 
 
