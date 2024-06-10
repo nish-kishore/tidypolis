@@ -2897,11 +2897,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
   cli::cli_process_start("Checking District GUIDs")
   afp.noshape <- dplyr::anti_join(afp.linelist.fixed.03, global.dist.01, by=c("Admin2GUID"="GUID"))
 
-  tidypolis_io(obj = afp.noshape, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/AFP_epids_bad_guid.csv"))
+  tidypolis_io(obj = afp.noshape, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/AFP_epids_bad_guid.csv", sep = ""))
 
 
-  shape.file.names <- names(global.dist.01)
-  shape.file.names <- shape.file.names[!shape.file.names %in% c("SHAPE")]
   col.afp.raw.01 <- colnames(afp.raw.01)
   rm("afp.raw.01", "afp.raw.02", "dup.epid", "afp.noshape")
   gc()
@@ -2909,8 +2907,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
   afp.linelist.fixed.04 <- f.pre.stsample.01(afp.linelist.fixed.03, global.dist.01)
   rm("afp.linelist.fixed.03")
 
-  #vars created during stsample
-  stsample.vars <- c("id", "empty.01", "x", "SHAPE")
 
   cli::cli_process_done()
 
@@ -3058,8 +3054,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
          virus.cluster = `virus.cluster(s)`,
          emergence.group = `emergence.group(s)`
   ) |>
-    dplyr::filter(!is.na(epid)) |>
-    dplyr::select(-c(shape.file.names, guid.check.vars, stsample.vars))
+    dplyr::filter(!is.na(epid))
 
   rm("afp.linelist.fixed.04")
   gc()
