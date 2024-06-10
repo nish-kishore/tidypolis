@@ -1162,6 +1162,9 @@ f.download.compare.02 <- function(df.from.f.download.compare.01, old.download, n
 #' @returns tibble with lat/lon for all unsampled locations
 f.pre.stsample.01 <- function(df01, global.dist.01) {
 
+  #also need to identify cases with no lat/lon
+  empty.coord <- df01 |>
+    dplyr::filter(is.na(polis.latitude) | is.na(polis.longitude) | (polis.latitude == 0 & polis.longitude == 0))
 
 }
 
