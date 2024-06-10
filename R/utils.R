@@ -1175,6 +1175,19 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
 
   global.dist.02 <- sf::st_make_valid(global.dist.01)
 
+  #identify bad shape rows after make_valid
+  check.dist.2 <- as_tibble(st_is_valid(global.dist.02))
+  row.num.2 <- which(check.dist.2$value == FALSE)
+  #removing all bad shapes post make valid
+  valid.shapes <- global.dist.02 |>
+    dplyr::slice(-row.num.2) |>
+    dplyr::select(GUID, yr.st, yr.end, SHAPE)
+
+  #invalid shapes for which we'll turn off s2
+  invalid.shapes <- global.dist.02 |>
+    dplyr::slice(row.num.2) |>
+    dplyr::select(GUID, yr.st, yr.end, SHAPE)
+
 }
 
 
