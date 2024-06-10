@@ -1228,6 +1228,18 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
 
   rm(dupes, dupes.01, dupes.02)
 
+  #remove the duplicate cases from df04 and bind back the fixed dupes
+  df05 <- df04 |>
+    dplyr::filter(!epid %in% dupes.fixed$epid) |>
+    dplyr::bind_rows(dupes.fixed)
+
+  #identify dropped obs. obs are dropped primarily because they match to a shape that doesn't
+  #exist for the case's year onset (there are holes in the global map for certain years)
+  df04$geometry <- NULL
+  #antijoin from df01 to keep polis.lat/lon
+  dropped.obs <- dplyr::anti_join(df01, df04, by = "epid") |>
+    dplyr::filter(!epid %in% df04$epid & epid %in% df01.sf$epid)
+
 
 }
 
