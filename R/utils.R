@@ -1266,6 +1266,41 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
     dplyr::filter(GUID %in% empty.coord.01$Admin2GUID) |>
     dplyr::left_join(empty.coord.01, by = c("GUID" = "Admin2GUID"))
 
+  cli::cli_process_start("Placing random points")
+  pt01 <- lapply(1:nrow(empty.coord.02), function(x){
+
+    tryCatch(
+      expr = {suppressMessages(sf::st_sample(empty.coord.02[x,], pull(empty.coord.02[x,], "nperarm"),
+                                             exact = T)) |> st_as_sf()},
+      error = function(e) {
+        guid = empty.coord.02[x, ]$GUID[1]
+        ctry_prov_dist_name = global.dist.01 |> filter(GUID == guid) |> select(ADM0_NAME, ADM1_NAME, ADM2_NAME)
+        cli::cli_alert_warning(paste0("Fixing errors for:\n",
+                                      "Country: ", ctry_prov_dist_name$ADM0_NAME,"\n",
+                                      "Province: ", ctry_prov_dist_name$ADM1_NAME, "\n",
+                                      "District: ", ctry_prov_dist_name$ADM2_NAME))
+
+        suppressWarnings(
+          {
+            sf_use_s2(F)
+            int <- empty.coord.02[x,] |> st_centroid(of_largest_polygon = T)
+            sf_use_s2(T)
+
+            st_buffer(int, dist = 3000) |>
+              st_sample(slice(empty.coord.02, x) |>
+                          pull(nperarm)) |>
+              st_as_sf()
+          }
+        )
+
+      }
+    )
+
+  }) |>
+    bind_rows()
+
+  cli::cli_process_done()
+
 
 }
 
