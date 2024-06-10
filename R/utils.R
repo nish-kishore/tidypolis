@@ -1336,7 +1336,13 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
         dplyr::rename("lon" = "X", "lat" = "Y")) |>
     dplyr::select(-id)
 
+  pt05$x <- NULL
+  pt05$geometry <- NULL
 
+  #bind back placed point cases with df06 and finished
+  df07 <- dplyr::bind_rows(df06, pt05)
+
+  return(df07)
 }
 
 
