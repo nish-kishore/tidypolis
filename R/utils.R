@@ -1201,6 +1201,32 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
   #bind back together df02 and df03
   df04 <- dplyr::bind_rows(df02, df03)
 
+  #df04 has a lot of dupes due to overlapping shapes, need to appropriately de dupe
+  #identify duplicate obs
+  dupes <- df04 |>
+    dplyr::group_by(epid) |>
+    dplyr::mutate(n = n()) |>
+    dplyr::ungroup() |>
+    dplyr::filter(n >1)
+
+  #duplicate obs where adm2guid matches GUID in shapefile
+  dupes.01 <- dupes |>
+    dplyr::filter(Admin2GUID == GUID) |>
+    dplyr::select(-n)
+
+  #duplicate obs where adm2guid is NA or doesn't match to shapefile
+  dupes.02 <- dupes |>
+    dplyr::filter(!epid %in% dupes.01$epid) |>
+    dplyr::group_by(epid) |>
+    dplyr::slice(1) |>
+    dplyr::ungroup() |>
+    dplyr::select(-n) |>
+    dplyr::mutate(Admin2GUID = GUID)
+
+  #fixed duplicates
+  dupes.fixed <- dplyr::bind_rows(dupes.01, dupes.02)
+
+  rm(dupes, dupes.01, dupes.02)
 
 
 }
