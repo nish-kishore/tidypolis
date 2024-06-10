@@ -1198,6 +1198,9 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
     dplyr::filter(yronset >= yr.st & yronset <= yr.end)
   sf_use_s2(T)
 
+  #bind back together df02 and df03
+  df04 <- dplyr::bind_rows(df02, df03)
+
 
 
 }
