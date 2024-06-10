@@ -1166,6 +1166,15 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
   empty.coord <- df01 |>
     dplyr::filter(is.na(polis.latitude) | is.na(polis.longitude) | (polis.latitude == 0 & polis.longitude == 0))
 
+  #create sf object from lat lon and make global.dist valid
+  df01.sf <- df01 |>
+    dplyr::filter(!epid %in% empty.coord$epid) |>
+    dplyr::mutate(lon = polis.longitude,
+                  lat = polis.latitude) |>
+    sf::st_as_sf(coords = c(x = "lon" , y = "lat"), crs = 4326)
+
+  global.dist.02 <- sf::st_make_valid(global.dist.01)
+
 }
 
 
