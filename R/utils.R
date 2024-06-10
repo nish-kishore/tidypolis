@@ -1240,6 +1240,17 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
   dropped.obs <- dplyr::anti_join(df01, df04, by = "epid") |>
     dplyr::filter(!epid %in% df04$epid & epid %in% df01.sf$epid)
 
+  #bring df05 and dropped observations back together, create lat/lon var from sf object previously created
+  df06 <- dplyr::bind_cols(
+    tibble::as_tibble(df05),
+    sf::st_coordinates(df05) |>
+      tibble::as_tibble() |>
+      dplyr::rename("lon" = "X", "lat" = "Y")) |>
+    dplyr::bind_rows(dropped.obs) |>
+    dplyr::select(-c("GUID", "yr.st", "yr.end"))
+
+  df06$geometry <- NULL
+
 
 }
 
