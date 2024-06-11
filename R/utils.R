@@ -1184,10 +1184,16 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
     dplyr::slice(-row.num.2) |>
     dplyr::select(GUID, yr.st, yr.end, SHAPE)
 
+  cli::cli_process_start("Evaluating invalid district shapes")
   #invalid shapes for which we'll turn off s2
   invalid.shapes <- global.dist.02 |>
     dplyr::slice(row.num.2) |>
     dplyr::select(GUID, yr.st, yr.end, SHAPE)
+
+
+  update_polis_log(.event = paste0("Invalid district shapes identified: ", paste(invalid.shapes |> pull(GUID), collapse = ", ")),
+                   .event_type = "ALERT")
+
 
   #do 2 seperate st_joins the first, df02, is for valid shapes and those attached cases
   df02 <- sf::st_join(df01.sf |> dplyr::filter(!Admin2GUID %in% invalid.shapes$GUID), valid.shapes, left = T) |>
@@ -1198,6 +1204,8 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
   df03 <- sf::st_join(df01.sf |> dplyr::filter(!Admin2GUID %in% invalid.shapes$GUID), invalid.shapes, left = T) |>
     dplyr::filter(yronset >= yr.st & yronset <= yr.end)
   sf_use_s2(T)
+
+  cli::cli_process_done()
 
   #bind back together df02 and df03
   df04 <- dplyr::bind_rows(df02, df03)
