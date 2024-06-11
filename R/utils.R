@@ -1166,6 +1166,7 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
   empty.coord <- df01 |>
     dplyr::filter(is.na(polis.latitude) | is.na(polis.longitude) | (polis.latitude == 0 & polis.longitude == 0))
 
+  cli::cli_process_start("Spatially joining AFP cases to global districts")
   #create sf object from lat lon and make global.dist valid
   df01.sf <- df01 |>
     dplyr::filter(!epid %in% empty.coord$epid) |>
@@ -1200,6 +1201,8 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
 
   #bind back together df02 and df03
   df04 <- dplyr::bind_rows(df02, df03)
+
+  cli::cli_process_done()
 
   #df04 has a lot of dupes due to overlapping shapes, need to appropriately de dupe
   #identify duplicate obs
@@ -1266,7 +1269,7 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
     dplyr::filter(GUID %in% empty.coord.01$Admin2GUID) |>
     dplyr::left_join(empty.coord.01, by = c("GUID" = "Admin2GUID"))
 
-  cli::cli_process_start("Placing random points")
+  cli::cli_process_start("Placing random points for cases with bad coordinates")
   pt01 <- lapply(1:nrow(empty.coord.02), function(x){
 
     tryCatch(
