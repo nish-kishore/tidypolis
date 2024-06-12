@@ -1617,6 +1617,42 @@ hard_coded_cases <- function(df){
 preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
                            polis_spatial_folder = Sys.getenv("POLIS_SPATIAL_CACHE"),
                            polis_misc_folder = Sys.getenv("POLIS_MISC_CACHE")) {
+
+  # Step 0 - Checking if the required local files exist ======
+  missing_req_files <- c()
+  cli::cli_h1("Checking for missing required files.")
+  if(!"global.ctry.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_spatial_folder))){
+    missing_req_files <- append(missing_req_files, "global.ctry.rds")
+  }
+
+  if(!"global.prov.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_spatial_folder))){
+    missing_req_files <- append(missing_req_files, "global.prov.rds")
+  }
+
+  if(!"global.dist.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_spatial_folder))){
+    missing_req_files <- append(missing_req_files, "global.dist.rds")
+  }
+
+  if(!"crosswalk.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_misc_folder))){
+    missing_req_files <- append(missing_req_files, "crosswalk.rds")
+  }
+
+  if(!"env_sites.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_misc_folder))){
+    missing_req_files <- append(missing_req_files, "env_sites.rds")
+  }
+
+  if(!"nopv_emg.table.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_misc_folder))){
+    missing_req_files <- append(missing_req_files, "nopv_emg.table.rds")
+  }
+
+  if (length(missing_req_files) > 0) {
+    cli::cli_alert_warning("Please request the following file(s) from the SIR team:")
+    for (i in missing_req_files) {
+      cli::cli_alert_info(paste0(i, "\n"))
+    }
+    stop("Halting execution of preprocessing due to missing files.")
+  }
+
   #Step 1 - Basic cleaning and crosswalk ======
   cli::cli_h1("Step 1/5: Basic cleaning and crosswalk across datasets")
 

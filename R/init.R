@@ -154,37 +154,37 @@ init_tidypolis <- function(
     if("global.ctry.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/spatial"))){
       cli::cli_alert_success("Global country shapefile found")
     }else{
-      cli::cli_alert_success("Please request global country shapefile from SIR team")
+      cli::cli_alert_warning("Please request global country shapefile from SIR team")
     }
 
     if("global.prov.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/spatial"))){
       cli::cli_alert_success("Global province shapefile found")
     }else{
-      cli::cli_alert_success("Please request global province shapefile from SIR team")
+      cli::cli_alert_warning("Please request global province shapefile from SIR team")
     }
 
     if("global.dist.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/spatial"))){
       cli::cli_alert_success("Global district shapefile found")
     }else{
-      cli::cli_alert_success("Please request global district shapefile from SIR team")
+      cli::cli_alert_warning("Please request global district shapefile from SIR team")
     }
 
     if("crosswalk.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/misc"))){
       cli::cli_alert_success("Crosswalk found")
     }else{
-      cli::cli_alert_success("Please request crosswalk data from SIR team")
+      cli::cli_alert_warning("Please request crosswalk data from SIR team")
     }
 
     if("env_sites.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/misc"))){
       cli::cli_alert_success("Environmental site data found")
     }else{
-      cli::cli_alert_success("Please request environmental site data from SIR team")
+      cli::cli_alert_warning("Please request environmental site data from SIR team")
     }
 
     if("nopv_emg.table.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/misc"))){
       cli::cli_alert_success("nOPV emergence table found")
     }else{
-      cli::cli_alert_success("Please request nOPV emergence table from SIR team")
+      cli::cli_alert_warning("Please request nOPV emergence table from SIR team")
     }
 
 }
