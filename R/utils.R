@@ -1753,65 +1753,38 @@ hard_coded_cases <- function(df){
 #' @param polis_spatial_folder str: location of the POLIS spatial folder, defaults to value stored from init_tidypolis
 #' @return Outputs intermediary core ready files
 preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
-                           polis_spatial_folder = Sys.getenv("POLIS_SPATIAL_CACHE")) {
+                           polis_spatial_folder = Sys.getenv("POLIS_SPATIAL_CACHE"),
+                           polis_misc_folder = Sys.getenv("POLIS_MISC_CACHE")) {
 
-  #Step 0 - create a CORE datafiles to combine folder and check for datasets before continuing with pre-p =========
-  if(!tidypolis_io(io = "exists.dir", file_path = paste0(polis_data_folder, "/core_files_to_combine"))){
-    tidypolis_io(io = "create", file_path = paste0(polis_data_folder, "/core_files_to_combine"))
-  }
-  #if on EDAV, create files to combine folder and write datasets into it
+  # Step 0 - Checking if the required local files exist ======
   missing_req_files <- c()
-  if(Sys.getenv("POLIS_EDAV_FLAG")){
-    if(!"afp_linelist_2001-01-01_2012-12-31.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/core_files_to_combine"))){
-      tidypolis_io(io = "read", file_path="Data/core_files_to_combine/afp_linelist_2001-01-01_2012-12-31.rds") |>
-        tidypolis_io(io = "write", file_path = paste0(polis_data_folder, "/core_files_to_combine/afp_linelist_2001-01-01_2012-12-31.rds"))
-    }
-    if(!"afp_linelist_2013-01-01_2016-12-31.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/core_files_to_combine"))){
-      tidypolis_io(io = "read", file_path="Data/core_files_to_combine/afp_linelist_2013-01-01_2016-12-31.rds") |>
-        tidypolis_io(io = "write", file_path = paste0(polis_data_folder, "/core_files_to_combine/afp_linelist_2013-01-01_2016-12-31.rds"))
-    }
-    if(!"afp_linelist_2017-01-01_2019-12-31.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/core_files_to_combine"))){
-      tidypolis_io(io = "read", file_path="Data/core_files_to_combine/afp_linelist_2017-01-01_2019-12-31.rds") |>
-        tidypolis_io(io = "write", file_path = paste0(polis_data_folder, "/core_files_to_combine/afp_linelist_2017-01-01_2019-12-31.rds"))
-    }
-    if(!"other_surveillance_type_linelist_2016_2016.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/core_files_to_combine"))){
-      tidypolis_io(io = "read", file_path="Data/core_files_to_combine/other_surveillance_type_linelist_2016_2016.rds") |>
-        tidypolis_io(io = "write", file_path = paste0(polis_data_folder, "/core_files_to_combine/other_surveillance_type_linelist_2016_2016.rds"))
-    }
-    if(!"other_surveillance_type_linelist_2017_2019.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/core_files_to_combine"))){
-      tidypolis_io(io = "read", file_path="Data/core_files_to_combine/other_surveillance_type_linelist_2017_2019.rds") |>
-        tidypolis_io(io = "write", file_path = paste0(polis_data_folder, "/core_files_to_combine/other_surveillance_type_linelist_2017_2019.rds"))
-    }
-    if(!"sia_2000_2019.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/core_files_to_combine"))){
-      tidypolis_io(io = "read", file_path="Data/core_files_to_combine/sia_2000_2019.rds") |>
-        tidypolis_io(io = "write", file_path = paste0(polis_data_folder, "/core_files_to_combine/sia_2000_2019.rds"))
-    }
+  cli::cli_h1("Checking for missing required files.")
+  if(!"global.ctry.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_spatial_folder))){
+    missing_req_files <- append(missing_req_files, "global.ctry.rds")
+  }
 
+  if(!"global.prov.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_spatial_folder))){
+    missing_req_files <- append(missing_req_files, "global.prov.rds")
+  }
 
-  }else{
-    if(!"afp_linelist_2001-01-01_2012-12-31.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/core_files_to_combine"))){
-      missing_req_files <- append(missing_req_files, "afp_linelist_2001-01-01_2012-12-31.rds")
-    }
-    if(!"afp_linelist_2013-01-01_2016-12-31.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/core_files_to_combine"))){
-      missing_req_files <- append(missing_req_files, "afp_linelist_2013-01-01_2016-12-31.rds")
-    }
-    if(!"afp_linelist_2017-01-01_2019-12-31.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/core_files_to_combine"))){
-      missing_req_files <- append(missing_req_files, "afp_linelist_2017-01-01_2019-12-31.rds")
-    }
-    if(!"other_surveillance_type_linelist_2016_2016.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/core_files_to_combine"))){
-      missing_req_files <- append(missing_req_files, "other_surveillance_type_linelist_2016_2016.rds")
-    }
-    if(!"other_surveillance_type_linelist_2017_2019.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/core_files_to_combine"))){
-      missing_req_files <- append(missing_req_files, "other_surveillance_type_linelist_2017_2019.rds")
-    }
-    if(!"sia_2000_2019.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/core_files_to_combine"))){
-      missing_req_files <- append(missing_req_files, "sia_2000_2019.rds")
-    }
+  if(!"global.dist.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_spatial_folder))){
+    missing_req_files <- append(missing_req_files, "global.dist.rds")
+  }
 
+  if(!"crosswalk.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_misc_folder))){
+    missing_req_files <- append(missing_req_files, "crosswalk.rds")
+  }
+
+  if(!"env_sites.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_misc_folder))){
+    missing_req_files <- append(missing_req_files, "env_sites.rds")
+  }
+
+  if(!"nopv_emg.table.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_misc_folder))){
+    missing_req_files <- append(missing_req_files, "nopv_emg.table.rds")
   }
 
   if (length(missing_req_files) > 0) {
-    cli::cli_alert_warning("Please request the following file(s) from the SIR team or if you have EDAV access move them into your core_files_to_combine folder:")
+    cli::cli_alert_warning("Please request the following file(s) from the SIR team:")
     for (i in missing_req_files) {
       cli::cli_alert_info(paste0(i, "\n"))
     }
