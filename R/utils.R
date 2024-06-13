@@ -1182,13 +1182,13 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
   #removing all bad shapes post make valid
   valid.shapes <- global.dist.02 |>
     dplyr::slice(-row.num.2) |>
-    dplyr::select(GUID, yr.st, yr.end, SHAPE)
+    dplyr::select(GUID, ADM1_GUID, ADM0_GUID, yr.st, yr.end, SHAPE)
 
   cli::cli_process_start("Evaluating invalid district shapes")
   #invalid shapes for which we'll turn off s2
   invalid.shapes <- global.dist.02 |>
     dplyr::slice(row.num.2) |>
-    dplyr::select(GUID, yr.st, yr.end, SHAPE)
+    dplyr::select(GUID, ADM1_GUID, ADM0_GUID, yr.st, yr.end, SHAPE)
 
 
   update_polis_log(.event = paste0("Invalid district shapes identified: ", paste(invalid.shapes |> pull(GUID), collapse = ", ")),
@@ -1242,7 +1242,10 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
   #remove the duplicate cases from df04 and bind back the fixed dupes
   df05 <- df04 |>
     dplyr::filter(!epid %in% dupes.fixed$epid) |>
-    dplyr::bind_rows(dupes.fixed)
+    dplyr::bind_rows(dupes.fixed) |>
+    dplyr::mutate(Admin2GUID = ifelse(Admin2GUID == GUID, Admin2GUID, GUID),
+                  Admin1GUID = ifelse(Admin1GUID == ADM1_GUID, Admin1GUID, ADM1_GUID),
+                  Admin0GUID = ifelse(Admin0GUID == ADM0_GUID, Admin0GUID, ADM0_GUID))
 
   #identify dropped obs. obs are dropped primarily because they match to a shape that doesn't
   #exist for the case's year onset (there are holes in the global map for certain years)
@@ -1351,7 +1354,8 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
   pt05$geometry <- NULL
 
   #bind back placed point cases with df06 and finished
-  df07 <- dplyr::bind_rows(df06, pt05)
+  df07 <- dplyr::bind_rows(df06, pt05) |>
+    dplyr::select(-c("wrongAdmin1GUID", "wrongAdmin2GUID", "ADM1_GUID", "ADM0_GUID"))
 
   return(df07)
 }
