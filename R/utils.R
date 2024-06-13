@@ -3108,10 +3108,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
          emergence.group = `emergence.group(s)`,
          adm0guid = Admin0GUID,
          adm1guid = Admin1GUID,
-         adm2guid = Admin2GUID,
-         polis.admin0guid = admin0guid,
-         polis.admin1guid = admin1guid,
-         polis.admin2guid = admin2guid
+         adm2guid = Admin2GUID
   ) |>
     dplyr::filter(!is.na(epid))
 
