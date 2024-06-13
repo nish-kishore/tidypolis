@@ -2888,9 +2888,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
   # the district and province level. There are also two new columns added to indicate wether
   # the province level of district level guid was incorrect.
 
-  #var names created from guid checking
-  guid.check.vars <- c("Admin0GUID", "Admin1GUID", "Admin2GUID", "wrongAdmin1GUID", "wrongAdmin2GUID")
-
   # some info about number of errors
   #table(afp.linelist.fixed.02$wrongAdmin1GUID)
   #table(afp.linelist.fixed.02$wrongAdmin2GUID)
