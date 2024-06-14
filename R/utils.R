@@ -1428,7 +1428,46 @@ archive_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
            dplyr::bind_rows(log.to.arch) |>
            tidypolis_io(io = "write", file_path = file.path(polis_data_folder, "Log_Archive/log_archive.rds"))
          )
+}
+
+#' function to remove original character formatted date vars from data tables
+#'
+#' @description
+#' remove original date variables from POLIS tables
+#' @import dplyr
+#' @param type str: the table on which to remove original date vars, "AFP", "ES", "POS"
+#' @param df df: the dataframe from which to remove character formatted dates
+#' @return outputs a saved reference table of original date vars and a smaller
+#' core ready file without character dates
+remove_character_dates <- function(type,
+                                   df){
+
+  if(type %in% c("AFP", "POS")){
+    df.01 <- df |>
+      dplyr::select(epid, (dplyr::contains("date") & dplyr::where(is.character)))
+
+    df.02 <- df |>
+      dplyr::select(!(dplyr::contains("date") & dplyr::where(is.character)))
   }
+
+  if(type == "ES"){
+    df.01 <- df |>
+      dplyr::select(env.sample.manual.edit.id, env.sample.id, (dplyr::contains("date") & dplyr::where(is.character)))
+
+    df.01.fixed <- df.01 |>
+      dplyr::mutate(dplyr::across(dplyr::contains("date") & dplyr::where(is.character),
+                    ~lubridate::parse_date_time(., c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S"))))
+
+    df.02 <- df |>
+      dplyr::select(env.sample.manual.edit.id, env.sample.id, !(dplyr::contains("date") & dplyr::where(is.character))) |>
+      dplyr::left_join(df.01.fixed)
+
+  }
+
+  tidypolis_io(io = "write", obj = df.01, file_path = paste0(polis_data_folder, "/Core_Ready_Files/", type, "_orig_char_dates.rds"))
+
+  return(df.02)
+}
 
 
 #### Pre-processing ####
@@ -2250,6 +2289,10 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
       dateinvest = lubridate::ymd(as.Date(investigation.date, "%Y-%m-%dT%H:%M:%S")),
       datestool1 = lubridate::ymd(as.Date(stool.1.collection.date, "%Y-%m-%dT%H:%M:%S")),
       datestool2 = lubridate::ymd(as.Date(stool.2.collection.date, "%Y-%m-%dT%H:%M:%S")),
+      datenotificationtohq = lubridate::ymd(as.Date(date.notification.to.hq, "%Y-%m-%dT%H:%M:%S")),
+      results.seq.date.to.program = lubridate::ymd(as.Date(results.seq.date.to.program, "%Y-%m-%dT%H:%M:%S")),
+      specimen.date = lubridate::ymd(as.Date(specimen.date, "%Y-%m-%dT%H:%M:%S")),
+      casedate = lubridate::ymd(as.Date(case.date, "%Y-%m-%dT%H:%M:%S")),
       ontostool2 = as.numeric(datestool2 - dateonset),
       ontostool1 = as.numeric(datestool1 - dateonset),
       age.months = as.numeric(`calculated.age.(months)`),
@@ -2257,7 +2300,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
       ontoinvest = as.numeric(dateinvest - dateonset),
       nottoinvest = as.numeric(dateinvest - datenotify),
       investtostool1 = as.numeric(datestool1 - dateinvest),
-      stool1tostool2 = (datestool2 - datestool1),
+      stool1tostool2 = as.numeric(datestool2 - datestool1),
       stooltolabdate = lubridate::ymd(as.Date(stool.date.sent.to.lab, "%Y-%m-%dT%H:%M:%S")),
       stooltoiclabdate = lubridate::ymd(as.Date(stool.date.sent.to.ic.lab, "%Y-%m-%dT%H:%M:%S")),
       clinicadmitdate = lubridate::ymd(as.Date(clinical.admitted.date, "%Y-%m-%dT%H:%M:%S")),
@@ -2571,7 +2614,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   rm("afp.linelist.fixed.03")
 
   #vars created during stsample
-  stsample.vars <- c("id", "empty.01", "geometry")
+  stsample.vars <- c("id", "empty.01", "x")
 
   cli::cli_process_done()
 
@@ -2712,7 +2755,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   # renaming POLIS original variables to match the variables in afp line list for CORE analysis
   dplyr::rename(adequate.stool = stool.adequacy,
-         datenotificationtohq = date.notification.to.hq,
          datasetlab = dataset.lab,
          doses.total = doses,
          # totalnumberofdosesipvopv = `total.number.of.ipv./.opv.doses`,
@@ -2798,10 +2840,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   afp.linelist.02 <- afp.linelist.02 |>
     dplyr::mutate(polis.latitude = as.character(polis.latitude),
            polis.longitude = as.character(polis.longitude),
-           doses.total = as.numeric(doses.total),
+           doses.total = as.numeric(doses.total)
            # virus.sequenced = as.logical(virus.sequenced),
-           datenotificationtohq = as.character(as.Date(datenotificationtohq, format="%Y-%m-%d"), format="%d/%m/%Y"),
-           results.seq.date.to.program = as.character(as.Date(results.seq.date.to.program, format="%Y-%m-%d"), format="%d/%m/%Y")
     )
 
   x <- tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/Core_Ready_Files/Archive/", latest_folder_in_archive), full_names = T)
@@ -2904,9 +2944,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   not.afp.01 <- not.afp.01 |>
     dplyr::mutate(polis.latitude = as.character(polis.latitude),
            polis.longitude = as.character(polis.longitude),
-           doses.total = as.numeric(doses.total),
-           datenotificationtohq = as.character(as.Date(datenotificationtohq, format="%Y-%m-%d"), format="%Y-%m-%d"),
-           results.seq.date.to.program = as.character(as.Date(results.seq.date.to.program, format="%Y-%m-%d"), format="%Y-%m-%d")
+           doses.total = as.numeric(doses.total)
     )
 
   x <- tidypolis_io(io = "list", file_path = file.path(polis_data_folder,"Core_Ready_Files", "Archive", latest_folder_in_archive), full_names = T)
@@ -3190,8 +3228,10 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     ) |>
     dplyr::mutate_at(
       dplyr::vars(
+        sub.activity.initial.planned.date, sub.activity.last.updated.date,
         activity.start.date, activity.end.date,
-        sub.activity.start.date, sub.activity.end.date
+        sub.activity.start.date, sub.activity.end.date,
+        last.updated.date
       ), ~ lubridate::parse_date_time(., c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S"))
     ) |>
     dplyr::mutate(
@@ -3724,6 +3764,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
                 "env.sample.manual.edit.id", "site.id", "sample.id", "admin.0.id", "admin.1.id"), ~as.numeric(.)) |>
     dplyr::distinct()
 
+  es.05 <- remove_character_dates(type = "ES", df = es.04)
+
   options(scipen = savescipen)
 
   cli::cli_process_done()
@@ -3740,12 +3782,12 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
     old.es <- tidypolis_io(io = "read", file_path = old.es.file)
 
-    new_table_metadata <- f.summarise.metadata(es.04)
+    new_table_metadata <- f.summarise.metadata(es.05)
     old_table_metadata <- f.summarise.metadata(old.es)
     es_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata, "ES")
 
     #compare obs
-    new <- es.04 |>
+    new <- es.05 |>
       dplyr::mutate(env.sample.manual.edit.id = stringr::str_squish(env.sample.manual.edit.id)) |>
       dplyr::mutate_all(as.character)
 
@@ -3796,7 +3838,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
 
   cli::cli_process_start("Writing out ES datasets")
-  tidypolis_io(obj = es.04, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/",
+  tidypolis_io(obj = es.05, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/",
                          paste("es", min(es.04$collect.date, na.rm = T), max(es.04$collect.date, na.rm = T), sep = "_"),
                          ".rds",
                          sep = ""
@@ -3812,7 +3854,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_start("Clearing memory")
 
   rm(
-    'envSiteYearList', 'es.00', 'es.02', 'es.03', 'es.04', 'es_metadata_comparison', 'global.ctry.01',
+    'envSiteYearList', 'es.00', 'es.02', 'es.03', 'es.04', 'es.05', 'es_metadata_comparison', 'global.ctry.01',
     'in_new_and_old_but_modified', 'in_new_not_old', 'in_old_not_new',
     'na.es.01', 'new', 'new.df', 'new.file', 'new.var.es.01', 'new_table_metadata', 'newsites',
     'old', 'old.es.file', 'old.file', 'old_table_metadata', 'savescipen',
@@ -4173,7 +4215,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     ) |>
     dplyr::select(virus.type, dplyr::everything()) |>
     dplyr::mutate(
-      dateonset = lubridate::dmy(dateonset),
+      dateonset = lubridate::parse_date_time(dateonset, c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S")),
       virustype = stringr::str_replace_all(virus.type, "  ", " "),
       datasource = "es_linelist",
       lat = as.numeric(lat),
@@ -4229,12 +4271,14 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
            env.sample.id = as.numeric(env.sample.id),
            polis.case.id = as.numeric(polis.case.id))
 
+  afp.es.virus.02 <- remove_character_dates(type = "POS", df = afp.es.virus.01)
+
   cli::cli_process_done()
 
   cli::cli_process_start("Checking for variables that don't match last weeks pull")
 
   #Compare the final file to last week's final file to identify any differences in var_names, var_classes, or categorical responses
-  new_table_metadata <- f.summarise.metadata(afp.es.virus.01)
+  new_table_metadata <- f.summarise.metadata(afp.es.virus.02)
 
   x <- tidypolis_io(io = "list", file_path = file.path(polis_data_folder, "Core_Ready_Files/Archive", latest_folder_in_archive), full_names = T)
 
@@ -4249,7 +4293,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     old_table_metadata <- f.summarise.metadata(old.es)
     positives_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata, "POS")
 
-    new <- afp.es.virus.01 |>
+    new <- afp.es.virus.02 |>
       unique() |>
       dplyr::mutate(epid = stringr::str_squish(epid)) |>
       dplyr::group_by(epid)|>
@@ -4356,7 +4400,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
                                    "POS Class Changed Records: ", length(unique(class.updated$epid))),
                    .event_type = "INFO")
 
-  tidypolis_io(obj = afp.es.virus.01,
+  tidypolis_io(obj = afp.es.virus.02,
                io = "write",
                file_path = paste(polis_data_folder, "/Core_Ready_Files/",
                                    paste("positives", min(afp.es.virus.01$dateonset, na.rm = T),
@@ -4373,7 +4417,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_start("Checking for positives that don't match to GUIDs")
 
   # AFP and ES that do not match to shape file
-  unmatched.afp.es.viruses.01 <- dplyr::anti_join(afp.es.virus.01, long.global.dist.01, by = c("admin2guid" = "GUID", "yronset" = "active.year.01"))
+  unmatched.afp.es.viruses.01 <- dplyr::anti_join(afp.es.virus.02, long.global.dist.01, by = c("admin2guid" = "GUID", "yronset" = "active.year.01"))
 
   # CSV file listing out unmatch virus
 
