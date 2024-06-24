@@ -294,13 +294,14 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
         ids_table <- as.data.frame(ids)
         missed.id <- ids_table |>
           dplyr::filter(!ids %in% dplyr::pull(old_cache[table_data$polis_id]))
-        cli::cli_process_done("Done checking downloaded records")
+        cli::cli_process_done()
 
         #if there are missed IDs, clear old cache and re-download full table
         if(nrow(missed.id)>0){
 
           cli::cli_process_start("Records are missing from download, clearing cache and downloading full table")
-          cli::cli_process_done("Table fully downloaded and cache updated")
+
+          cli::cli_process_done()
 
         }else{
 
