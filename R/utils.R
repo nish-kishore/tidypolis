@@ -285,10 +285,13 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
           bind_and_reconcile(new_data = out, old_data = old_cache)
 
         #delete data that no longer exists in POLIS
-        old_cache <- old_cache |> filter(get(table_data$polis_id) %in% ids)
+        old_cache <- old_cache |>
+          dplyr::filter(get(table_data$polis_id) %in% ids)
 
         #check for missed IDs, if IDs missed then redownload full table
-        missed.id <- ids.table |>
+        #create ids table in order to filter
+        ids_table <- as.data.frame(ids)
+        missed.id <- ids_table |>
           dplyr::filter(!ids %in% dplyr::pull(old_cache[table_data$polis_id]))
 
 
