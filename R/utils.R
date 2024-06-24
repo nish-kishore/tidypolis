@@ -287,6 +287,9 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
         #delete data that no longer exists in POLIS
         old_cache <- old_cache |> filter(get(table_data$polis_id) %in% ids)
 
+        #check for missed IDs, if IDs missed then redownload full table
+
+
         #write cache
 
         cli::cli_process_start("Updating cache log")
