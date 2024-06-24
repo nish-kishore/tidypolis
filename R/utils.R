@@ -299,6 +299,9 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
         #if there are missed IDs, clear old cache and re-download full table
         if(nrow(missed.id)>0){
 
+          cli::cli_process_start("Records are missing from download, clearing cache and downloading full table")
+          cli::cli_process_done("Table fully downloaded and cache updated")
+
         }else{
 
           #write cache
