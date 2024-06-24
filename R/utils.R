@@ -294,32 +294,41 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
         missed.id <- ids_table |>
           dplyr::filter(!ids %in% dplyr::pull(old_cache[table_data$polis_id]))
 
+        #if there are missed IDs, clear old cache and re-download full table
+        if(nrow(missed.id)>0){
 
-        #write cache
+        }else{
 
-        cli::cli_process_start("Updating cache log")
-        update_polis_cache(
-          cache_file = Sys.getenv("POLIS_CACHE_FILE"),
-          .table = .table,
-          .nrow = nrow(old_cache),
-          .update_val = max(lubridate::as_datetime(dplyr::pull(out[table_data$polis_update_id])))
-        )
-        cli::cli_process_done()
+          #write cache
 
-        cli::cli_process_start("Writing data cache")
-        tidypolis_io(obj = old_cache, io = "write",
-                         file_path = paste0(
-                           Sys.getenv("POLIS_DATA_CACHE"),
-                           "/",
-                           table_data$table,
-                           ".rds"
-                         ))
-        update_polis_log(.event = paste0(table_data$table, " data saved locally"),
-                         .event_type = "PROCESS")
-        cli::cli_process_done()
+          cli::cli_process_start("Updating cache log")
+          update_polis_cache(
+            cache_file = Sys.getenv("POLIS_CACHE_FILE"),
+            .table = .table,
+            .nrow = nrow(old_cache),
+            .update_val = max(lubridate::as_datetime(dplyr::pull(out[table_data$polis_update_id])))
+          )
+          cli::cli_process_done()
 
-        #garbage clean
-        gc()
+          cli::cli_process_start("Writing data cache")
+          tidypolis_io(obj = old_cache, io = "write",
+                       file_path = paste0(
+                         Sys.getenv("POLIS_DATA_CACHE"),
+                         "/",
+                         table_data$table,
+                         ".rds"
+                       ))
+          update_polis_log(.event = paste0(table_data$table, " data saved locally"),
+                           .event_type = "PROCESS")
+          cli::cli_process_done()
+
+          #garbage clean
+          gc()
+
+        }
+
+
+
 
       }
 
