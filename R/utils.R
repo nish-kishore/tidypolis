@@ -279,8 +279,8 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
         )
 
         #update cache
-        old_cache <-
-          old_cache |> dplyr::filter(!get(table_data$polis_id) %in% dplyr::pull(out[table_data$polis_id]))
+        old_cache <- old_cache |>
+          dplyr::filter(!get(table_data$polis_id) %in% dplyr::pull(out[table_data$polis_id]))
         old_cache <-
           bind_and_reconcile(new_data = out, old_data = old_cache)
 
@@ -288,6 +288,8 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
         old_cache <- old_cache |> filter(get(table_data$polis_id) %in% ids)
 
         #check for missed IDs, if IDs missed then redownload full table
+        missed.id <- ids.table |>
+          dplyr::filter(!ids %in% dplyr::pull(old_cache[table_data$polis_id]))
 
 
         #write cache
