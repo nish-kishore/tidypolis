@@ -306,14 +306,70 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
             )
           )
 
+          table_size <- get_table_size(.table = table_data$table)
+          cli::cli_alert_info(paste0("Getting ready to download ", table_size, " new rows of data!"))
 
-          update_polis_cache(
-            cache_file = Sys.getenv("POLIS_CACHE_FILE"),
-            .table = .table,
-            .nrow = NA,
-            .update_val = NA
-          )
+          if (table_data$table %in% c("human_specimen",
+                                      "environmental_sample",
+                                      "activity",
+                                      "sub_activity",
+                                      "lqas",
+                                      "pop")) {
+            urls <-
+              create_table_urls(url = table_url,
+                                table_size = table_size,
+                                type = "lab")
+          } else{
+            urls <-
+              create_table_urls(url = table_url,
+                                table_size = table_size,
+                                type = "full")
+          }
 
+          cli::cli_process_start("Downloading data")
+          out <- call_urls(urls)
+          update_polis_log(.event = paste0(
+            "Downloaded ",
+            table_size,
+            " rows of ",
+            table_data$table,
+            " data"
+          ),
+          .event_type = "INFO")
+          cli::cli_process_done()
+
+          #update cache information
+          cli::cli_process_start("Updating cache")
+          if (is.na(table_data$polis_update_id)) {
+            update_polis_cache(
+              cache_file = Sys.getenv("POLIS_CACHE_FILE"),
+              .table = .table,
+              .nrow = nrow(out),
+              .update_val = NA
+            )
+          } else{
+            update_polis_cache(
+              cache_file = Sys.getenv("POLIS_CACHE_FILE"),
+              .table = .table,
+              .nrow = nrow(out),
+              .update_val = max(lubridate::as_datetime(dplyr::pull(out[table_data$polis_update_id])), na.rm = T)
+            )
+          }
+
+          cli::cli_process_done()
+
+          cli::cli_process_start("Writing data cache")
+          tidypolis_io(obj = out, io = "write", file_path = paste0(
+            Sys.getenv("POLIS_DATA_CACHE"),
+            "/",
+            table_data$table,
+            ".rds"
+          ))
+          update_polis_log(.event = paste0(table_data$table, " data saved locally"),
+                           .event_type = "PROCESS")
+          cli::cli_process_done()
+
+          gc()
 
           cli::cli_process_done()
 
