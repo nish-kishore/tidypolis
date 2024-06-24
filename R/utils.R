@@ -319,7 +319,7 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
               create_table_urls(url = table_url,
                                 table_size = table_size,
                                 type = "lab")
-          } else{
+          }else{
             urls <-
               create_table_urls(url = table_url,
                                 table_size = table_size,
