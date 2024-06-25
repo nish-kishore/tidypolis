@@ -125,7 +125,7 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
         cache_file = Sys.getenv("POLIS_CACHE_FILE"),
         .table = .table,
         .nrow = nrow(out),
-        .update_val = max(lubridate::as_datetime(dplyr::pull(out[table_data$polis_update_id])))
+        .update_val = max(lubridate::as_datetime(dplyr::pull(out[table_data$polis_update_id])), na.rm = T)
       )
     }
 
