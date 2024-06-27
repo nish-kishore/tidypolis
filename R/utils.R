@@ -2595,8 +2595,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_start("Fixing missing GPS locations (this may take a while)")
 
   afp.linelist.fixed.03 <- afp.linelist.fixed.02 |>
-    dplyr::rename(polis.latitude = y,
-           polis.longitude = x) |>
+    dplyr::rename(polis.latitude = x,
+           polis.longitude = y) |>
     dplyr::distinct()
 
   rm("afp.linelist.fixed.02")
