@@ -309,6 +309,8 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
           table_size <- get_table_size(.table = table_data$table)
           cli::cli_alert_info(paste0("Getting ready to download ", table_size, " new rows of data!"))
 
+          table_url <- paste0(base_url, table_data$endpoint)
+
           if (table_data$table %in% c("human_specimen",
                                       "environmental_sample",
                                       "activity",
