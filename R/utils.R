@@ -4272,7 +4272,11 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     dplyr::mutate(latitude = as.character(latitude),
            longitude = as.character(longitude),
            env.sample.id = as.numeric(env.sample.id),
-           polis.case.id = as.numeric(polis.case.id))
+           polis.case.id = as.numeric(polis.case.id),
+           vdpvclassificationchangedate = parse_date_time(vdpvclassificationchangedate, c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S")),
+           report_date = case_when(
+             measurement %in% c("cVDPV 1", "cVDPV 2", "cVDPV 3") ~ vdpvclassificationchangedate,
+             measurement == "WILD 1" ~ datenotificationtohq))
 
   afp.es.virus.02 <- remove_character_dates(type = "POS", df = afp.es.virus.01)
 
