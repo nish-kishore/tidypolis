@@ -4217,6 +4217,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     dplyr::select(virus.type, dplyr::everything()) |>
     dplyr::mutate(
       dateonset = lubridate::parse_date_time(dateonset, c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S")),
+      datenotificationtohq = parse_date_time(date.notification.to.hq,
+                                             c("%Y-%m-%d", "%d/%m/%Y")),
       virustype = stringr::str_replace_all(virus.type, "  ", " "),
       datasource = "es_linelist",
       lat = as.numeric(lat),
@@ -4226,7 +4228,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
 
   es.03 <- es.02 |>
-    dplyr::select(env.sample.id, site.id, lat, lon) |>
+    dplyr::select(env.sample.id, site.id, lat, lon, datenotificationtohq) |>
     dplyr::rename(epid = env.sample.id)
 
 
