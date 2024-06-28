@@ -4131,7 +4131,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   #Combine AFP and other surveillance type cases
   afp.02 <- rbind(afp.01, non.afp.01) |>
-    dplyr::select(epid, lat, lon, datenotificationtohq)
+    dplyr::select(epid, lat, lon, datenotificationtohq) |>
+    dplyr::mutate(datenotificationtohq = parse_date_time(datenotificationtohq, c("%Y-%m-%d", "%d/%m/%Y")))
 
 
   # Get geo cordinates from AFP linelist.
