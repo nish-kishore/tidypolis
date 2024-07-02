@@ -4219,17 +4219,18 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   # deleting any duplicate records in afp.01.
   afp.01 <- afp.01[!duplicated(afp.01$epid), ] |>
     dplyr::select(epid, dateonset,  place.admin.0, place.admin.1, place.admin.2, admin0guid, yronset, admin1guid, admin2guid, cdc.classification.all,
-           whoregion, nt.changes, emergence.group, virus.cluster, surveillancetypename, lat, lon, vtype.fixed)
+           whoregion, nt.changes, emergence.group, virus.cluster, surveillancetypename, lat, lon, vtype.fixed, datenotificationtohq)
 
   # deleting any duplicate records in non.afp.files.01.
   non.afp.01 <- non.afp.01[!duplicated(non.afp.01$epid), ] |>
     dplyr::select(epid, dateonset,  place.admin.0, place.admin.1, place.admin.2, admin0guid, yronset, admin1guid, admin2guid, cdc.classification.all,
-           whoregion, nt.changes, emergence.group, virus.cluster, surveillancetypename, lat, lon, vtype.fixed)
+           whoregion, nt.changes, emergence.group, virus.cluster, surveillancetypename, lat, lon, vtype.fixed, datenotificationtohq)
 
 
   #Combine AFP and other surveillance type cases
   afp.02 <- rbind(afp.01, non.afp.01) |>
-    dplyr::select(epid, lat, lon)
+    dplyr::select(epid, lat, lon, datenotificationtohq) |>
+    dplyr::mutate(datenotificationtohq = parse_date_time(datenotificationtohq, c("%Y-%m-%d", "%d/%m/%Y")))
 
 
   # Get geo cordinates from AFP linelist.
@@ -4314,6 +4315,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     dplyr::select(virus.type, dplyr::everything()) |>
     dplyr::mutate(
       dateonset = lubridate::parse_date_time(dateonset, c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S")),
+      datenotificationtohq = parse_date_time(date.notification.to.hq,
+                                             c("%Y-%m-%d", "%d/%m/%Y")),
       virustype = stringr::str_replace_all(virus.type, "  ", " "),
       datasource = "es_linelist",
       lat = as.numeric(lat),
@@ -4323,7 +4326,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
 
   es.03 <- es.02 |>
-    dplyr::select(env.sample.id, site.id, lat, lon) |>
+    dplyr::select(env.sample.id, site.id, lat, lon, datenotificationtohq) |>
     dplyr::rename(epid = env.sample.id)
 
 
@@ -4367,7 +4370,11 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     dplyr::mutate(latitude = as.character(latitude),
            longitude = as.character(longitude),
            env.sample.id = as.numeric(env.sample.id),
-           polis.case.id = as.numeric(polis.case.id))
+           polis.case.id = as.numeric(polis.case.id),
+           vdpvclassificationchangedate = parse_date_time(vdpvclassificationchangedate, c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S")),
+           report_date = case_when(
+             measurement %in% c("cVDPV 1", "cVDPV 2", "cVDPV 3") ~ vdpvclassificationchangedate,
+             measurement == "WILD 1" ~ datenotificationtohq))
 
   afp.es.virus.02 <- remove_character_dates(type = "POS", df = afp.es.virus.01)
 
