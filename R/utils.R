@@ -3980,6 +3980,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
            whoregion=who.region
     ) |>
     dplyr::mutate(dateonset = lubridate::ymd(virus.date),
+                  vdpvclassificationchangedate = lubridate::parse_date_time(vdpvclassificationchangedate, c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S")),
            datasource='virustable',
            yronset= lubridate::year(dateonset))|>
     dplyr::mutate(
