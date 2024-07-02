@@ -304,7 +304,7 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
               table_data$endpoint,
               " has been downloaded before but ",
               nrow(missed.id),
-              " records are missing, downloading all data...checking size..."
+              " record(s) missing, downloading all data...checking size..."
             )
           )
 
