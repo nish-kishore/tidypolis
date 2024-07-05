@@ -3524,8 +3524,12 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   sia.files.02 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path="Data/core_files_to_combine", full_names=TRUE)) |>
     dplyr::filter(grepl("^.*(sia).*(.rds)$", name)) |>
     dplyr::pull(name)
-  sia.files.03 <- c(sia.files.01, sia.files.02)
-  sia.clean.01 <- purrr::map_df(sia.files.03, ~tidypolis_io(io = "read", file_path = .x))
+  sia.to.combine <- purrr::map_df(sia.files.02, ~tidypolis_io(io = "read", file_path = .x)) |>
+    dplyr::mutate(sub.activity.initial.planned.date = lubridate::parse_date_time(sub.activity.initial.planned.date, c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S")),
+                  last.updated.date = lubridate::parse_date_time(last.updated.date, c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S")),
+                  sub.activity.last.updated.date = as.Date(lubridate::parse_date_time(sub.activity.last.updated.date, c("dmY", "bY", "Ymd", "%d-%m-%Y %H:%M"))))
+
+
 
   tidypolis_io(obj = sia.clean.01, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/",
                                 paste("sia", min(sia.clean.01$yr.sia, na.rm = T),
