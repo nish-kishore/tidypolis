@@ -3166,6 +3166,10 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   non.afp.to.combine <- purrr::map_df(non.afp.files.02, ~tidypolis_io(io = "read", file_path = .x)) |>
     dplyr::mutate(stool1tostool2 = as.numeric(stool1tostool2),
                   datenotificationtohq =  lubridate::parse_date_time(datenotificationtohq, c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S")))
+  non.afp.new <- purrr::map_df(non.afp.files.01, ~tidypolis_io(io = "read", file_path = .x))
+
+  non.afp.clean.01 <- dplyr::bind_rows(non.afp.new, non.afp.to.combine)
+
 
 
   tidypolis_io(obj = non.afp.clean.01, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/",
