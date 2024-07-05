@@ -3187,14 +3187,13 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_start("Clearing memory")
 
   rm('afp.clean.01', 'afp.clean.light', 'afp.files.01', 'afp.files.02',
-     'afp.files.03', 'afp.linelist.01',
-     'afp.linelist.02', 'afp.linelist.latlong', 'afp.missing.01',
-     'afp.missing.02', 'afp_metadata_comparison',
+      'afp.linelist.01', 'afp.linelist.02', 'afp.linelist.latlong',
+     'afp.missing.01', 'afp.missing.02', 'afp_metadata_comparison',
      'col.afp.raw.01', 'dup.epid', 'issuesbyCtry', 'issuesbyyear',
      'endyr', 'global.dist.01', 'in_new_and_old_but_modified',
      'in_new_not_old', 'in_old_not_new',
      'new', 'new_table_metadata', 'non.afp.clean.01', 'non.afp.files.01',
-     'non.afp.files.02', 'non.afp.files.03', 'non.afp.files.03',
+     'non.afp.files.02', 'non.afp.files.03',
      'not.afp', 'not.afp.01', 'not_afp_metadata_comparison', 'old',
      'old.file', 'old_table_metadata', 'startyr',
      'unknown.afp', 'x', "afp.new", "afp.to.combine", "non.afp.new",
