@@ -1324,7 +1324,7 @@ f.compare.metadata <- function(new_table_metadata, old_table_metadata, table){
   }
 
   if(length(new_vars) == 0 & length(lost_vars) == 0){
-    update_polis_log(.event = paste0(table, " - ", "No new or lost varaibles"),
+    update_polis_log(.event = paste0(table, " - ", "No new or lost variables"),
                      .event_type = "INFO")
   }
 
