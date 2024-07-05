@@ -3171,7 +3171,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   non.afp.clean.01 <- dplyr::bind_rows(non.afp.new, non.afp.to.combine)
 
 
-
   tidypolis_io(obj = non.afp.clean.01, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/",
                                     paste("other_surveillance_type_linelist", min(non.afp.clean.01$yronset, na.rm = T),
                                           max(non.afp.clean.01$yronset, na.rm = T),
@@ -3198,7 +3197,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
      'non.afp.files.02', 'non.afp.files.03', 'non.afp.files.03',
      'not.afp', 'not.afp.01', 'not_afp_metadata_comparison', 'old',
      'old.file', 'old_table_metadata', 'startyr',
-     'unknown.afp', 'x')
+     'unknown.afp', 'x', "afp.new", "afp.to.combine", "non.afp.new",
+     "non.afp.to.combine"
+  )
 
   gc()
 
