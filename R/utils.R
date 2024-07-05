@@ -3121,8 +3121,10 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   afp.files.02 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path="Data/core_files_to_combine", full_names=TRUE)) |>
     dplyr::filter(grepl("^.*(afp_linelist).*(.rds)$", name)) |>
     dplyr::pull(name)
-  afp.files.03 <- c(afp.files.01, afp.files.02)
-  afp.clean.01 <- purrr::map_df(afp.files.03, ~tidypolis_io(io = "read", file_path = .x))
+  afp.to.combine <- purrr::map_df(afp.files.02, ~tidypolis_io(io = "read", file_path = .x)) |>
+    dplyr::mutate(stool1tostool2 = as.numeric(stool1tostool2),
+                  datenotificationtohq =  lubridate::parse_date_time(datenotificationtohq, c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S")))
+
 
   tidypolis_io(obj = afp.clean.01, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/",
                                 paste("afp_linelist", min(afp.clean.01$dateonset, na.rm = T),
