@@ -1473,8 +1473,8 @@ log_report <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
   readr::write_csv(x = new.virus.records, file = file3)
 
   #coms section
-  sirfunctions::send_teams_message(msg = paste0("New CORE data files info: ", report_info), type = "html")
-  sirfunctions::send_teams_message(msg = paste0("New CORE data files alerts: ", report_alert), type = "html")
+  sirfunctions::send_teams_message(msg = paste0("New CORE data files info: ", report_info))
+  sirfunctions::send_teams_message(msg = paste0("New CORE data files alerts: ", report_alert))
   sirfunctions::send_teams_message(msg = "Attached CSVs contain information on new/changed virus records", attach = c(file1, file2, file3))
 
 }
