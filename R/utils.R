@@ -1447,16 +1447,16 @@ log_report <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
     dplyr::filter(event_type == "INFO" & !grepl("records identified!", event)) |>
     dplyr::mutate(event = ifelse(grepl(" - update -", event), sub("deleted.*", "deleted", event), event))|>
     dplyr::pull(event) |>
-    sapply(function(x){paste0("<li>",x,"</li>")}, USE.NAMES = F) |>
+    sapply(function(x){paste0(x, "; ")}, USE.NAMES = F) |>
     paste0(collapse = "") %>%
-    {paste0("<ul>", ., "</ul>")}
+    {paste0(.)}
 
   report_alert <- latest_run |>
     dplyr::filter(event_type == "ALERT") |>
     dplyr::pull(event) |>
-    sapply(function(x){paste0("<li>",x,"</li>")}, USE.NAMES = F) |>
+    sapply(function(x){paste0(x, "; ")}, USE.NAMES = F) |>
     paste0(collapse = "") %>%
-    {paste0("<ul>", ., "</ul>")}
+    {paste0(.)}
 
 
   #csv files to attach to report
