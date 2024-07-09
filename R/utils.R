@@ -1578,6 +1578,10 @@ remove_character_dates <- function(type,
 #' @param polis_data_folder str: location of the POLIS data folder, defaults to value stored from init_tidypolis
 #' @return Outputs intermediary core ready files
 preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
+
+  #Step 0 - create and CORE datafiles to combine folder and check for datasets before continuing with pre-p =========
+
+
   #Step 1 - Basic cleaning and crosswalk ======
   cli::cli_h1("Step 1/5: Basic cleaning and crosswalk across datasets")
 
