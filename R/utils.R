@@ -1580,6 +1580,13 @@ remove_character_dates <- function(type,
 preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   #Step 0 - create and CORE datafiles to combine folder and check for datasets before continuing with pre-p =========
+  #if on EDAV, create files to combine folder and write datasets into it
+if(Sys.getenv("POLIS_EDAV_FLAG")){
+
+
+}else{
+
+}
 
 
   #Step 1 - Basic cleaning and crosswalk ======
