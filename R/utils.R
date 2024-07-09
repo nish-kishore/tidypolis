@@ -3108,8 +3108,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   cli::cli_process_done()
 
-  #if not on EDAV limit writing linelists to 2020 onward
-  if(Sys.getenv("POLIS_EDAV_FLAG")){
 
   cli::cli_process_start("Generating AFP dataset")
   # AFP cases with EPIDs ("14070210003" "50023710003" "Per 011-21"  "53060210001") got removed from original POLIS download "Cases_30-04-2020_20-15-38_from_01_Jan_2000_to_31_Dec_2018.csv"
@@ -3182,7 +3180,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   ))
 
   cli::cli_process_done()
-}
 
   update_polis_log(.event = "AFP and Other Surveillance Linelists Finished",
                    .event_type = "PROCESS")
