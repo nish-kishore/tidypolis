@@ -1610,6 +1610,14 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   }
 
+  if (length(missing_req_files) > 0) {
+    cli::cli_alert_warning("Please request the following file(s) from the SIR team or if you have EDAV access move them into your core_files_to_combine folder:")
+    for (i in missing_req_files) {
+      cli::cli_alert_info(paste0(i, "\n"))
+    }
+    stop("Halting execution of preprocessing due to missing files.")
+  }
+
 
   #Step 1 - Basic cleaning and crosswalk ======
   cli::cli_h1("Step 1/5: Basic cleaning and crosswalk across datasets")
