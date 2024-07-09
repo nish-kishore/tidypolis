@@ -3516,8 +3516,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   #combine SIA pre-2020 with the current rds
   # read SIA and combine to make one SIA dataset
-  #only combine datasets when on EDAV
-if(Sys.getenv("POLIS_EDAV_FLAG")){
 
   sia.files.01 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path=paste0(polis_data_folder, "/Core_Ready_Files"), full_names=TRUE)) |>
     dplyr::filter(grepl("^.*(sia).*(.rds)$", name)) |>
@@ -3543,8 +3541,6 @@ if(Sys.getenv("POLIS_EDAV_FLAG")){
                                 ),".rds",
                                 sep = ""
   ))
-
-}
 
   cli::cli_process_start("Evaluating unmatched SIAs")
 
