@@ -1579,7 +1579,10 @@ remove_character_dates <- function(type,
 #' @return Outputs intermediary core ready files
 preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
-  #Step 0 - create and CORE datafiles to combine folder and check for datasets before continuing with pre-p =========
+  #Step 0 - create a CORE datafiles to combine folder and check for datasets before continuing with pre-p =========
+  if(!tidypolis_io(io = "exists.dir", file_path = paste0(polis_data_folder, "/core_files_to_combine"))){
+    tidypolis_io(io = "create", file_path = paste0(polis_data_folder, "/core_files_to_combine"))
+  }
   #if on EDAV, create files to combine folder and write datasets into it
 if(Sys.getenv("POLIS_EDAV_FLAG")){
 
