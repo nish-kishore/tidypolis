@@ -3585,7 +3585,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   sia.files.01 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path=paste0(polis_data_folder, "/Core_Ready_Files"), full_names=TRUE)) |>
     dplyr::filter(grepl("^.*(sia).*(.rds)$", name)) |>
     dplyr::pull(name)
-  sia.files.02 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path="Data/core_files_to_combine", full_names=TRUE)) |>
+  sia.files.02 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path=paste0(polis_data_folder, "/core_files_to_combine"), full_names=TRUE)) |>
     dplyr::filter(grepl("^.*(sia).*(.rds)$", name)) |>
     dplyr::pull(name)
   sia.to.combine <- purrr::map_df(sia.files.02, ~tidypolis_io(io = "read", file_path = .x)) |>
