@@ -1584,12 +1584,31 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     tidypolis_io(io = "create", file_path = paste0(polis_data_folder, "/core_files_to_combine"))
   }
   #if on EDAV, create files to combine folder and write datasets into it
-if(Sys.getenv("POLIS_EDAV_FLAG")){
+  missing_req_files <- c()
+  if(Sys.getenv("POLIS_EDAV_FLAG")){
 
 
-}else{
+  }else{
+    if(!"afp_linelist_2001-01-01_2012-12-31.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/core_files_to_combine"))){
+      missing_req_files <- append(missing_req_files, "afp_linelist_2001-01-01_2012-12-31.rds")
+    }
+    if(!"afp_linelist_2013-01-01_2016-12-31.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/core_files_to_combine"))){
+      missing_req_files <- append(missing_req_files, "afp_linelist_2013-01-01_2016-12-31.rds")
+    }
+    if(!"afp_linelist_2017-01-01_2019-12-31.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/core_files_to_combine"))){
+      missing_req_files <- append(missing_req_files, "afp_linelist_2017-01-01_2019-12-31.rds")
+    }
+    if(!"other_surveillance_type_linelist_2016_2016.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/core_files_to_combine"))){
+      missing_req_files <- append(missing_req_files, "other_surveillance_type_linelist_2016_2016.rds")
+    }
+    if(!"other_surveillance_type_linelist_2017_2019.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/core_files_to_combine"))){
+      missing_req_files <- append(missing_req_files, "other_surveillance_type_linelist_2017_2019.rds")
+    }
+    if(!"sia_2000_2019.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/core_files_to_combine"))){
+      missing_req_files <- append(missing_req_files, "sia_2000_2019.rds")
+    }
 
-}
+  }
 
 
   #Step 1 - Basic cleaning and crosswalk ======
