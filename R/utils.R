@@ -4637,9 +4637,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   update_polis_log(.event = "Processing of CORE datafiles complete",
                    .event_type = "END")
 
-  log_report()
-  archive_log()
-
 }
 
 #Began work on pop processing pipeline but not ready for V1
