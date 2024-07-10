@@ -1324,7 +1324,7 @@ f.compare.metadata <- function(new_table_metadata, old_table_metadata, table){
   }
 
   if(length(new_vars) == 0 & length(lost_vars) == 0){
-    update_polis_log(.event = paste0(table, " - ", "No new or lost varaibles"),
+    update_polis_log(.event = paste0(table, " - ", "No new or lost variables"),
                      .event_type = "INFO")
   }
 
@@ -1447,16 +1447,16 @@ log_report <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
     dplyr::filter(event_type == "INFO" & !grepl("records identified!", event)) |>
     dplyr::mutate(event = ifelse(grepl(" - update -", event), sub("deleted.*", "deleted", event), event))|>
     dplyr::pull(event) |>
-    sapply(function(x){paste0("<li>",x,"</li>")}, USE.NAMES = F) |>
+    sapply(function(x){paste0(x, "; ")}, USE.NAMES = F) |>
     paste0(collapse = "") %>%
-    {paste0("<ul>", ., "</ul>")}
+    {paste0(.)}
 
   report_alert <- latest_run |>
     dplyr::filter(event_type == "ALERT") |>
     dplyr::pull(event) |>
-    sapply(function(x){paste0("<li>",x,"</li>")}, USE.NAMES = F) |>
+    sapply(function(x){paste0(x, "; ")}, USE.NAMES = F) |>
     paste0(collapse = "") %>%
-    {paste0("<ul>", ., "</ul>")}
+    {paste0(.)}
 
 
   #csv files to attach to report
@@ -1473,8 +1473,8 @@ log_report <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
   readr::write_csv(x = new.virus.records, file = file3)
 
   #coms section
-  sirfunctions::send_teams_message(msg = paste0("New CORE data files info: ", report_info), type = "html")
-  sirfunctions::send_teams_message(msg = paste0("New CORE data files alerts: ", report_alert), type = "html")
+  sirfunctions::send_teams_message(msg = paste0("New CORE data files info: ", report_info))
+  sirfunctions::send_teams_message(msg = paste0("New CORE data files alerts: ", report_alert))
   sirfunctions::send_teams_message(msg = "Attached CSVs contain information on new/changed virus records", attach = c(file1, file2, file3))
 
 }
@@ -4636,6 +4636,10 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   update_polis_log(.event = "Processing of CORE datafiles complete",
                    .event_type = "END")
+
+
+  #log_report()
+  #archive_log()
 
 }
 
