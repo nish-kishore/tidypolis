@@ -1533,11 +1533,13 @@ archive_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
 #' remove original date variables from POLIS tables
 #' @import dplyr
 #' @param type str: the table on which to remove original date vars, "AFP", "ES", "POS"
-#' @param df df: the dataframe from which to remove character formatted dates
+#' @param df tibble: the dataframe from which to remove character formatted dates
+#' @param polis_data_folder str:  location of user's polis data folder
 #' @return outputs a saved reference table of original date vars and a smaller
 #' core ready file without character dates
 remove_character_dates <- function(type,
-                                   df){
+                                   df,
+                                   polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")){
 
   if(type %in% c("AFP", "POS")){
     df.01 <- df |>
@@ -1578,6 +1580,71 @@ remove_character_dates <- function(type,
 #' @param polis_data_folder str: location of the POLIS data folder, defaults to value stored from init_tidypolis
 #' @return Outputs intermediary core ready files
 preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
+
+  #Step 0 - create a CORE datafiles to combine folder and check for datasets before continuing with pre-p =========
+  if(!tidypolis_io(io = "exists.dir", file_path = paste0(polis_data_folder, "/core_files_to_combine"))){
+    tidypolis_io(io = "create", file_path = paste0(polis_data_folder, "/core_files_to_combine"))
+  }
+  #if on EDAV, create files to combine folder and write datasets into it
+  missing_req_files <- c()
+  if(Sys.getenv("POLIS_EDAV_FLAG")){
+    if(!"afp_linelist_2001-01-01_2012-12-31.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/core_files_to_combine"))){
+      tidypolis_io(io = "read", file_path="Data/core_files_to_combine/afp_linelist_2001-01-01_2012-12-31.rds") |>
+        tidypolis_io(io = "write", file_path = paste0(polis_data_folder, "/core_files_to_combine/afp_linelist_2001-01-01_2012-12-31.rds"))
+    }
+    if(!"afp_linelist_2013-01-01_2016-12-31.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/core_files_to_combine"))){
+      tidypolis_io(io = "read", file_path="Data/core_files_to_combine/afp_linelist_2013-01-01_2016-12-31.rds") |>
+        tidypolis_io(io = "write", file_path = paste0(polis_data_folder, "/core_files_to_combine/afp_linelist_2013-01-01_2016-12-31.rds"))
+    }
+    if(!"afp_linelist_2017-01-01_2019-12-31.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/core_files_to_combine"))){
+      tidypolis_io(io = "read", file_path="Data/core_files_to_combine/afp_linelist_2017-01-01_2019-12-31.rds") |>
+        tidypolis_io(io = "write", file_path = paste0(polis_data_folder, "/core_files_to_combine/afp_linelist_2017-01-01_2019-12-31.rds"))
+    }
+    if(!"other_surveillance_type_linelist_2016_2016.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/core_files_to_combine"))){
+      tidypolis_io(io = "read", file_path="Data/core_files_to_combine/other_surveillance_type_linelist_2016_2016.rds") |>
+        tidypolis_io(io = "write", file_path = paste0(polis_data_folder, "/core_files_to_combine/other_surveillance_type_linelist_2016_2016.rds"))
+    }
+    if(!"other_surveillance_type_linelist_2017_2019.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/core_files_to_combine"))){
+      tidypolis_io(io = "read", file_path="Data/core_files_to_combine/other_surveillance_type_linelist_2017_2019.rds") |>
+        tidypolis_io(io = "write", file_path = paste0(polis_data_folder, "/core_files_to_combine/other_surveillance_type_linelist_2017_2019.rds"))
+    }
+    if(!"sia_2000_2019.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/core_files_to_combine"))){
+      tidypolis_io(io = "read", file_path="Data/core_files_to_combine/sia_2000_2019.rds") |>
+        tidypolis_io(io = "write", file_path = paste0(polis_data_folder, "/core_files_to_combine/sia_2000_2019.rds"))
+    }
+
+
+  }else{
+    if(!"afp_linelist_2001-01-01_2012-12-31.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/core_files_to_combine"))){
+      missing_req_files <- append(missing_req_files, "afp_linelist_2001-01-01_2012-12-31.rds")
+    }
+    if(!"afp_linelist_2013-01-01_2016-12-31.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/core_files_to_combine"))){
+      missing_req_files <- append(missing_req_files, "afp_linelist_2013-01-01_2016-12-31.rds")
+    }
+    if(!"afp_linelist_2017-01-01_2019-12-31.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/core_files_to_combine"))){
+      missing_req_files <- append(missing_req_files, "afp_linelist_2017-01-01_2019-12-31.rds")
+    }
+    if(!"other_surveillance_type_linelist_2016_2016.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/core_files_to_combine"))){
+      missing_req_files <- append(missing_req_files, "other_surveillance_type_linelist_2016_2016.rds")
+    }
+    if(!"other_surveillance_type_linelist_2017_2019.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/core_files_to_combine"))){
+      missing_req_files <- append(missing_req_files, "other_surveillance_type_linelist_2017_2019.rds")
+    }
+    if(!"sia_2000_2019.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/core_files_to_combine"))){
+      missing_req_files <- append(missing_req_files, "sia_2000_2019.rds")
+    }
+
+  }
+
+  if (length(missing_req_files) > 0) {
+    cli::cli_alert_warning("Please request the following file(s) from the SIR team or if you have EDAV access move them into your core_files_to_combine folder:")
+    for (i in missing_req_files) {
+      cli::cli_alert_info(paste0(i, "\n"))
+    }
+    stop("Halting execution of preprocessing due to missing files.")
+  }
+
+
   #Step 1 - Basic cleaning and crosswalk ======
   cli::cli_h1("Step 1/5: Basic cleaning and crosswalk across datasets")
 
@@ -3118,11 +3185,17 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   afp.files.01 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path=paste0(polis_data_folder, "/Core_Ready_Files"), full_names=TRUE)) |>
     dplyr::filter(grepl("^.*(afp_linelist).*(.rds)$", name)) |>
     dplyr::pull(name)
-  afp.files.02 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path="Data/core_files_to_combine", full_names=TRUE)) |>
+  afp.files.02 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path=paste0(polis_data_folder, "/core_files_to_combine"), full_names=TRUE)) |>
     dplyr::filter(grepl("^.*(afp_linelist).*(.rds)$", name)) |>
     dplyr::pull(name)
-  afp.files.03 <- c(afp.files.01, afp.files.02)
-  afp.clean.01 <- purrr::map_df(afp.files.03, ~tidypolis_io(io = "read", file_path = .x))
+  afp.to.combine <- purrr::map_df(afp.files.02, ~tidypolis_io(io = "read", file_path = .x)) |>
+    dplyr::mutate(stool1tostool2 = as.numeric(stool1tostool2),
+                  datenotificationtohq =  lubridate::parse_date_time(datenotificationtohq, c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S")))
+  afp.new <- purrr::map_df(afp.files.01, ~tidypolis_io(io = "read", file_path = .x))
+
+  afp.clean.01 <- dplyr::bind_rows(afp.new, afp.to.combine)
+
+
 
   tidypolis_io(obj = afp.clean.01, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/",
                                 paste("afp_linelist", min(afp.clean.01$dateonset, na.rm = T),
@@ -3154,11 +3227,16 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   non.afp.files.01 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path=paste0(polis_data_folder, "/Core_Ready_Files"), full_names=TRUE)) |>
     dplyr::filter(grepl("^.*(other_surveillance_type_linelist).*(.rds)$", name)) |>
     dplyr::pull(name)
-  non.afp.files.02 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path="Data/core_files_to_combine", full_names=TRUE)) |>
+  non.afp.files.02 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path=paste0(polis_data_folder, "/core_files_to_combine"), full_names=TRUE)) |>
     dplyr::filter(grepl("^.*(other_surveillance_type_linelist).*(.rds)$", name)) |>
     dplyr::pull(name)
-  non.afp.files.03 <- c(non.afp.files.01, non.afp.files.02)
-  non.afp.clean.01 <- purrr::map_df(non.afp.files.03, ~tidypolis_io(io = "read", file_path = .x))
+  non.afp.to.combine <- purrr::map_df(non.afp.files.02, ~tidypolis_io(io = "read", file_path = .x)) |>
+    dplyr::mutate(stool1tostool2 = as.numeric(stool1tostool2),
+                  datenotificationtohq =  lubridate::parse_date_time(datenotificationtohq, c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S")))
+  non.afp.new <- purrr::map_df(non.afp.files.01, ~tidypolis_io(io = "read", file_path = .x))
+
+  non.afp.clean.01 <- dplyr::bind_rows(non.afp.new, non.afp.to.combine)
+
 
   tidypolis_io(obj = non.afp.clean.01, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/",
                                     paste("other_surveillance_type_linelist", min(non.afp.clean.01$yronset, na.rm = T),
@@ -3176,17 +3254,18 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_start("Clearing memory")
 
   rm('afp.clean.01', 'afp.clean.light', 'afp.files.01', 'afp.files.02',
-     'afp.files.03', 'afp.linelist.01',
-     'afp.linelist.02', 'afp.linelist.latlong', 'afp.missing.01',
-     'afp.missing.02', 'afp_metadata_comparison',
+      'afp.linelist.01', 'afp.linelist.02', 'afp.linelist.latlong',
+     'afp.missing.01', 'afp.missing.02', 'afp_metadata_comparison',
      'col.afp.raw.01', 'dup.epid', 'issuesbyCtry', 'issuesbyyear',
      'endyr', 'global.dist.01', 'in_new_and_old_but_modified',
      'in_new_not_old', 'in_old_not_new',
      'new', 'new_table_metadata', 'non.afp.clean.01', 'non.afp.files.01',
-     'non.afp.files.02', 'non.afp.files.03', 'non.afp.files.03',
+     'non.afp.files.02', 'non.afp.files.03',
      'not.afp', 'not.afp.01', 'not_afp_metadata_comparison', 'old',
      'old.file', 'old_table_metadata', 'startyr',
-     'unknown.afp', 'x')
+     'unknown.afp', 'x', "afp.new", "afp.to.combine", "non.afp.new",
+     "non.afp.to.combine"
+  )
 
   gc()
 
@@ -3508,11 +3587,19 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   sia.files.01 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path=paste0(polis_data_folder, "/Core_Ready_Files"), full_names=TRUE)) |>
     dplyr::filter(grepl("^.*(sia).*(.rds)$", name)) |>
     dplyr::pull(name)
-  sia.files.02 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path="Data/core_files_to_combine", full_names=TRUE)) |>
+  sia.files.02 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path=paste0(polis_data_folder, "/core_files_to_combine"), full_names=TRUE)) |>
     dplyr::filter(grepl("^.*(sia).*(.rds)$", name)) |>
     dplyr::pull(name)
-  sia.files.03 <- c(sia.files.01, sia.files.02)
-  sia.clean.01 <- purrr::map_df(sia.files.03, ~tidypolis_io(io = "read", file_path = .x))
+  sia.to.combine <- purrr::map_df(sia.files.02, ~tidypolis_io(io = "read", file_path = .x)) |>
+    dplyr::mutate(sub.activity.initial.planned.date = lubridate::parse_date_time(sub.activity.initial.planned.date, c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S")),
+                  last.updated.date = lubridate::parse_date_time(last.updated.date, c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S")),
+                  sub.activity.last.updated.date = as.Date(lubridate::parse_date_time(sub.activity.last.updated.date, c("dmY", "bY", "Ymd", "%d-%m-%Y %H:%M"))))
+  sia.new <- purrr::map_df(sia.files.01, ~tidypolis_io(io = "read", file_path = .x))
+
+  sia.clean.01 <- dplyr::bind_rows(sia.new, sia.to.combine) |>
+    mutate(sub.activity.last.updated.date = as.Date(sub.activity.last.updated.date),
+           last.updated.date = as.Date(last.updated.date)) |>
+    dplyr::select(sia.code, sia.sub.activity.code, everything())
 
   tidypolis_io(obj = sia.clean.01, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/",
                                 paste("sia", min(sia.clean.01$yr.sia, na.rm = T),
@@ -3565,8 +3652,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     'sia.01.new', 'sia.01.new.compare', 'sia.01.old',
     'sia.01.old.compare', 'sia.02', 'sia.03', 'sia.04', 'sia.05',
     'sia.06', 'sia.clean.01', 'sia.files.01', 'sia.files.02',
-    'sia.files.03', 'sia_metadata_comparison', 'sia.file.path',
-    'startyr', 'tofix', 'var.list.01'
+    'sia_metadata_comparison', 'sia.file.path',
+    'startyr', 'tofix', 'var.list.01', "sia.new", "sia.to.combine"
   )
 
   cli::cli_process_done()
@@ -4549,6 +4636,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   update_polis_log(.event = "Processing of CORE datafiles complete",
                    .event_type = "END")
+
 
   #log_report()
   #archive_log()
