@@ -1537,7 +1537,8 @@ archive_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
 #' @return outputs a saved reference table of original date vars and a smaller
 #' core ready file without character dates
 remove_character_dates <- function(type,
-                                   df){
+                                   df,
+                                   polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")){
 
   if(type %in% c("AFP", "POS")){
     df.01 <- df |>
