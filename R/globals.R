@@ -44,5 +44,7 @@ utils::globalVariables(c(
   'who.region', 'whoregion', 'write.csv', 'wrongAdmin1GUID', 'wrongAdmin2GUID', 'yr.sia', 'yr.st', 'yronset',
   'corrupted.rds', 'createddate', 'date_time', 'dest', 'emergence_group', 'event', 'event_type',
   'full_name', 'measurement', 'short_name', 'time', 'vaccine_source', 'vdpvclassificationchangedate',
-  'vdpvclassificationcode'
+  'vdpvclassificationcode', 'vdpvclassificationcode', 'case.date', 'last.updated.date', 'sia.code', 'specimen.date',
+  'stool1tostool2', 'sub.activity.initial.planned.date', 'sub.activity.last.updated.date',
+  'corrupted.rds'
 ))
