@@ -4005,6 +4005,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
     if(nrow(in_new_and_old_but_modified) > 0){
       in_new_and_old_but_modified <- in_new_and_old_but_modified |>
+        dplyr::mutate(new = as.character(new),
+                      old = as.character(old)) |>
         dplyr::filter(new != old)
     }
 
