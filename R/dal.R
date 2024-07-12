@@ -79,6 +79,7 @@ tidypolis_io <- function(
 
   if(io == "read"){
     if(edav){
+      corrupted.rds <- NULL
       tryCatch(
         {
           return(sirfunctions::edav_io(io = "read", file_loc = file_path, azcontainer = azcontainer))
