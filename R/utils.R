@@ -3658,6 +3658,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   cli::cli_process_done()
   #Step 4 - Creating ES datasets====
+  update_polis_log(.event = "Creating ES analytic datasets",
+                   .event_type = "PROCESS")
+
   cli::cli_h1("Step 4/5 - Creating ES analytic datasets")
 
   # Step 1: Read in "old" data file (System to find "Old" data file)
