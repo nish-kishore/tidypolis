@@ -4528,8 +4528,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
     if(nrow(in_new_and_old_but_modified) > 0){
       in_new_and_old_but_modified <- in_new_and_old_but_modified |>
-        dplyr::mutate(new = unlist(new)) |>
-        dplyr::mutate(old = unlist(old)) |>
+        dplyr::mutate(new = as.character(new)) |>
+        dplyr::mutate(old = as.character(old)) |>
         dplyr::filter(new != old & !name %in% c("latitude", "longitude"))
 
       # list of records for which virus type name has changed from last week to this week.
