@@ -29,7 +29,7 @@ contact us to get the pre-requisite data files to run this process locally.
 
 ## Release Schedule
 
-- V1.1 to be released 4/1/2024, you can track progress [here](https://github.com/nish-kishore/tidypolis/milestone/2).
+- V1.2 to be released 10/11/2024, you can track progress [here](https://github.com/nish-kishore/tidypolis/milestone/3).
 
 Key features to be released are in development and will be shared shortly. 
 
