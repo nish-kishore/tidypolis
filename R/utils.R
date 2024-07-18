@@ -3658,6 +3658,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   cli::cli_process_done()
   #Step 4 - Creating ES datasets====
+  update_polis_log(.event = "Creating ES analytic datasets",
+                   .event_type = "PROCESS")
+
   cli::cli_h1("Step 4/5 - Creating ES analytic datasets")
 
   # Step 1: Read in "old" data file (System to find "Old" data file)
@@ -4005,6 +4008,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
     if(nrow(in_new_and_old_but_modified) > 0){
       in_new_and_old_but_modified <- in_new_and_old_but_modified |>
+        dplyr::mutate(new = as.character(new),
+                      old = as.character(old)) |>
         dplyr::filter(new != old)
     }
 
@@ -4526,8 +4531,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
     if(nrow(in_new_and_old_but_modified) > 0){
       in_new_and_old_but_modified <- in_new_and_old_but_modified |>
-        dplyr::mutate(new = unlist(new)) |>
-        dplyr::mutate(old = unlist(old)) |>
+        dplyr::mutate(new = as.character(new)) |>
+        dplyr::mutate(old = as.character(old)) |>
         dplyr::filter(new != old & !name %in% c("latitude", "longitude"))
 
       # list of records for which virus type name has changed from last week to this week.
