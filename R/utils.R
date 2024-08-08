@@ -2851,7 +2851,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
           bad.stool1 == "data entry error" | bad.stool1 == "date before onset" | bad.stool1 == "date onset missing" ~ 77,
           bad.stool2 == "data entry error" | bad.stool2 == "date before onset" | bad.stool2 == "date onset missing" ~ 77,
           ontostool1 <= 13 & ontostool1 >= 0 & ontostool2 <= 14 & ontostool2 >= 1 & stool1tostool2 >= 1 & is.na(stool1tostool2) == F
-          & (stool.1.condition =="Good" | is.na(stool.1.condition)) & (stool.2.condition =="Good" | is.na(stool.2.condition)) ~ 1,
+          & (stool.1.condition =="Good" | is.na(stool.1.condition) | stool.1.condition == "Unknown") &
+            (stool.2.condition =="Good" | is.na(stool.2.condition) | stool.2.condition == "Unknown") ~ 1,
           ontostool1 > 13 | ontostool1 < 0 | ontostool2 > 14 | ontostool2 < 1 | stool1tostool2 < 1 | is.na(stool1tostool2) == T
           | stool.1.condition == "Poor" | stool.2.condition == "Poor" ~ 0
         ),
