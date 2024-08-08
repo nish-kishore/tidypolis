@@ -2863,9 +2863,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
       # Step 7 create variables need for flags and 60 day follow-up variable
       # based on old CORE code, but can be combined with bad.invest etc. to limit to only those with interpetable dates
 
-      stool2missing = ifelse(is.na(datestool2) == T, 1, 0),
-      stool1missing = ifelse(is.na(datestool1) == T, 1, 0),
-      stoolmissing = ifelse(is.na(datestool1) == T & is.na(datestool2) == T, 1, 0),
+      stool2missing = ifelse(is.na(datestool2) & is.na(stool.2.condition), 1, 0),
+      stool1missing = ifelse(is.na(datestool1) & is.na(stool.1.condition), 1, 0),
+      stoolmissing = ifelse(stool1missing == 1 & stool2missing == 1, 1, 0),
 
 
       ontostool2.03 = NA,
