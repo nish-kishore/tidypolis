@@ -4278,7 +4278,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   # Human virus dataset with sabin 2 and positive viruses only
   human.virus.01 <- virus.01 |>
     dplyr::filter(!surveillance.type=="ENV") |>
-    dplyr::filter(!virustype %in% c("VACCINE 1", "VACCINE 3") & classificationvdpv != "Pending")
+    dplyr::filter(!virustype %in% c("VACCINE 1", "VACCINE 3"))
 
   cli::cli_process_start("Clearing memory")
   rm(
@@ -4374,7 +4374,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   ### ENV data from virus table
   env.virus.01 <- virus.01 |>
     dplyr::filter(surveillance.type == "ENV" & !is.na(virustype) &
-             !virustype %in% c("VACCINE 1", "VACCINE 3", "NPEV") & classificationvdpv != "Pending")
+             !virustype %in% c("VACCINE 1", "VACCINE 3", "NPEV"))
 
   cli::cli_process_done()
   gc()
