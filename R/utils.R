@@ -3818,10 +3818,10 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
 
   # find out duplicate ES samples even though they have different 'env.sample.maual.edit.id'
-  # from same site, same date, with same virus type on sabin samples.
+  # from same site, same date, with same virus type
 
   es.dup.01 <- es.02 |>
-    dplyr::filter(sabin==1) |>
+    #dplyr::filter(sabin==1) |>
     dplyr::group_by(env.sample.id, virus.type, emergence.group, nt.changes, site.id, collection.date, collect.yr) |>
     dplyr::mutate(es.dups=dplyr::n()) |>
     dplyr::filter(es.dups >=2)|>
