@@ -155,7 +155,7 @@ init_tidypolis <- function(
       "endpoint" = c("cache", "Virus", "Case", "LabSpecimen", "EnvSample", "Activity",
                      "SubActivity", "Lqas", "Im", "Population", "Geography", "Synonym", "IndicatorValue",
                      "RefData", "Population"),
-      "polis_id" = c(NA, "VirusId", "EPID", "SpecimenId", "EnviroSampleId", "SubActivityId", "SubActivityByAdmin2Id",
+      "polis_id" = c(NA, "VirusId", "EPID", "SpecimenId", "EnviroSampleManualEditId", "SubActivityId", "SubActivityByAdmin2Id",
                      "LqasId", "ImId", "FK_GeoplaceId", "PlaceId", NA, NA, NA, "Id"),
       "polis_update_id" = c(NA, "UpdatedDate", "LastUpdateDate", "LastUpdateDate", "LastUpdateDate", "LastUpdateDate", "UpdatedDate",
                             NA, NA, "UpdatedDate", "UpdatedDate", NA, NA, NA, NA),
