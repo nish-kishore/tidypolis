@@ -125,7 +125,7 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
         cache_file = Sys.getenv("POLIS_CACHE_FILE"),
         .table = .table,
         .nrow = nrow(out),
-        .update_val = max(lubridate::as_datetime(dplyr::pull(out[table_data$polis_update_id])))
+        .update_val = max(lubridate::as_datetime(dplyr::pull(out[table_data$polis_update_id])), na.rm = T)
       )
     }
 
@@ -279,39 +279,136 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
         )
 
         #update cache
-        old_cache <-
-          old_cache |> dplyr::filter(!get(table_data$polis_id) %in% dplyr::pull(out[table_data$polis_id]))
+        old_cache <- old_cache |>
+          dplyr::filter(!get(table_data$polis_id) %in% dplyr::pull(out[table_data$polis_id]))
         old_cache <-
           bind_and_reconcile(new_data = out, old_data = old_cache)
 
         #delete data that no longer exists in POLIS
-        old_cache <- old_cache |> filter(get(table_data$polis_id) %in% ids)
+        old_cache <- old_cache |>
+          dplyr::filter(get(table_data$polis_id) %in% ids)
 
-        #write cache
-
-        cli::cli_process_start("Updating cache log")
-        update_polis_cache(
-          cache_file = Sys.getenv("POLIS_CACHE_FILE"),
-          .table = .table,
-          .nrow = nrow(old_cache),
-          .update_val = max(lubridate::as_datetime(dplyr::pull(out[table_data$polis_update_id])))
-        )
+        #check for missed IDs, if IDs missed then redownload full table
+        #create ids table in order to filter
+        cli::cli_process_start("Checking for missed records in download")
+        ids_table <- as.data.frame(ids)
+        missed.id <- ids_table |>
+          dplyr::filter(!ids %in% dplyr::pull(old_cache[table_data$polis_id]))
         cli::cli_process_done()
 
-        cli::cli_process_start("Writing data cache")
-        tidypolis_io(obj = old_cache, io = "write",
-                         file_path = paste0(
-                           Sys.getenv("POLIS_DATA_CACHE"),
-                           "/",
-                           table_data$table,
-                           ".rds"
-                         ))
-        update_polis_log(.event = paste0(table_data$table, " data saved locally"),
-                         .event_type = "PROCESS")
-        cli::cli_process_done()
+        #if there are missed IDs, clear old cache and re-download full table
+        if(nrow(missed.id) > 0){
 
-        #garbage clean
-        gc()
+          cli::cli_alert_info(
+            paste0(
+              table_data$endpoint,
+              " has been downloaded before but ",
+              nrow(missed.id),
+              " record(s) missing, downloading all data...checking size..."
+            )
+          )
+
+          table_size <- get_table_size(.table = table_data$table)
+          cli::cli_alert_info(paste0("Getting ready to download ", table_size, " new rows of data!"))
+
+          table_url <- paste0(base_url, table_data$endpoint)
+
+          if (table_data$table %in% c("human_specimen",
+                                      "environmental_sample",
+                                      "activity",
+                                      "sub_activity",
+                                      "lqas",
+                                      "pop")) {
+            urls <-
+              create_table_urls(url = table_url,
+                                table_size = table_size,
+                                type = "lab")
+          }else{
+            urls <-
+              create_table_urls(url = table_url,
+                                table_size = table_size,
+                                type = "full")
+          }
+
+          cli::cli_process_start("Downloading data")
+          out <- call_urls(urls)
+          update_polis_log(.event = paste0(
+            "Downloaded ",
+            table_size,
+            " rows of ",
+            table_data$table,
+            " data"
+          ),
+          .event_type = "INFO")
+          cli::cli_process_done()
+
+          #update cache information
+          cli::cli_process_start("Updating cache")
+          if (is.na(table_data$polis_update_id)) {
+            update_polis_cache(
+              cache_file = Sys.getenv("POLIS_CACHE_FILE"),
+              .table = .table,
+              .nrow = nrow(out),
+              .update_val = NA
+            )
+          } else{
+            update_polis_cache(
+              cache_file = Sys.getenv("POLIS_CACHE_FILE"),
+              .table = .table,
+              .nrow = nrow(out),
+              .update_val = max(lubridate::as_datetime(dplyr::pull(out[table_data$polis_update_id])), na.rm = T)
+            )
+          }
+
+          cli::cli_process_done()
+
+          cli::cli_process_start("Writing data cache")
+          tidypolis_io(obj = out, io = "write", file_path = paste0(
+            Sys.getenv("POLIS_DATA_CACHE"),
+            "/",
+            table_data$table,
+            ".rds"
+          ))
+          update_polis_log(.event = paste0(table_data$table, " data saved locally"),
+                           .event_type = "PROCESS")
+          cli::cli_process_done()
+
+          gc()
+
+          cli::cli_process_done()
+
+        }else{
+
+          #write cache
+
+          cli::cli_process_start("Updating cache log")
+          update_polis_cache(
+            cache_file = Sys.getenv("POLIS_CACHE_FILE"),
+            .table = .table,
+            .nrow = nrow(old_cache),
+            .update_val = max(lubridate::as_datetime(dplyr::pull(out[table_data$polis_update_id])))
+          )
+          cli::cli_process_done()
+
+          cli::cli_process_start("Writing data cache")
+          tidypolis_io(obj = old_cache, io = "write",
+                       file_path = paste0(
+                         Sys.getenv("POLIS_DATA_CACHE"),
+                         "/",
+                         table_data$table,
+                         ".rds"
+                       ))
+          update_polis_log(.event = paste0(table_data$table, " data saved locally"),
+                           .event_type = "PROCESS")
+          cli::cli_process_done()
+
+          #garbage clean
+          gc()
+
+        }
+
+
+
 
       }
 
@@ -1065,41 +1162,132 @@ f.download.compare.02 <- function(df.from.f.download.compare.01, old.download, n
 #' @returns tibble with lat/lon for all unsampled locations
 f.pre.stsample.01 <- function(df01, global.dist.01) {
 
-  df01.noshape <- dplyr::anti_join(df01, global.dist.01, by=c("Admin2GUID"="GUID"))
+  #also need to identify cases with no lat/lon
+  empty.coord <- df01 |>
+    dplyr::filter(is.na(polis.latitude) | is.na(polis.longitude) | (polis.latitude == 0 & polis.longitude == 0))
 
-  global.dist.01$empty.01 <- sf::st_is_empty(global.dist.01)
+  cli::cli_process_start("Spatially joining AFP cases to global districts")
+  #create sf object from lat lon and make global.dist valid
+  df01.sf <- df01 |>
+    dplyr::filter(!epid %in% empty.coord$epid) |>
+    dplyr::mutate(lon = polis.longitude,
+                  lat = polis.latitude) |>
+    sf::st_as_sf(coords = c(x = "lon" , y = "lat"), crs = 4326)
 
-  df01.shape <- dplyr::right_join(global.dist.01,
-                                  df01 |> dplyr::filter(!is.na(Admin2GUID)),
-                                  by = c("GUID" = "Admin2GUID"))
+  global.dist.02 <- sf::st_make_valid(global.dist.01)
 
-  df01.empty.shape <- dplyr::filter(df01.shape, empty.01)
-  df01.shape <- dplyr::filter(df01.shape, !empty.01)
+  #identify bad shape rows after make_valid
+  check.dist.2 <- as_tibble(st_is_valid(global.dist.02))
+  row.num.2 <- which(check.dist.2$value == FALSE)
+  #removing all bad shapes post make valid
+  valid.shapes <- global.dist.02 |>
+    dplyr::slice(-row.num.2) |>
+    dplyr::select(GUID, ADM1_GUID, ADM0_GUID, yr.st, yr.end, SHAPE)
 
-  df02.ref <- df01.shape |>
+  cli::cli_process_start("Evaluating invalid district shapes")
+  #invalid shapes for which we'll turn off s2
+  invalid.shapes <- global.dist.02 |>
+    dplyr::slice(row.num.2) |>
+    dplyr::select(GUID, ADM1_GUID, ADM0_GUID, yr.st, yr.end, SHAPE)
+
+
+  update_polis_log(.event = paste0("Invalid district shapes identified: ", paste(invalid.shapes |> pull(GUID), collapse = ", ")),
+                   .event_type = "ALERT")
+
+
+  #do 2 seperate st_joins the first, df02, is for valid shapes and those attached cases
+  df02 <- sf::st_join(df01.sf |> dplyr::filter(!Admin2GUID %in% invalid.shapes$GUID), valid.shapes, left = T) |>
+    dplyr::filter(yronset >= yr.st & yronset <= yr.end)
+
+  #second st_join is for invalid shapes and those attached cases, turning off s2
+  sf_use_s2(F)
+  df03 <- sf::st_join(df01.sf |> dplyr::filter(!Admin2GUID %in% invalid.shapes$GUID), invalid.shapes, left = T) |>
+    dplyr::filter(yronset >= yr.st & yronset <= yr.end)
+  sf_use_s2(T)
+
+  cli::cli_process_done()
+
+  #bind back together df02 and df03
+  df04 <- dplyr::bind_rows(df02, df03)
+
+  cli::cli_process_done()
+
+  #df04 has a lot of dupes due to overlapping shapes, need to appropriately de dupe
+  #identify duplicate obs
+  dupes <- df04 |>
+    dplyr::group_by(epid) |>
+    dplyr::mutate(n = n()) |>
+    dplyr::ungroup() |>
+    dplyr::filter(n >1)
+
+  #duplicate obs where adm2guid matches GUID in shapefile
+  dupes.01 <- dupes |>
+    dplyr::filter(Admin2GUID == GUID) |>
+    dplyr::select(-n)
+
+  #duplicate obs where adm2guid is NA or doesn't match to shapefile
+  dupes.02 <- dupes |>
+    dplyr::filter(!epid %in% dupes.01$epid) |>
+    dplyr::group_by(epid) |>
+    dplyr::slice(1) |>
+    dplyr::ungroup() |>
+    dplyr::select(-n) |>
+    dplyr::mutate(Admin2GUID = GUID)
+
+  #fixed duplicates
+  dupes.fixed <- dplyr::bind_rows(dupes.01, dupes.02)
+
+  rm(dupes, dupes.01, dupes.02)
+
+  #remove the duplicate cases from df04 and bind back the fixed dupes
+  df05 <- df04 |>
+    dplyr::filter(!epid %in% dupes.fixed$epid) |>
+    dplyr::bind_rows(dupes.fixed) |>
+    dplyr::mutate(Admin2GUID = ifelse(Admin2GUID == GUID, Admin2GUID, GUID),
+                  Admin1GUID = ifelse(Admin1GUID == ADM1_GUID, Admin1GUID, ADM1_GUID),
+                  Admin0GUID = ifelse(Admin0GUID == ADM0_GUID, Admin0GUID, ADM0_GUID))
+
+  #identify dropped obs. obs are dropped primarily because they match to a shape that doesn't
+  #exist for the case's year onset (there are holes in the global map for certain years)
+  df04$geometry <- NULL
+  #antijoin from df01 to keep polis.lat/lon
+  dropped.obs <- dplyr::anti_join(df01, df04, by = "epid") |>
+    dplyr::filter(!epid %in% df04$epid & epid %in% df01.sf$epid)
+
+  #bring df05 and dropped observations back together, create lat/lon var from sf object previously created
+  df06 <- dplyr::bind_cols(
+    tibble::as_tibble(df05),
+    sf::st_coordinates(df05) |>
+      tibble::as_tibble() |>
+      dplyr::rename("lon" = "X", "lat" = "Y")) |>
+    dplyr::bind_rows(dropped.obs) |>
+    dplyr::select(-c("GUID", "yr.st", "yr.end"))
+
+  df06$geometry <- NULL
+
+  #feed only cases with empty coordinates into st_sample (vars = GUID, nperarm, id, SHAPE)
+  empty.coord.01 <- empty.coord |>
     tibble::as_tibble() |>
-    dplyr::group_by(GUID) |>
+    dplyr::group_by(Admin2GUID) |>
     dplyr::summarise(nperarm = dplyr::n()) |>
-    dplyr::arrange(GUID) |>
+    dplyr::arrange(Admin2GUID) |>
     dplyr::mutate(id = dplyr::row_number()) |>
-    dplyr::ungroup()
+    dplyr::ungroup() |>
+    dplyr::filter(Admin2GUID != "{NA}")
 
-  df02 <- global.dist.01 |>
+  empty.coord.02 <- global.dist.01 |>
     dplyr::select(GUID) |>
-    dplyr::filter(GUID %in% df02.ref$GUID) |>
-    dplyr::left_join(df02.ref, by = "GUID")
+    dplyr::filter(GUID %in% empty.coord.01$Admin2GUID) |>
+    dplyr::left_join(empty.coord.01, by = c("GUID" = "Admin2GUID"))
 
-  cli::cli_process_start("Placing random points")
- # pt01 <- suppressMessages(sf::st_sample(df02, df02$nperarm,
-  #                                       exact = T, progress = T))
-
-  pt01 <- lapply(1:nrow(df02), function(x){
+  cli::cli_process_start("Placing random points for cases with bad coordinates")
+  pt01 <- lapply(1:nrow(empty.coord.02), function(x){
 
     tryCatch(
-      expr = {suppressMessages(sf::st_sample(df02[x,], pull(df02[x,], "nperarm"),
-                                            exact = T)) |> st_as_sf()},
+      expr = {suppressMessages(sf::st_sample(empty.coord.02[x,], pull(empty.coord.02[x,], "nperarm"),
+                                             exact = T)) |> st_as_sf()},
       error = function(e) {
-        guid = df02[x, ]$GUID[1]
+        guid = empty.coord.02[x, ]$GUID[1]
         ctry_prov_dist_name = global.dist.01 |> filter(GUID == guid) |> select(ADM0_NAME, ADM1_NAME, ADM2_NAME)
         cli::cli_alert_warning(paste0("Fixing errors for:\n",
                                       "Country: ", ctry_prov_dist_name$ADM0_NAME,"\n",
@@ -1108,14 +1296,14 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
 
         suppressWarnings(
           {
-          sf_use_s2(F)
-          int <- df02[x,] |> st_centroid(of_largest_polygon = T)
-          sf_use_s2(T)
+            sf_use_s2(F)
+            int <- empty.coord.02[x,] |> st_centroid(of_largest_polygon = T)
+            sf_use_s2(T)
 
-          st_buffer(int, dist = 3000) |>
-                   st_sample(slice(df02, x) |>
-                               pull(nperarm)) |>
-                   st_as_sf()
+            st_buffer(int, dist = 3000) |>
+              st_sample(slice(empty.coord.02, x) |>
+                          pull(nperarm)) |>
+              st_as_sf()
           }
         )
 
@@ -1127,29 +1315,17 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
 
   cli::cli_process_done()
 
-  pt01_sf <- pt01
 
   pt01_joined <- dplyr::bind_cols(
-    pt01_sf,
-    df02 |>
+    pt01,
+    empty.coord.02 |>
       tibble::as_tibble() |>
       dplyr::select(GUID, nperarm) |>
       tidyr::uncount(nperarm)
   ) |>
-    dplyr::left_join(tibble::as_tibble(df02) |> dplyr::select(-SHAPE), by = "GUID")
+    dplyr::left_join(tibble::as_tibble(empty.coord.02) |> dplyr::select(-SHAPE), by = "GUID")
 
-
-
-  #pt01_joined <- sf::st_join(pt01_sf, df02)
-
-  pt01_joined <- dplyr::bind_cols(
-    tibble::as_tibble(pt01_joined),
-    sf::st_coordinates(pt01_joined) |>
-      tibble::as_tibble() |>
-      dplyr::rename("lon" = "X", "lat" = "Y")
-  )
-
-  df03 <- pt01_joined |>
+  pt02 <- pt01_joined |>
     tibble::as_tibble() |>
     dplyr::select(-nperarm, -id) |>
     dplyr::group_by(GUID)|>
@@ -1157,17 +1333,29 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
     dplyr::mutate(id = dplyr::row_number()) |>
     as.data.frame()
 
-  df04 <- df01.shape |>
-    dplyr::group_by(GUID)|>
-    dplyr::arrange(GUID, .by_group = TRUE) |>
-    dplyr::mutate(id = dplyr::row_number())
+  pt03 <- empty.coord |>
+    dplyr::group_by(Admin2GUID) |>
+    dplyr::arrange(Admin2GUID, .by_group = TRUE) |>
+    dplyr::mutate(id = dplyr::row_number()) |>
+    dplyr::ungroup()
 
-  df05 <- dplyr::full_join(df04, df03, by = c("GUID", "id"))
 
-  sf::st_geometry(df05) <- NULL
+  pt04 <- dplyr::full_join(pt03, pt02, by = c("Admin2GUID" = "GUID", "id"))
 
-  df06 <- dplyr::bind_rows(df05, df01.noshape)
-  df07 <- dplyr::bind_rows(df06, df01.empty.shape)
+  pt05 <- pt04 |>
+    dplyr::bind_cols(
+      tibble::as_tibble(pt04$x),
+      sf::st_coordinates(pt04$x) |>
+        tibble::as_tibble() |>
+        dplyr::rename("lon" = "X", "lat" = "Y")) |>
+    dplyr::select(-id)
+
+  pt05$x <- NULL
+  pt05$geometry <- NULL
+
+  #bind back placed point cases with df06 and finished
+  df07 <- dplyr::bind_rows(df06, pt05) |>
+    dplyr::select(-c("wrongAdmin1GUID", "wrongAdmin2GUID", "ADM1_GUID", "ADM0_GUID"))
 
   return(df07)
 }
@@ -1230,7 +1418,7 @@ f.compare.metadata <- function(new_table_metadata, old_table_metadata, table){
   }
 
   if(length(new_vars) == 0 & length(lost_vars) == 0){
-    update_polis_log(.event = paste0(table, " - ", "No new or lost varaibles"),
+    update_polis_log(.event = paste0(table, " - ", "No new or lost variables"),
                      .event_type = "INFO")
   }
 
@@ -1353,16 +1541,16 @@ log_report <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
     dplyr::filter(event_type == "INFO" & !grepl("records identified!", event)) |>
     dplyr::mutate(event = ifelse(grepl(" - update -", event), sub("deleted.*", "deleted", event), event))|>
     dplyr::pull(event) |>
-    sapply(function(x){paste0("<li>",x,"</li>")}, USE.NAMES = F) |>
+    sapply(function(x){paste0(x, "; ")}, USE.NAMES = F) |>
     paste0(collapse = "") %>%
-    {paste0("<ul>", ., "</ul>")}
+    {paste0(.)}
 
   report_alert <- latest_run |>
     dplyr::filter(event_type == "ALERT") |>
     dplyr::pull(event) |>
-    sapply(function(x){paste0("<li>",x,"</li>")}, USE.NAMES = F) |>
+    sapply(function(x){paste0(x, "; ")}, USE.NAMES = F) |>
     paste0(collapse = "") %>%
-    {paste0("<ul>", ., "</ul>")}
+    {paste0(.)}
 
 
   #csv files to attach to report
@@ -1379,8 +1567,8 @@ log_report <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
   readr::write_csv(x = new.virus.records, file = file3)
 
   #coms section
-  sirfunctions::send_teams_message(msg = paste0("New CORE data files info: ", report_info), type = "html")
-  sirfunctions::send_teams_message(msg = paste0("New CORE data files alerts: ", report_alert), type = "html")
+  sirfunctions::send_teams_message(msg = paste0("New CORE data files info: ", report_info))
+  sirfunctions::send_teams_message(msg = paste0("New CORE data files alerts: ", report_alert))
   sirfunctions::send_teams_message(msg = "Attached CSVs contain information on new/changed virus records", attach = c(file1, file2, file3))
 
 }
@@ -1440,7 +1628,48 @@ archive_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
     )
   }
 
+}
+
+#' function to remove original character formatted date vars from data tables
+#'
+#' @description
+#' remove original date variables from POLIS tables
+#' @import dplyr
+#' @param type str: the table on which to remove original date vars, "AFP", "ES", "POS"
+#' @param df tibble: the dataframe from which to remove character formatted dates
+#' @param polis_data_folder str:  location of user's polis data folder
+#' @return outputs a saved reference table of original date vars and a smaller
+#' core ready file without character dates
+remove_character_dates <- function(type,
+                                   df,
+                                   polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")){
+
+  if(type %in% c("AFP", "POS")){
+    df.01 <- df |>
+      dplyr::select(epid, (dplyr::contains("date") & dplyr::where(is.character)))
+
+    df.02 <- df |>
+      dplyr::select(!(dplyr::contains("date") & dplyr::where(is.character)))
   }
+
+  if(type == "ES"){
+    df.01 <- df |>
+      dplyr::select(env.sample.manual.edit.id, env.sample.id, (dplyr::contains("date") & dplyr::where(is.character)))
+
+    df.01.fixed <- df.01 |>
+      dplyr::mutate(dplyr::across(dplyr::contains("date") & dplyr::where(is.character),
+                    ~lubridate::parse_date_time(., c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S"))))
+
+    df.02 <- df |>
+      dplyr::select(env.sample.manual.edit.id, env.sample.id, !(dplyr::contains("date") & dplyr::where(is.character))) |>
+      dplyr::left_join(df.01.fixed)
+
+  }
+
+  tidypolis_io(io = "write", obj = df.01, file_path = paste0(polis_data_folder, "/Core_Ready_Files/", type, "_orig_char_dates.rds"))
+
+  return(df.02)
+}
 
 
 #' function to hard code incomplete or incorrect POLIS records that are GPEI confirmed viruses
@@ -1528,7 +1757,44 @@ hard_coded_cases <- function(df){
 #' @param polis_spatial_folder str: location of the POLIS spatial folder, defaults to value stored from init_tidypolis
 #' @return Outputs intermediary core ready files
 preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
-                           polis_spatial_folder = Sys.getenv("POLIS_SPATIAL_CACHE")) {
+                           polis_spatial_folder = Sys.getenv("POLIS_SPATIAL_CACHE"),
+                           polis_misc_folder = Sys.getenv("POLIS_MISC_CACHE")) {
+
+  # Step 0 - Checking if the required local files exist ======
+  missing_req_files <- c()
+  cli::cli_h1("Checking for missing required files.")
+  if(!"global.ctry.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_spatial_folder))){
+    missing_req_files <- append(missing_req_files, "global.ctry.rds")
+  }
+
+  if(!"global.prov.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_spatial_folder))){
+    missing_req_files <- append(missing_req_files, "global.prov.rds")
+  }
+
+  if(!"global.dist.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_spatial_folder))){
+    missing_req_files <- append(missing_req_files, "global.dist.rds")
+  }
+
+  if(!"crosswalk.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_misc_folder))){
+    missing_req_files <- append(missing_req_files, "crosswalk.rds")
+  }
+
+  if(!"env_sites.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_misc_folder))){
+    missing_req_files <- append(missing_req_files, "env_sites.rds")
+  }
+
+  if(!"nopv_emg.table.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_misc_folder))){
+    missing_req_files <- append(missing_req_files, "nopv_emg.table.rds")
+  }
+
+  if (length(missing_req_files) > 0) {
+    cli::cli_alert_warning("Please request the following file(s) from the SIR team:")
+    for (i in missing_req_files) {
+      cli::cli_alert_info(paste0(i, "\n"))
+    }
+    stop("Halting execution of preprocessing due to missing files.")
+  }
+
   #Step 1 - Basic cleaning and crosswalk ======
   cli::cli_h1("Step 1/5: Basic cleaning and crosswalk across datasets")
 
@@ -2372,6 +2638,10 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
       dateinvest = lubridate::ymd(as.Date(investigation.date, "%Y-%m-%dT%H:%M:%S")),
       datestool1 = lubridate::ymd(as.Date(stool.1.collection.date, "%Y-%m-%dT%H:%M:%S")),
       datestool2 = lubridate::ymd(as.Date(stool.2.collection.date, "%Y-%m-%dT%H:%M:%S")),
+      datenotificationtohq = lubridate::ymd(as.Date(date.notification.to.hq, "%Y-%m-%dT%H:%M:%S")),
+      results.seq.date.to.program = lubridate::ymd(as.Date(results.seq.date.to.program, "%Y-%m-%dT%H:%M:%S")),
+      specimen.date = lubridate::ymd(as.Date(specimen.date, "%Y-%m-%dT%H:%M:%S")),
+      casedate = lubridate::ymd(as.Date(case.date, "%Y-%m-%dT%H:%M:%S")),
       ontostool2 = as.numeric(datestool2 - dateonset),
       ontostool1 = as.numeric(datestool1 - dateonset),
       age.months = as.numeric(`calculated.age.(months)`),
@@ -2379,7 +2649,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
       ontoinvest = as.numeric(dateinvest - dateonset),
       nottoinvest = as.numeric(dateinvest - datenotify),
       investtostool1 = as.numeric(datestool1 - dateinvest),
-      stool1tostool2 = (datestool2 - datestool1),
+      stool1tostool2 = as.numeric(datestool2 - datestool1),
       stooltolabdate = lubridate::ymd(as.Date(stool.date.sent.to.lab, "%Y-%m-%dT%H:%M:%S")),
       stooltoiclabdate = lubridate::ymd(as.Date(stool.date.sent.to.ic.lab, "%Y-%m-%dT%H:%M:%S")),
       clinicadmitdate = lubridate::ymd(as.Date(clinical.admitted.date, "%Y-%m-%dT%H:%M:%S")),
@@ -2618,9 +2888,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
   # the district and province level. There are also two new columns added to indicate wether
   # the province level of district level guid was incorrect.
 
-  #var names created from guid checking
-  guid.check.vars <- c("Admin0GUID", "Admin1GUID", "Admin2GUID", "wrongAdmin1GUID", "wrongAdmin2GUID")
-
   # some info about number of errors
   #table(afp.linelist.fixed.02$wrongAdmin1GUID)
   #table(afp.linelist.fixed.02$wrongAdmin2GUID)
@@ -2656,24 +2923,51 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
   cli::cli_process_start("Fixing missing GPS locations (this may take a while)")
 
   afp.linelist.fixed.03 <- afp.linelist.fixed.02 |>
-    dplyr::rename(polis.latitude = y,
-           polis.longitude = x) |>
+    dplyr::rename(polis.latitude = x,
+           polis.longitude = y) |>
     dplyr::distinct()
 
   rm("afp.linelist.fixed.02")
   gc()
 
-  shape.file.names <- names(global.dist.01)
-  shape.file.names <- shape.file.names[!shape.file.names %in% c("SHAPE")]
+  cli::cli_process_start("Checking duplicated AFP EPIDs")
+  #identify duplicate EPIDs with differing place and onsets
+  dup.epid <- afp.linelist.fixed.03 |>
+    dplyr::group_by(epid) |>
+    dplyr::mutate(dup_epid = dplyr::n()) |>
+    dplyr::filter(dup_epid > 1) |>
+    dplyr::ungroup() |>
+    dplyr::select(epid, date.onset, yronset, diagnosis.final, classification, classificationvdpv,
+                  final.cell.culture.result, poliovirustypes, person.sex, place.admin.0,
+                  place.admin.1, place.admin.2) |>
+    dplyr::distinct() |>
+    dplyr::arrange(epid)
+
+  tidypolis_io(obj = dup.epid, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/", paste("duplicate_AFP_epids_Polis",
+                                                                                                              min(dup.epid$yronset, na.rm = T),
+                                                                                                              max(dup.epid$yronset, na.rm = T),
+                                                                                                              sep = "_"), ".csv", sep = "")
+  )
+
+  # remove duplicates in afp linelist
+  afp.linelist.fixed.03 <- afp.linelist.fixed.03[!duplicated(afp.linelist.fixed.03$epid), ]
+
+  cli::cli_process_done()
+
+  #identify afp cases w/ bad adm2guids
+  cli::cli_process_start("Checking District GUIDs")
+  afp.noshape <- dplyr::anti_join(afp.linelist.fixed.03, global.dist.01, by=c("Admin2GUID"="GUID"))
+
+  tidypolis_io(obj = afp.noshape, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/AFP_epids_bad_guid.csv", sep = ""))
+
+
   col.afp.raw.01 <- colnames(afp.raw.01)
-  rm("afp.raw.01")
+  rm("afp.raw.01", "afp.raw.02", "dup.epid", "afp.noshape")
   gc()
   # Function to create lat & long for AFP cases
   afp.linelist.fixed.04 <- f.pre.stsample.01(afp.linelist.fixed.03, global.dist.01)
   rm("afp.linelist.fixed.03")
 
-  #vars created during stsample
-  stsample.vars <- c("id", "empty.01", "x", "SHAPE")
 
   cli::cli_process_done()
 
@@ -2746,7 +3040,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
           bad.stool1 == "data entry error" | bad.stool1 == "date before onset" | bad.stool1 == "date onset missing" ~ 77,
           bad.stool2 == "data entry error" | bad.stool2 == "date before onset" | bad.stool2 == "date onset missing" ~ 77,
           ontostool1 <= 13 & ontostool1 >= 0 & ontostool2 <= 14 & ontostool2 >= 1 & stool1tostool2 >= 1 & is.na(stool1tostool2) == F
-          & (stool.1.condition =="Good" | is.na(stool.1.condition)) & (stool.2.condition =="Good" | is.na(stool.2.condition)) ~ 1,
+          & (stool.1.condition =="Good" | is.na(stool.1.condition) | stool.1.condition == "Unknown") &
+            (stool.2.condition =="Good" | is.na(stool.2.condition) | stool.2.condition == "Unknown") ~ 1,
           ontostool1 > 13 | ontostool1 < 0 | ontostool2 > 14 | ontostool2 < 1 | stool1tostool2 < 1 | is.na(stool1tostool2) == T
           | stool.1.condition == "Poor" | stool.2.condition == "Poor" ~ 0
         ),
@@ -2758,9 +3053,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
       # Step 7 create variables need for flags and 60 day follow-up variable
       # based on old CORE code, but can be combined with bad.invest etc. to limit to only those with interpetable dates
 
-      stool2missing = ifelse(is.na(datestool2) == T, 1, 0),
-      stool1missing = ifelse(is.na(datestool1) == T, 1, 0),
-      stoolmissing = ifelse(is.na(datestool1) == T & is.na(datestool2) == T, 1, 0),
+      stool2missing = ifelse(is.na(datestool2) & is.na(stool.2.condition), 1, 0),
+      stool1missing = ifelse(is.na(datestool1) & is.na(stool.1.condition), 1, 0),
+      stoolmissing = ifelse(stool1missing == 1 & stool2missing == 1, 1, 0),
 
 
       ontostool2.03 = NA,
@@ -2793,15 +3088,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
           need60day == 0 ~ 99, # excluded timely cases
           need60day == 1 & timeto60day >= 60 & timeto60day <= 90 ~ 1,
           (need60day == 1 & timeto60day < 60 | timeto60day > 90 | is.na(timeto60day) == T) ~ 0
-        ),
-
-      adm0guid = paste("{", stringr::str_to_upper(admin0guid), "}", sep = ""),
-      adm0guid = ifelse(adm0guid == "{}" | adm0guid == "{NA}", NA, adm0guid),
-      adm1guid = paste("{", stringr::str_to_upper(admin1guid), "}", sep = ""),
-      adm1guid = ifelse(adm1guid == "{}" | adm1guid == "{NA}", NA, adm1guid),
-      adm2guid = paste("{", stringr::str_to_upper(admin2guid), "}", sep = ""),
-      adm2guid = ifelse(adm2guid == "{}" | adm2guid == "{NA}", NA, adm2guid),
-    ) |>
+        )) |>
 
     # need to decide range for 60 day reviews completed
 
@@ -2814,48 +3101,26 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
 
   # renaming POLIS original variables to match the variables in afp line list for CORE analysis
   dplyr::rename(adequate.stool = stool.adequacy,
-         datenotificationtohq = date.notification.to.hq,
          datasetlab = dataset.lab,
          doses.total = doses,
          # totalnumberofdosesipvopv = `total.number.of.ipv./.opv.doses`,
          virus.cluster = `virus.cluster(s)`,
-         emergence.group = `emergence.group(s)`
+         emergence.group = `emergence.group(s)`,
+         adm0guid = Admin0GUID,
+         adm1guid = Admin1GUID,
+         adm2guid = Admin2GUID
   ) |>
-    dplyr::filter(!is.na(epid)) |>
-    dplyr::select(-c(shape.file.names, guid.check.vars, stsample.vars))
+    dplyr::filter(!is.na(epid))
 
   rm("afp.linelist.fixed.04")
   gc()
   cli::cli_process_done()
 
-  cli::cli_process_start("Checking duplicated AFP EPIDs")
 
   afp.linelist.02 <- afp.linelist.01 |>
     dplyr::filter(surveillancetypename == "AFP") |>
     dplyr::distinct()# this gives us an AFP line list
 
-  #identify duplicate EPIDs with differing place and onsets
-  dup.epid <- afp.linelist.02 |>
-    dplyr::group_by(epid) |>
-    dplyr::mutate(dup_epid = dplyr::n()) |>
-    dplyr::filter(dup_epid > 1) |>
-    dplyr::ungroup() |>
-    dplyr::select(epid, date.onset, yronset, diagnosis.final, classification, classificationvdpv,
-           final.cell.culture.result, poliovirustypes, person.sex, place.admin.0,
-           place.admin.1, place.admin.2) |>
-    dplyr::distinct() |>
-    dplyr::arrange(epid)
-
-  tidypolis_io(obj = dup.epid, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/", paste("duplicate_AFP_epids_Polis",
-                                                      min(dup.epid$yronset, na.rm = T),
-                                                      max(dup.epid$yronset, na.rm = T),
-                                                      sep = "_"), ".csv", sep = "")
-  )
-
-  # remove duplicates in afp linelist
-  afp.linelist.02 <- afp.linelist.02[!duplicated(afp.linelist.02$epid), ]
-
-  cli::cli_process_done()
 
   cli::cli_process_start("Checking Missing AFP EPIDs and GUIDs")
 
@@ -2900,10 +3165,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
   afp.linelist.02 <- afp.linelist.02 |>
     dplyr::mutate(polis.latitude = as.character(polis.latitude),
            polis.longitude = as.character(polis.longitude),
-           doses.total = as.numeric(doses.total),
+           doses.total = as.numeric(doses.total)
            # virus.sequenced = as.logical(virus.sequenced),
-           datenotificationtohq = as.character(as.Date(datenotificationtohq, format="%Y-%m-%d"), format="%d/%m/%Y"),
-           results.seq.date.to.program = as.character(as.Date(results.seq.date.to.program, format="%Y-%m-%d"), format="%d/%m/%Y")
     )
 
   x <- tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/Core_Ready_Files/Archive/", latest_folder_in_archive), full_names = T)
@@ -3027,9 +3290,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
   not.afp.01 <- not.afp.01 |>
     dplyr::mutate(polis.latitude = as.character(polis.latitude),
            polis.longitude = as.character(polis.longitude),
-           doses.total = as.numeric(doses.total),
-           datenotificationtohq = as.character(as.Date(datenotificationtohq, format="%Y-%m-%d"), format="%Y-%m-%d"),
-           results.seq.date.to.program = as.character(as.Date(results.seq.date.to.program, format="%Y-%m-%d"), format="%Y-%m-%d")
+           doses.total = as.numeric(doses.total)
     )
 
   x <- tidypolis_io(io = "list", file_path = file.path(polis_data_folder,"Core_Ready_Files", "Archive", latest_folder_in_archive), full_names = T)
@@ -3104,17 +3365,18 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
   cli::cli_process_start("Clearing memory")
 
   rm('afp.clean.01', 'afp.clean.light', 'afp.files.01', 'afp.files.02',
-     'afp.files.03', 'afp.linelist.01',
-     'afp.linelist.02', 'afp.linelist.latlong', 'afp.missing.01',
-     'afp.missing.02', 'afp_metadata_comparison',
+      'afp.linelist.01', 'afp.linelist.02', 'afp.linelist.latlong',
+     'afp.missing.01', 'afp.missing.02', 'afp_metadata_comparison',
      'col.afp.raw.01', 'dup.epid', 'issuesbyCtry', 'issuesbyyear',
      'endyr', 'global.dist.01', 'in_new_and_old_but_modified',
      'in_new_not_old', 'in_old_not_new',
      'new', 'new_table_metadata', 'non.afp.clean.01', 'non.afp.files.01',
-     'non.afp.files.02', 'non.afp.files.03', 'non.afp.files.03',
+     'non.afp.files.02', 'non.afp.files.03',
      'not.afp', 'not.afp.01', 'not_afp_metadata_comparison', 'old',
      'old.file', 'old_table_metadata', 'startyr',
-     'unknown.afp', 'x')
+     'unknown.afp', 'x', "afp.new", "afp.to.combine", "non.afp.new",
+     "non.afp.to.combine"
+  )
 
   gc()
 
@@ -3253,8 +3515,10 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
     ) |>
     dplyr::mutate_at(
       dplyr::vars(
+        sub.activity.initial.planned.date, sub.activity.last.updated.date,
         activity.start.date, activity.end.date,
-        sub.activity.start.date, sub.activity.end.date
+        sub.activity.start.date, sub.activity.end.date,
+        last.updated.date
       ), ~ lubridate::parse_date_time(., c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S"))
     ) |>
     dplyr::mutate(
@@ -3486,7 +3750,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
   ))
   cli::cli_process_done()
 
-
   cli::cli_process_start("Evaluating unmatched SIAs")
 
   # Identify the SIAs did not match to shape file.
@@ -3530,12 +3793,15 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
     'sia.01.new', 'sia.01.new.compare', 'sia.01.old',
     'sia.01.old.compare', 'sia.02', 'sia.03', 'sia.04', 'sia.05',
     'sia.06', 'sia.clean.01', 'sia.files.01', 'sia.files.02',
-    'sia.files.03', 'sia_metadata_comparison', 'sia.file.path',
-    'startyr', 'tofix', 'var.list.01'
+    'sia_metadata_comparison', 'sia.file.path',
+    'startyr', 'tofix', 'var.list.01', "sia.new", "sia.to.combine"
   )
 
   cli::cli_process_done()
   #Step 4 - Creating ES datasets====
+  update_polis_log(.event = "Creating ES analytic datasets",
+                   .event_type = "PROCESS")
+
   cli::cli_h1("Step 4/5 - Creating ES analytic datasets")
 
   # Step 1: Read in "old" data file (System to find "Old" data file)
@@ -3836,6 +4102,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
                 "env.sample.manual.edit.id", "site.id", "sample.id", "admin.0.id", "admin.1.id"), ~as.numeric(.)) |>
     dplyr::distinct()
 
+  es.05 <- remove_character_dates(type = "ES", df = es.04)
+
   options(scipen = savescipen)
 
   cli::cli_process_done()
@@ -3852,12 +4120,12 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
 
     old.es <- tidypolis_io(io = "read", file_path = old.es.file)
 
-    new_table_metadata <- f.summarise.metadata(es.04)
+    new_table_metadata <- f.summarise.metadata(es.05)
     old_table_metadata <- f.summarise.metadata(old.es)
     es_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata, "ES")
 
     #compare obs
-    new <- es.04 |>
+    new <- es.05 |>
       dplyr::mutate(env.sample.manual.edit.id = stringr::str_squish(env.sample.manual.edit.id)) |>
       dplyr::mutate_all(as.character)
 
@@ -3891,6 +4159,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
 
     if(nrow(in_new_and_old_but_modified) > 0){
       in_new_and_old_but_modified <- in_new_and_old_but_modified |>
+        dplyr::mutate(new = as.character(new),
+                      old = as.character(old)) |>
         dplyr::filter(new != old)
     }
 
@@ -3908,7 +4178,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
 
 
   cli::cli_process_start("Writing out ES datasets")
-  tidypolis_io(obj = es.04, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/",
+  tidypolis_io(obj = es.05, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/",
                          paste("es", min(es.04$collect.date, na.rm = T), max(es.04$collect.date, na.rm = T), sep = "_"),
                          ".rds",
                          sep = ""
@@ -3924,7 +4194,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
   cli::cli_process_start("Clearing memory")
 
   rm(
-    'envSiteYearList', 'es.00', 'es.02', 'es.03', 'es.04', 'es_metadata_comparison', 'global.ctry.01',
+    'envSiteYearList', 'es.00', 'es.02', 'es.03', 'es.04', 'es.05', 'es_metadata_comparison', 'global.ctry.01',
     'in_new_and_old_but_modified', 'in_new_not_old', 'in_old_not_new',
     'na.es.01', 'new', 'new.df', 'new.file', 'new.var.es.01', 'new_table_metadata', 'newsites',
     'old', 'old.es.file', 'old.file', 'old_table_metadata', 'savescipen',
@@ -4035,7 +4305,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
   cli::cli_process_start("Creating CDC variables")
 
   #read in list of novel emergences supplied by ORPG
-  nopv.emrg <- sirfunctions::edav_io(io = "read", file_loc = "GID/PEB/SIR/Data/orpg/nopv_emg.table.rds", default_dir = NULL) |>
+  nopv.emrg <- tidypolis_io(io = "read", file_path = paste0(polis_misc_folder, "/nopv_emg.table.rds")) |>
     dplyr::rename(emergencegroup = emergence_group,
                   vaccine.source = vaccine_source) |>
     dplyr::mutate(vaccine.source = dplyr::if_else(vaccine.source == "novel", "Novel", vaccine.source))
@@ -4050,6 +4320,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
            whoregion=who.region
     ) |>
     dplyr::mutate(dateonset = lubridate::ymd(virus.date),
+                  vdpvclassificationchangedate = lubridate::parse_date_time(vdpvclassificationchangedate, c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S")),
            datasource='virustable',
            yronset= lubridate::year(dateonset))|>
     dplyr::mutate(
@@ -4157,7 +4428,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
   # Human virus dataset with sabin 2 and positive viruses only
   human.virus.01 <- virus.01 |>
     dplyr::filter(!surveillance.type=="ENV") |>
-    dplyr::filter(!virustype %in% c("VACCINE 1", "VACCINE 3") & classificationvdpv != "Pending")
+    dplyr::filter(!virustype %in% c("VACCINE 1", "VACCINE 3"))
 
   cli::cli_process_start("Clearing memory")
   rm(
@@ -4191,17 +4462,18 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
   # deleting any duplicate records in afp.01.
   afp.01 <- afp.01[!duplicated(afp.01$epid), ] |>
     dplyr::select(epid, dateonset,  place.admin.0, place.admin.1, place.admin.2, admin0guid, yronset, admin1guid, admin2guid, cdc.classification.all,
-           whoregion, nt.changes, emergence.group, virus.cluster, surveillancetypename, lat, lon, vtype.fixed)
+           whoregion, nt.changes, emergence.group, virus.cluster, surveillancetypename, lat, lon, vtype.fixed, datenotificationtohq)
 
   # deleting any duplicate records in non.afp.files.01.
   non.afp.01 <- non.afp.01[!duplicated(non.afp.01$epid), ] |>
     dplyr::select(epid, dateonset,  place.admin.0, place.admin.1, place.admin.2, admin0guid, yronset, admin1guid, admin2guid, cdc.classification.all,
-           whoregion, nt.changes, emergence.group, virus.cluster, surveillancetypename, lat, lon, vtype.fixed)
+           whoregion, nt.changes, emergence.group, virus.cluster, surveillancetypename, lat, lon, vtype.fixed, datenotificationtohq)
 
 
   #Combine AFP and other surveillance type cases
   afp.02 <- rbind(afp.01, non.afp.01) |>
-    dplyr::select(epid, lat, lon)
+    dplyr::select(epid, lat, lon, datenotificationtohq) |>
+    dplyr::mutate(datenotificationtohq = parse_date_time(datenotificationtohq, c("%Y-%m-%d", "%d/%m/%Y")))
 
 
   # Get geo cordinates from AFP linelist.
@@ -4252,7 +4524,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
   ### ENV data from virus table
   env.virus.01 <- virus.01 |>
     dplyr::filter(surveillance.type == "ENV" & !is.na(virustype) &
-             !virustype %in% c("VACCINE 1", "VACCINE 3", "NPEV") & classificationvdpv != "Pending")
+             !virustype %in% c("VACCINE 1", "VACCINE 3", "NPEV"))
 
   cli::cli_process_done()
   gc()
@@ -4285,7 +4557,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
     ) |>
     dplyr::select(virus.type, dplyr::everything()) |>
     dplyr::mutate(
-      dateonset = lubridate::dmy(dateonset),
+      dateonset = lubridate::parse_date_time(dateonset, c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S")),
+      datenotificationtohq = parse_date_time(date.notification.to.hq,
+                                             c("%Y-%m-%d", "%d/%m/%Y")),
       virustype = stringr::str_replace_all(virus.type, "  ", " "),
       datasource = "es_linelist",
       lat = as.numeric(lat),
@@ -4295,7 +4569,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
 
 
   es.03 <- es.02 |>
-    dplyr::select(env.sample.id, site.id, lat, lon) |>
+    dplyr::select(env.sample.id, site.id, lat, lon, datenotificationtohq) |>
     dplyr::rename(epid = env.sample.id)
 
 
@@ -4339,14 +4613,20 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
     dplyr::mutate(latitude = as.character(latitude),
            longitude = as.character(longitude),
            env.sample.id = as.numeric(env.sample.id),
-           polis.case.id = as.numeric(polis.case.id))
+           polis.case.id = as.numeric(polis.case.id),
+           vdpvclassificationchangedate = parse_date_time(vdpvclassificationchangedate, c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S")),
+           report_date = case_when(
+             measurement %in% c("cVDPV 1", "cVDPV 2", "cVDPV 3") ~ vdpvclassificationchangedate,
+             measurement == "WILD 1" ~ datenotificationtohq))
+
+  afp.es.virus.02 <- remove_character_dates(type = "POS", df = afp.es.virus.01)
 
   cli::cli_process_done()
 
   cli::cli_process_start("Checking for variables that don't match last weeks pull")
 
   #Compare the final file to last week's final file to identify any differences in var_names, var_classes, or categorical responses
-  new_table_metadata <- f.summarise.metadata(afp.es.virus.01)
+  new_table_metadata <- f.summarise.metadata(afp.es.virus.02)
 
   x <- tidypolis_io(io = "list", file_path = file.path(polis_data_folder, "Core_Ready_Files/Archive", latest_folder_in_archive), full_names = T)
 
@@ -4361,7 +4641,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
     old_table_metadata <- f.summarise.metadata(old.es)
     positives_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata, "POS")
 
-    new <- afp.es.virus.01 |>
+    new <- afp.es.virus.02 |>
       unique() |>
       dplyr::mutate(epid = stringr::str_squish(epid)) |>
       dplyr::group_by(epid)|>
@@ -4402,8 +4682,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
 
     if(nrow(in_new_and_old_but_modified) > 0){
       in_new_and_old_but_modified <- in_new_and_old_but_modified |>
-        dplyr::mutate(new = unlist(new)) |>
-        dplyr::mutate(old = unlist(old)) |>
+        dplyr::mutate(new = as.character(new)) |>
+        dplyr::mutate(old = as.character(old)) |>
         dplyr::filter(new != old & !name %in% c("latitude", "longitude"))
 
       # list of records for which virus type name has changed from last week to this week.
@@ -4468,7 +4748,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
                                    "POS Class Changed Records: ", length(unique(class.updated$epid))),
                    .event_type = "INFO")
 
-  tidypolis_io(obj = afp.es.virus.01,
+  tidypolis_io(obj = afp.es.virus.02,
                io = "write",
                file_path = paste(polis_data_folder, "/Core_Ready_Files/",
                                    paste("positives", min(afp.es.virus.01$dateonset, na.rm = T),
@@ -4485,7 +4765,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
   cli::cli_process_start("Checking for positives that don't match to GUIDs")
 
   # AFP and ES that do not match to shape file
-  unmatched.afp.es.viruses.01 <- dplyr::anti_join(afp.es.virus.01, long.global.dist.01, by = c("admin2guid" = "GUID", "yronset" = "active.year.01"))
+  unmatched.afp.es.viruses.01 <- dplyr::anti_join(afp.es.virus.02, long.global.dist.01, by = c("admin2guid" = "GUID", "yronset" = "active.year.01"))
 
   # CSV file listing out unmatch virus
 
@@ -4512,9 +4792,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
 
   update_polis_log(.event = "Processing of CORE datafiles complete",
                    .event_type = "END")
-
- #  log_report()
-  archive_log()
 
 }
 
