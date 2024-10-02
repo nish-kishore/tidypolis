@@ -55,8 +55,139 @@ init_tidypolis <- function(
     cli::cli_alert_success("- Creating 'data' folder")
     tidypolis_io(io = "create", file_path = paste0(polis_data_folder, "/data"))
   }
-  Sys.setenv(POLIS_DATA_CACHE = paste0(polis_data_folder,"/data"))
+  if("spatial" %in% tidypolis_io(io = "list", file_path = polis_data_folder)){
+    cli::cli_alert_success("- Spatial folder identified")
+  }else{
+    cli::cli_alert_success("- Creating 'spatial' folder")
+    tidypolis_io(io = "create", file_path = paste0(polis_data_folder, "/spatial"))
+  }
+  if("misc" %in% tidypolis_io(io = "list", file_path = polis_data_folder)){
+    cli::cli_alert_success("- Miscellaneous folder identified")
+  }else{
+    cli::cli_alert_success("- Creating 'misc' folder")
+    tidypolis_io(io = "create", file_path = paste0(polis_data_folder, "/misc"))
+  }
 
+  Sys.setenv(POLIS_DATA_CACHE = paste0(polis_data_folder,"/data"))
+  Sys.setenv(POLIS_SPATIAL_CACHE = paste0(polis_data_folder,"/spatial"))
+  Sys.setenv(POLIS_MISC_CACHE = paste0(polis_data_folder, "/misc"))
+
+  #if edav is true, automatically pull spatial files from EDAV into spatial folder
+  if(edav == T){
+
+    cli::cli_alert_info("Checking for global shapefiles")
+
+    if("global.ctry.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/spatial"))){
+
+      cli::cli_alert_success("Global country shapefile found")
+
+    }else{
+
+      cli::cli_alert_success("Writing global country shapefile into spatial folder")
+      global.ctry <- sirfunctions::edav_io(io = "read", file_loc = "Data/spatial/global.ctry.rds")
+      sirfunctions::edav_io(io = "write", obj = global.ctry, file_loc = paste0(polis_data_folder, "/spatial/global.ctry.rds"))
+
+    }
+
+    if("global.prov.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/spatial"))){
+
+      cli::cli_alert_success("Global province shapefile found")
+
+    }else{
+
+      cli::cli_alert_success("Writing global province shapefile into spatial folder")
+      global.prov <- sirfunctions::edav_io(io = "read", file_loc = "Data/spatial/global.prov.rds")
+      sirfunctions::edav_io(io = "write", obj = global.prov, file_loc = paste0(polis_data_folder, "/spatial/global.prov.rds"))
+
+    }
+
+    if("global.dist.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/spatial"))){
+
+      cli::cli_alert_success("Global district shapefile found")
+
+    }else{
+
+      cli::cli_alert_success("Writing global district shapefile into spatial folder")
+      global.dist <- sirfunctions::edav_io(io = "read", file_loc = "Data/spatial/global.dist.rds")
+      sirfunctions::edav_io(io = "write", obj = global.dist, file_loc = paste0(polis_data_folder, "/spatial/global.dist.rds"))
+
+    }
+
+    cli::cli_alert_success("Checking for other necessary files for pre-processing")
+
+    if("crosswalk.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/misc"))){
+
+      cli::cli_alert_success("Crosswalk found")
+
+    }else{
+
+      cli::cli_alert_success("Writing crosswalk into miscellaneous folder")
+      crosswalk <- sirfunctions::edav_io(io = "read", file_loc = "Data/misc/crosswalk.rds")
+      sirfunctions::edav_io(io = "write", obj = crosswalk, file_loc = paste0(polis_data_folder, "/misc/crosswalk.rds"))
+
+    }
+
+    if("env_sites.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/misc"))){
+
+      cli::cli_alert_success("Environmental sites data found")
+
+    }else{
+
+      cli::cli_alert_success("Writing environmental sites data into miscellaneous folder")
+      env_sites <- sirfunctions::edav_io(io = "read", file_loc = "Data/misc/env_sites.rds")
+      sirfunctions::edav_io(io = "write", obj = env_sites, file_loc = paste0(polis_data_folder, "/misc/env_sites.rds"))
+
+    }
+
+    if("nopv_emg.table.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/misc"))){
+
+      cli::cli_alert_success("nOPV emergence table found")
+
+    }else{
+
+      cli::cli_alert_success("Writing nOPV emergence table into miscellaneous folder")
+      nopv_emg.table <- sirfunctions::edav_io(io = "read", file_loc = "Data/orpg/nopv_emg.table.rds")
+      sirfunctions::edav_io(io = "write", obj = nopv_emg.table, file_loc = paste0(polis_data_folder, "/misc/nopv_emg.table.rds"))
+
+    }}else{
+
+    if("global.ctry.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/spatial"))){
+      cli::cli_alert_success("Global country shapefile found")
+    }else{
+      cli::cli_alert_warning("Please request global country shapefile from SIR team")
+    }
+
+    if("global.prov.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/spatial"))){
+      cli::cli_alert_success("Global province shapefile found")
+    }else{
+      cli::cli_alert_warning("Please request global province shapefile from SIR team")
+    }
+
+    if("global.dist.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/spatial"))){
+      cli::cli_alert_success("Global district shapefile found")
+    }else{
+      cli::cli_alert_warning("Please request global district shapefile from SIR team")
+    }
+
+    if("crosswalk.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/misc"))){
+      cli::cli_alert_success("Crosswalk found")
+    }else{
+      cli::cli_alert_warning("Please request crosswalk data from SIR team")
+    }
+
+    if("env_sites.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/misc"))){
+      cli::cli_alert_success("Environmental site data found")
+    }else{
+      cli::cli_alert_warning("Please request environmental site data from SIR team")
+    }
+
+    if("nopv_emg.table.rds" %in% tidypolis_io(io = "list", file_path = paste0(polis_data_folder, "/misc"))){
+      cli::cli_alert_success("nOPV emergence table found")
+    }else{
+      cli::cli_alert_warning("Please request nOPV emergence table from SIR team")
+    }
+
+}
   #check if key details exist, if not ask for them, test them and store them
   #if they exist, check the key
   #if key doesn't work ask for another one
