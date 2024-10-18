@@ -1630,6 +1630,51 @@ cluster_dates <- function(x,
   }
 }
 
+#' @description
+#' manager function to run the cluster_dates() function using helper function run_cluster_dates to cluster SIAs by type
+#' @export
+#' @import dplyr
+#' @param df dataframe of SIAs to identify rounds by vaccine type
+cluster_dates_for_sias <- function(sia){
+
+
+  tick <- Sys.time()
+  #original vax types
+  out_mopv2 <- sia |>
+    run_cluster_dates(min_obs = 4, type = "mOPV2")
+
+  out_nopv2 <- sia |>
+    run_cluster_dates(min_obs = 4, type = "nOPV2")
+
+  out_topv <- sia |>
+    run_cluster_dates(min_obs = 4, type = "tOPV")
+
+  #add bopv
+  out_bopv <- sia |>
+    run_cluster_dates(min_obs = 4, type = "bOPV")
+
+  cluster <- dplyr::bind_rows(out_mopv2, out_nopv2, out_topv, out_bopv) |>
+    dplyr::select(sia.sub.activity.code, adm2guid, cluster)
+
+  #merge back with SIA data
+
+  case.sia <- dplyr::left_join(sia, cluster, by = c("sia.sub.activity.code"="sia.sub.activity.code", "adm2guid"="adm2guid")) |>
+    dplyr::arrange(adm2guid, sub.activity.start.date) |>
+    dplyr::group_by(adm2guid, vaccine.type, cluster) |>
+    dplyr::mutate(round.num = row_number()) |>
+    dplyr::ungroup() |>
+    dplyr::group_by(adm2guid) |>
+    dplyr::mutate(max.round = max(sub.activity.start.date)) |>
+    dplyr::ungroup() |>
+    dplyr::mutate(last.camp = ifelse(max.round == sub.activity.start.date, 1, 0))
+
+  tock <- Sys.time()
+
+  print(tock - tick)
+
+  return(case.sia)
+}
+
 #### Pre-processing ####
 
 
