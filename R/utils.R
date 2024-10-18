@@ -1649,11 +1649,24 @@ cluster_dates_for_sias <- function(sia){
   out_topv <- sia |>
     run_cluster_dates(min_obs = 4, type = "tOPV")
 
-  #add bopv
+  #add all vaccine types
   out_bopv <- sia |>
     run_cluster_dates(min_obs = 4, type = "bOPV")
 
-  cluster <- dplyr::bind_rows(out_mopv2, out_nopv2, out_topv, out_bopv) |>
+  out_fipv <- sia |>
+    run_cluster_dates(min_obs = 4, type = "f-IPV")
+
+  out_ipv <- sia |>
+    run_cluster_dates(min_obs = 4, type = "IPV")
+
+  out_ipv_bopv <- sia |>
+    run_cluster_dates(min_obs = 4, type = "IPV + bOPV")
+
+  out_mopv1 <- sia |>
+    run_cluster_dates(min_obs = 4, type = "mOPV1")
+
+  cluster <- dplyr::bind_rows(out_mopv2, out_nopv2, out_topv, out_bopv,
+                              out_fipv, out_ipv, out_ipv_bopv, out_mopv1) |>
     dplyr::select(sia.sub.activity.code, adm2guid, cluster)
 
   #merge back with SIA data
@@ -1673,6 +1686,112 @@ cluster_dates_for_sias <- function(sia){
   print(tock - tick)
 
   return(case.sia)
+}
+
+#' Wrapper around the cluster_dates function to do some error checking
+#'
+#' @export
+#' @import dplyr readr
+#' @param data df dataframe on which to run cluster dates function
+#' @param min_obs int
+#' @param type str vaccine type
+run_cluster_dates <- function(data,
+                              sia_folder = Sys.getenv("SIA_FOLDER"),
+                              min_obs = 4,
+                              type){
+
+  #check which locations meet minimum obs requirements
+  in_data <- data |>
+    dplyr::filter(vaccine.type == type) |>
+    dplyr::group_by(adm2guid) |>
+    dplyr::summarize(count = n())
+
+  #check if cache exists
+  cache_exists <- tidypolis:::tidypolis_io(io = "exists.file", file_path = paste0(sia_folder, "/assets/cache/", type,"_cluster_cache.rds"))
+
+  if(cache_exists){
+    cache <- tidypolis:::tidypolis_io(io = "read", file_path = paste0(sia_folder, "/assets/cache/", type,"_cluster_cache.rds"))
+    in_data <- setdiff(in_data, cache)
+
+    print(paste0(nrow(in_data), " potentially new SIAs in [",type,"] found for clustering analysis"))
+
+    #drop cache rows where the adm2guid is in in_data with a different count
+    cache <- cache |>
+      dplyr::filter(!(adm2guid %in% in_data$adm2guid))
+
+    tidypolis:::tidypolis_io(obj = dplyr::bind_rows(in_data, cache), io = "write", file_path = paste0(sia_folder, "/assets/cache/", type,"_cluster_cache.rds"))
+  }else{
+    print(paste0("No cache found for [", type, "], creating cache and running clustering for ", nrow(in_data), " SIAs"))
+    tidypolis:::tidypolis_io(obj = in_data, io = "write", file_path = paste0(sia_folder, "/assets/cache/", type,"_cluster_cache.rds"))
+  }
+
+  if(nrow(in_data) > 0){
+    print("Clustering new SIA data")
+    in_data <- in_data |>
+      dplyr::filter(count >= min_obs)
+
+    included <- data |>
+      dplyr::filter(vaccine.type == type) |>
+      dplyr::filter(adm2guid %in% in_data$adm2guid)
+
+    #observations which didn't meet the minimum requirement
+    dropped <- setdiff(dplyr::filter(data, vaccine.type == type), included)
+
+    #for data with at least a minimum number of observations
+    out <- dplyr::ungroup(included) |>
+      dplyr::group_by(adm2guid) |>
+      dplyr::group_split() |>
+      #apply function to each subset
+      lapply(cluster_dates) |>
+      #bind output back together
+      dplyr::bind_rows()
+
+    #error checking for situations where no data < min_obs
+    if(nrow(dropped) > 0){
+      #for data with low obs
+      out2 <- dplyr::ungroup(dropped) |>
+        dplyr::group_by(adm2guid) |>
+        dplyr::group_split() |>
+        lapply(function(x) cluster_dates(x, method = "mindate")) |>
+        dplyr::bind_rows()
+    }
+
+
+    #error catching the return
+    if(nrow(dropped) > 0){
+
+      out <- bind_rows(out, out2)
+    }
+
+    #data cache
+    data_cache_exists <- tidypolis:::tidypolis_io(io = "exists.file", file_path = paste0(sia_folder, "/assets/cache/", type, "data_cluster_cache.rds"))
+
+    if(data_cache_exists){
+      data_cache <- tidypolis:::tidypolis_io(io = "read", file_path = paste0(sia_folder, "/assets/cache/", type, "data_cluster_cache.rds"))
+
+      out <- filter(data_cache, !sia.sub.activity.code %in% unique(out$sia.sub.activity.code)) |>
+        dplyr::bind_rows(out)
+      # data_cache2 <- data_cache %>%
+      #   anti_join(out, by=c("sia.sub.activity.code", "adm2guid"))
+      # out <- data_cache2 %>%
+      #   bind_rows(out)
+
+      tidypolis:::tidypolis_io(obj = out, io = "write", file_path = paste0(sia_folder, "/assets/cache/", type, "data_cluster_cache.rds"))
+
+    }else{
+      print(paste0("No data cache found for [", type, "], creating data cache and saving clustering results for ", nrow(out), " SIAs"))
+      tidypolis:::tidypolis_io(obj = out, io = "write", file_path = paste0(sia_folder, "/assets/cache/", type, "data_cluster_cache.rds"))
+  }
+
+
+
+
+  }else{
+    print(paste0("No new SIA data found for [", type, "], loading cached data!"))
+    out <- tidypolis:::tidypolis_io(io = "read", file_path = paste0(sia_folder, "/assets/cache/", type, "data_cluster_cache.rds"))
+  }
+
+  return(out)
 }
 
 #### Pre-processing ####
