@@ -1696,10 +1696,11 @@ cluster_dates_for_sias <- function(sia){
 #' @param min_obs int
 #' @param type str vaccine type
 run_cluster_dates <- function(data,
-                              sia_folder = Sys.getenv("SIA_FOLDER"),
+                              cache_folder = "Data/sia_cluster_cache",
                               min_obs = 4,
                               type){
 
+  Sys.setenv(POLIS_EDAV_FLAG = T)
   #check which locations meet minimum obs requirements
   in_data <- data |>
     dplyr::filter(vaccine.type == type) |>
@@ -1707,10 +1708,10 @@ run_cluster_dates <- function(data,
     dplyr::summarize(count = n())
 
   #check if cache exists
-  cache_exists <- tidypolis:::tidypolis_io(io = "exists.file", file_path = paste0(sia_folder, "/assets/cache/", type,"_cluster_cache.rds"))
+  cache_exists <- tidypolis:::tidypolis_io(io = "exists.file", file_path = paste0(cache_folder, "/", type, "_cluster_cache.rds"))
 
   if(cache_exists){
-    cache <- tidypolis:::tidypolis_io(io = "read", file_path = paste0(sia_folder, "/assets/cache/", type,"_cluster_cache.rds"))
+    cache <- tidypolis:::tidypolis_io(io = "read", file_path = paste0(cache_folder, "/", type, "_cluster_cache.rds"))
     in_data <- setdiff(in_data, cache)
 
     print(paste0(nrow(in_data), " potentially new SIAs in [",type,"] found for clustering analysis"))
@@ -1719,10 +1720,10 @@ run_cluster_dates <- function(data,
     cache <- cache |>
       dplyr::filter(!(adm2guid %in% in_data$adm2guid))
 
-    tidypolis:::tidypolis_io(obj = dplyr::bind_rows(in_data, cache), io = "write", file_path = paste0(sia_folder, "/assets/cache/", type,"_cluster_cache.rds"))
+    tidypolis:::tidypolis_io(obj = dplyr::bind_rows(in_data, cache), io = "write", file_path = paste0(cache_folder, "/", type,"_cluster_cache.rds"))
   }else{
     print(paste0("No cache found for [", type, "], creating cache and running clustering for ", nrow(in_data), " SIAs"))
-    tidypolis:::tidypolis_io(obj = in_data, io = "write", file_path = paste0(sia_folder, "/assets/cache/", type,"_cluster_cache.rds"))
+    tidypolis:::tidypolis_io(obj = in_data, io = "write", file_path = paste0(cache_folder, "/", type,"_cluster_cache.rds"))
   }
 
   if(nrow(in_data) > 0){
@@ -1764,10 +1765,10 @@ run_cluster_dates <- function(data,
     }
 
     #data cache
-    data_cache_exists <- tidypolis:::tidypolis_io(io = "exists.file", file_path = paste0(sia_folder, "/assets/cache/", type, "data_cluster_cache.rds"))
+    data_cache_exists <- tidypolis:::tidypolis_io(io = "exists.file", file_path = paste0(cache_folder, "/", type, "data_cluster_cache.rds"))
 
     if(data_cache_exists){
-      data_cache <- tidypolis:::tidypolis_io(io = "read", file_path = paste0(sia_folder, "/assets/cache/", type, "data_cluster_cache.rds"))
+      data_cache <- tidypolis:::tidypolis_io(io = "read", file_path = paste0(cache_folder, "/", type, "data_cluster_cache.rds"))
 
       out <- filter(data_cache, !sia.sub.activity.code %in% unique(out$sia.sub.activity.code)) |>
         dplyr::bind_rows(out)
@@ -1776,11 +1777,11 @@ run_cluster_dates <- function(data,
       # out <- data_cache2 %>%
       #   bind_rows(out)
 
-      tidypolis:::tidypolis_io(obj = out, io = "write", file_path = paste0(sia_folder, "/assets/cache/", type, "data_cluster_cache.rds"))
+      tidypolis:::tidypolis_io(obj = out, io = "write", file_path = paste0(cache_folder, "/", type, "data_cluster_cache.rds"))
 
     }else{
       print(paste0("No data cache found for [", type, "], creating data cache and saving clustering results for ", nrow(out), " SIAs"))
-      tidypolis:::tidypolis_io(obj = out, io = "write", file_path = paste0(sia_folder, "/assets/cache/", type, "data_cluster_cache.rds"))
+      tidypolis:::tidypolis_io(obj = out, io = "write", file_path = paste0(cache_folder, "/", type, "data_cluster_cache.rds"))
   }
 
 
@@ -1788,7 +1789,7 @@ run_cluster_dates <- function(data,
 
   }else{
     print(paste0("No new SIA data found for [", type, "], loading cached data!"))
-    out <- tidypolis:::tidypolis_io(io = "read", file_path = paste0(sia_folder, "/assets/cache/", type, "data_cluster_cache.rds"))
+    out <- tidypolis:::tidypolis_io(io = "read", file_path = paste0(cache_folder, "/", type, "data_cluster_cache.rds"))
   }
 
   return(out)
