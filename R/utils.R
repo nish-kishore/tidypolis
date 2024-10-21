@@ -1639,30 +1639,33 @@ cluster_dates_for_sias <- function(sia){
 
 
   tick <- Sys.time()
+
+  sia.01 <- sia |>
+    dplyr::filter(yr.sia >= 2010)
   #original vax types
-  out_mopv2 <- sia |>
+  out_mopv2 <- sia.01 |>
     run_cluster_dates(min_obs = 4, type = "mOPV2")
 
-  out_nopv2 <- sia |>
+  out_nopv2 <- sia.01 |>
     run_cluster_dates(min_obs = 4, type = "nOPV2")
 
-  out_topv <- sia |>
+  out_topv <- sia.01 |>
     run_cluster_dates(min_obs = 4, type = "tOPV")
 
   #add all vaccine types
-  out_bopv <- sia |>
+  out_bopv <- sia.01 |>
     run_cluster_dates(min_obs = 4, type = "bOPV")
 
-  out_fipv <- sia |>
+  out_fipv <- sia.01 |>
     run_cluster_dates(min_obs = 4, type = "f-IPV")
 
-  out_ipv <- sia |>
+  out_ipv <- sia.01 |>
     run_cluster_dates(min_obs = 4, type = "IPV")
 
-  out_ipv_bopv <- sia |>
+  out_ipv_bopv <- sia.01 |>
     run_cluster_dates(min_obs = 4, type = "IPV + bOPV")
 
-  out_mopv1 <- sia |>
+  out_mopv1 <- sia.01 |>
     run_cluster_dates(min_obs = 4, type = "mOPV1")
 
   cluster <- dplyr::bind_rows(out_mopv2, out_nopv2, out_topv, out_bopv,
@@ -1671,7 +1674,7 @@ cluster_dates_for_sias <- function(sia){
 
   #merge back with SIA data
 
-  case.sia <- dplyr::left_join(sia, cluster, by = c("sia.sub.activity.code"="sia.sub.activity.code", "adm2guid"="adm2guid")) |>
+  case.sia <- dplyr::left_join(sia.01, cluster, by = c("sia.sub.activity.code"="sia.sub.activity.code", "adm2guid"="adm2guid")) |>
     dplyr::arrange(adm2guid, sub.activity.start.date) |>
     dplyr::group_by(adm2guid, vaccine.type, cluster) |>
     dplyr::mutate(round.num = row_number()) |>
