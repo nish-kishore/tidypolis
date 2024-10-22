@@ -3814,6 +3814,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
            last.updated.date = as.Date(last.updated.date)) |>
     dplyr::select(sia.code, sia.sub.activity.code, everything())
 
+  cluster_dates_for_sias(sia.clean.01)
+
   tidypolis_io(obj = sia.clean.01, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/",
                                 paste("sia", min(sia.clean.01$yr.sia, na.rm = T),
                                       max(sia.clean.01$yr.sia, na.rm = T),
