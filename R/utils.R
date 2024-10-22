@@ -1668,29 +1668,12 @@ cluster_dates_for_sias <- function(sia){
   out_mopv1 <- sia.01 |>
     run_cluster_dates(min_obs = 4, type = "mOPV1")
 
-  cluster <- dplyr::bind_rows(out_mopv2, out_nopv2, out_topv, out_bopv,
-                              out_fipv, out_ipv, out_ipv_bopv, out_mopv1) |>
-    dplyr::select(sia.sub.activity.code, adm2guid, cluster)
-
-  #merge back with SIA data
-
-  case.sia <- dplyr::left_join(sia.01, cluster, by = c("sia.sub.activity.code"="sia.sub.activity.code", "adm2guid"="adm2guid")) |>
-    dplyr::arrange(adm2guid, sub.activity.start.date) |>
-    dplyr::group_by(adm2guid, vaccine.type, cluster) |>
-    dplyr::mutate(round.num = row_number()) |>
-    dplyr::ungroup() |>
-    dplyr::group_by(adm2guid) |>
-    dplyr::mutate(max.round = max(sub.activity.start.date)) |>
-    dplyr::ungroup() |>
-    dplyr::mutate(last.camp = ifelse(max.round == sub.activity.start.date, 1, 0))
-
   tock <- Sys.time()
 
   print(tock - tick)
-
-  return(case.sia)
 }
 
+#' @description
 #' Wrapper around the cluster_dates function to do some error checking
 #'
 #' @export
