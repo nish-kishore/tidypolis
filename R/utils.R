@@ -1668,6 +1668,9 @@ cluster_dates_for_sias <- function(sia){
   out_mopv1 <- sia.01 |>
     run_cluster_dates(min_obs = 4, type = "mOPV1")
 
+  out_mopv3 <- sia.01 |>
+    run_cluster_dates(min_obs = 4, type = "mOPV3")
+
   tock <- Sys.time()
 
   print(tock - tick)
