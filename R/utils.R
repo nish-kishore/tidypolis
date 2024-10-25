@@ -4778,6 +4778,25 @@ process_spatial <- function(gdb_folder,
                   yr.end = lubridate::year(ENDDATE),
                   ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"), "COTE D IVOIRE", ADM0_NAME))
 
+
+  check.dist.valid <- tibble::as_tibble(sf::st_is_valid(global.dist.01))
+  row.num.dist <- which(check.dist.valid$value == FALSE)
+  invalid.dist.shapes <- global.dist.01 |>
+    dplyr::slice(row.num.dist) |>
+    dplyr::select(ADM0_NAME, ADM1_NAME, ADM2_NAME, GUID, yr.st, yr.end, SHAPE) |>
+    dplyr::arrange(ADM0_NAME)
+
+  sf::st_geometry(invalid.dist.shapes) <- NULL
+
+  utils::write.csv(invalid.dist.shapes, file = paste0(output_folder, "/invalid_dist_shapes.csv"))
+
+  empty.dist <- global.dist.01 |>
+    dplyr::mutate(empty = sf::st_is_empty(SHAPE)) |>
+    dplyr::filter(empty == TRUE)
+
+  if(nrow(empty.dist) > 0) {
+    utils::write.csv(empty.dist, file = paste0(output_folder, "/empty_dist_shapes.csv"))
+  }
   # save global province geodatabase in RDS file:
   readr::write_rds(global.dist.01, file = paste0(output_folder, "/global.dist.01.rds"))
 
