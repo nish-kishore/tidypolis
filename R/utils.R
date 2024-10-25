@@ -4691,7 +4691,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 #' @param gdb_folder str the folder location of spatial datasets, should end with .gdb
 #' @param output_folder str folder location to write outputs to
 process_spatial <- function(gdb_folder,
-                            output_folder){
+                            output_folder) {
   # Read the shapes in as sf dataframe
   # and remove the shape from these files
   # by saving as regular dataframe
@@ -4713,12 +4713,17 @@ process_spatial <- function(gdb_folder,
     dplyr::select(ADM0_NAME, GUID, yr.st, yr.end, Shape) |>
     dplyr::arrange(ADM0_NAME)
 
+  sf::st_geometry(invalid.ctry.shapes) <- NULL
+
+  utils::write.csv(invalid.ctry.shapes, file = paste0(output_folder, "/invalid_ctry_shapes.csv"))
+
   empty.ctry <- global.ctry.01 |>
     dplyr::mutate(empty = sf::st_is_empty(Shape)) |>
     dplyr::filter(empty == TRUE)
 
+  if(nrow(empty.ctry) > 0) {
 
-
+  }
 
   # save global country geodatabase in RDS file:
   readr::write_rds(global.ctry.01, file = paste0(output_folder, "/global.ctry.01.rds"))
@@ -4765,7 +4770,7 @@ process_spatial <- function(gdb_folder,
 
   df.list <- list()
 
-  for (i in startyr:endyr) {
+  for(i in startyr:endyr) {
     df02 <- sirfunctions:::f.yrs.01(global.prov.01, i)
 
     df.list[[i]] <- df02
@@ -4773,7 +4778,7 @@ process_spatial <- function(gdb_folder,
 
   long.global.prov.01 <- do.call(rbind, df.list)
 
-  if (endyr == lubridate::year(format(Sys.time())) & startyr == 2000) {
+  if(endyr == lubridate::year(format(Sys.time())) & startyr == 2000) {
     prov.shape.issue.01 <- long.global.prov.01 |>
       dplyr::group_by(ADM0_NAME, ADM1_NAME, active.year.01) |>
       dplyr::summarise(no.of.shapes = dplyr::n()) |>
@@ -4789,7 +4794,7 @@ process_spatial <- function(gdb_folder,
 
   df.list <- list()
 
-  for (i in startyr:endyr) {
+  for(i in startyr:endyr) {
     df02 <- sirfunctions:::f.yrs.01(global.dist.01, i)
 
     df.list[[i]] <- df02
@@ -4797,7 +4802,7 @@ process_spatial <- function(gdb_folder,
 
   long.global.dist.01 <- do.call(rbind, df.list)
 
-  if (endyr == year(format(Sys.time())) & startyr == 2000) {
+  if(endyr == year(format(Sys.time())) & startyr == 2000) {
     dist.shape.issue.01 <- long.global.dist.01 |>
       dplyr::group_by(ADM0_NAME, ADM1_NAME, ADM2_NAME, active.year.01) |>
       dplyr::summarise(no.of.shapes = dplyr::n()) |>
@@ -4811,15 +4816,4 @@ process_spatial <- function(gdb_folder,
 
   remove(df.list, df02)
 
-  #identifying bad shapes
-  check.ctry.valid <- as_tibble(st_is_valid(global.ctry.01))
-  row.num.ctry <- which(check.ctry.valid$value == FALSE)
-  invalid.ctry.shapes <- global.ctry |>
-    dplyr::slice(row.num.ctry) |>
-    dplyr::select(ADM0_NAME, GUID, yr.st, yr.end, Shape) |>
-    arrange(ADM0_NAME)
-
-  empty.ctry <- global.ctry |>
-    mutate(empty = st_is_empty(Shape)) |>
-    filter(empty == TRUE)
 }
