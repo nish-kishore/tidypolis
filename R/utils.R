@@ -4708,7 +4708,7 @@ process_spatial <- function(gdb_folder,
   # save global country geodatabase in RDS file:
   readr::write_rds(global.ctry.01, file = output_folder)
 
-  sf::st_geometry(global.ctry.01) <- NULL
+  sf::st_geometry(global.ctry.02) <- NULL
 
   # Province shapes ===============
   global.prov.01 <- sf::st_read(dsn = gdb_folder, layer = "GLOBAL_ADM1") |>
@@ -4796,5 +4796,16 @@ process_spatial <- function(gdb_folder,
 
   remove(df.list, df02)
 
+  #identifying bad shapes
+  #countries
+  check.ctry.valid <- as_tibble(st_is_valid(global.ctry.01))
+  row.num.ctry <- which(check.ctry.valid$value == FALSE)
+  invalid.ctry.shapes <- global.ctry |>
+    dplyr::slice(row.num.ctry) |>
+    dplyr::select(ADM0_NAME, GUID, yr.st, yr.end, Shape) |>
+    arrange(ADM0_NAME)
 
+  empty.ctry <- global.ctry |>
+    mutate(empty = st_is_empty(Shape)) |>
+    filter(empty == TRUE)
 }
