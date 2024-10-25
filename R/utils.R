@@ -4684,3 +4684,11 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 #'
 #' }
 #'
+
+#' @description
+#' a function to process WHO spatial datasets
+#' @import dplyr sf lubridate stringr readr
+#' @param folder str folder location of spatial datasets
+process_spatial <- function(folder){
+
+}
