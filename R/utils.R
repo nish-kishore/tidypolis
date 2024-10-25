@@ -4688,7 +4688,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 #' @description
 #' a function to process WHO spatial datasets
 #' @import dplyr sf lubridate stringr readr
-#' @param folder str folder location of spatial datasets
-process_spatial <- function(folder){
+#' @param gdb_folder str the folder location of spatial datasets, should end with .gdb
+#' @param output_folder str folder location to write outputs to
+process_spatial <- function(gdb_folder,
+                            output_folder){
 
 }
