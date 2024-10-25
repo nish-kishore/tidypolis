@@ -4746,6 +4746,25 @@ process_spatial <- function(gdb_folder,
     dplyr::mutate(yr.end = ifelse(ADM0_GUID == '{B5FF48B9-7282-445C-8CD2-BEFCE4E0BDA7}' &
                                     GUID == '{EE73F3EA-DD35-480F-8FEA-5904274087C4}', 2021, yr.end))
 
+  check.prov.valid <- tibble::as_tibble(sf::st_is_valid(global.prov.01))
+  row.num.prov <- which(check.prov.valid$value == FALSE)
+  invalid.prov.shapes <- global.prov.01 |>
+    dplyr::slice(row.num.prov) |>
+    dplyr::select(ADM0_NAME, ADM1_NAME, GUID, yr.st, yr.end, SHAPE) |>
+    dplyr::arrange(ADM0_NAME)
+
+  sf::st_geometry(invalid.prov.shapes) <- NULL
+
+  utils::write.csv(invalid.prov.shapes, file = paste0(output_folder, "/invalid_prov_shapes.csv"))
+
+  empty.prov <- global.prov.01 |>
+    dplyr::mutate(empty = sf::st_is_empty(SHAPE)) |>
+    dplyr::filter(empty == TRUE)
+
+  if(nrow(empty.prov) > 0) {
+    utils::write.csv(empty.prov, file = paste0(output_folder, "/empty_prov_shapes.csv"))
+  }
+
   # save global province geodatabase in RDS file:
   readr::write_rds(global.prov.01, file = paste0(output_folder, "/global.prov.01.rds"))
 
