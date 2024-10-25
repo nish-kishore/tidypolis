@@ -4702,13 +4702,12 @@ process_spatial <- function(gdb_folder,
                   ENDDATE = as.Date(ENDDATE),
                   yr.st = lubridate::year(STARTDATE),
                   yr.end = lubridate::year(ENDDATE),
-                  ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"), "COTE D IVOIRE", ADM0_NAME)
-    )
+                  ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"), "COTE D IVOIRE", ADM0_NAME))
 
   # save global country geodatabase in RDS file:
-  readr::write_rds(global.ctry.01, file = output_folder)
+  readr::write_rds(global.ctry.01, file = paste0(output_folder, "/global.ctry.01.rds"))
 
-  sf::st_geometry(global.ctry.02) <- NULL
+  sf::st_geometry(global.ctry.01) <- NULL
 
   # Province shapes ===============
   global.prov.01 <- sf::st_read(dsn = gdb_folder, layer = "GLOBAL_ADM1") |>
@@ -4726,7 +4725,7 @@ process_spatial <- function(gdb_folder,
                                     GUID == '{EE73F3EA-DD35-480F-8FEA-5904274087C4}', 2021, yr.end))
 
   # save global province geodatabase in RDS file:
-  readr::write_rds(global.prov.01, file = output_folder)
+  readr::write_rds(global.prov.01, file = paste0(output_folder, "/global.prov.01.rds"))
 
   sf::st_geometry(global.prov.01) <- NULL
 
@@ -4739,7 +4738,7 @@ process_spatial <- function(gdb_folder,
                   ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"), "COTE D IVOIRE", ADM0_NAME))
 
   # save global province geodatabase in RDS file:
-  readr::write_rds(global.dist.01, file = output_folder)
+  readr::write_rds(global.dist.01, file = paste0(output_folder, "/global.dist.01.rds"))
 
   sf::st_geometry(global.dist.01) <- NULL
 
