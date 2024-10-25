@@ -4687,7 +4687,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
 #' @description
 #' a function to process WHO spatial datasets
-#' @import dplyr sf lubridate stringr readr
+#' @import dplyr sf lubridate stringr readr tibble
 #' @param gdb_folder str the folder location of spatial datasets, should end with .gdb
 #' @param output_folder str folder location to write outputs to
 process_spatial <- function(gdb_folder,
@@ -4706,16 +4706,19 @@ process_spatial <- function(gdb_folder,
 
 
   #identifying bad shapes
-  check.ctry.valid <- as_tibble(st_is_valid(global.ctry.01))
+  check.ctry.valid <- tibble::as_tibble(sf::st_is_valid(global.ctry.01))
   row.num.ctry <- which(check.ctry.valid$value == FALSE)
-  invalid.ctry.shapes <- global.ctry |>
+  invalid.ctry.shapes <- global.ctry.01 |>
     dplyr::slice(row.num.ctry) |>
     dplyr::select(ADM0_NAME, GUID, yr.st, yr.end, Shape) |>
-    arrange(ADM0_NAME)
+    dplyr::arrange(ADM0_NAME)
 
-  empty.ctry <- global.ctry |>
-    mutate(empty = st_is_empty(Shape)) |>
-    filter(empty == TRUE)
+  empty.ctry <- global.ctry.01 |>
+    dplyr::mutate(empty = sf::st_is_empty(Shape)) |>
+    dplyr::filter(empty == TRUE)
+
+
+
 
   # save global country geodatabase in RDS file:
   readr::write_rds(global.ctry.01, file = paste0(output_folder, "/global.ctry.01.rds"))
