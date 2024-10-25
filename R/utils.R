@@ -4704,6 +4704,19 @@ process_spatial <- function(gdb_folder,
                   yr.end = lubridate::year(ENDDATE),
                   ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"), "COTE D IVOIRE", ADM0_NAME))
 
+
+  #identifying bad shapes
+  check.ctry.valid <- as_tibble(st_is_valid(global.ctry.01))
+  row.num.ctry <- which(check.ctry.valid$value == FALSE)
+  invalid.ctry.shapes <- global.ctry |>
+    dplyr::slice(row.num.ctry) |>
+    dplyr::select(ADM0_NAME, GUID, yr.st, yr.end, Shape) |>
+    arrange(ADM0_NAME)
+
+  empty.ctry <- global.ctry |>
+    mutate(empty = st_is_empty(Shape)) |>
+    filter(empty == TRUE)
+
   # save global country geodatabase in RDS file:
   readr::write_rds(global.ctry.01, file = paste0(output_folder, "/global.ctry.01.rds"))
 
@@ -4796,7 +4809,6 @@ process_spatial <- function(gdb_folder,
   remove(df.list, df02)
 
   #identifying bad shapes
-  #countries
   check.ctry.valid <- as_tibble(st_is_valid(global.ctry.01))
   row.num.ctry <- which(check.ctry.valid$value == FALSE)
   invalid.ctry.shapes <- global.ctry |>
