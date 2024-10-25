@@ -4765,6 +4765,7 @@ process_spatial <- function(gdb_folder,
     utils::write.csv(empty.prov, file = paste0(output_folder, "/empty_prov_shapes.csv"))
   }
 
+  rm(check.prov.valid, row.num.prov, invalid.prov.shapes, empty.prov)
   # save global province geodatabase in RDS file:
   readr::write_rds(global.prov.01, file = paste0(output_folder, "/global.prov.01.rds"))
 
@@ -4797,6 +4798,8 @@ process_spatial <- function(gdb_folder,
   if(nrow(empty.dist) > 0) {
     utils::write.csv(empty.dist, file = paste0(output_folder, "/empty_dist_shapes.csv"))
   }
+
+  rm(check.dist.valid, row.num.dist, invalid.dist.shapes, empty.dist)
   # save global province geodatabase in RDS file:
   readr::write_rds(global.dist.01, file = paste0(output_folder, "/global.dist.01.rds"))
 
