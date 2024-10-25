@@ -4722,7 +4722,7 @@ process_spatial <- function(gdb_folder,
     dplyr::filter(empty == TRUE)
 
   if(nrow(empty.ctry) > 0) {
-
+    utils::write.csv(empty.ctry, file = paste0(output_folder, "empty_ctry_shapes.csv"))
   }
 
   # save global country geodatabase in RDS file:
