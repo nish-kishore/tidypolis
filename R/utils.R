@@ -4700,8 +4700,8 @@ process_spatial <- function(gdb_folder,
   global.ctry.01 <- sf::st_read(dsn = gdb_folder, layer = "GLOBAL_ADM0") |>
     dplyr::mutate(STARTDATE = as.Date(STARTDATE),
                   ENDDATE = as.Date(ENDDATE),
-                  yr.st = year(STARTDATE),
-                  yr.end = year(ENDDATE),
+                  yr.st = lubridate::year(STARTDATE),
+                  yr.end = lubridate::year(ENDDATE),
                   ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"), "COTE D IVOIRE", ADM0_NAME)
     )
 
