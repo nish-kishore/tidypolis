@@ -4730,7 +4730,7 @@ process_spatial <- function(gdb_folder,
 
   sf::st_geometry(global.prov.01) <- NULL
 
-  ## District shapes ===============
+  # District shapes ===============
   global.dist.01 <- sf::st_read(dsn = gdb_folder, layer = "GLOBAL_ADM2") |>
     dplyr::mutate(STARTDATE = as.Date(STARTDATE),
                   ENDDATE = as.Date(ENDDATE),
@@ -4742,4 +4742,8 @@ process_spatial <- function(gdb_folder,
   readr::write_rds(global.dist.01, file = output_folder)
 
   sf::st_geometry(global.dist.01) <- NULL
+
+  endyr <- year(format(Sys.time()))
+  startyr <- 2000
+
 }
