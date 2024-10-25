@@ -4692,11 +4692,11 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 #' @param output_folder str folder location to write outputs to
 process_spatial <- function(gdb_folder,
                             output_folder){
-  # Read the shapes in as sf dataframe ======================
+  # Read the shapes in as sf dataframe
   # and remove the shape from these files
   # by saving as regular dataframe
 
-  ## Country shapes ===============
+  # Country shapes ===============
   global.ctry.01 <- sf::st_read(dsn = gdb_folder, layer = "GLOBAL_ADM0") |>
     dplyr::mutate(STARTDATE = as.Date(STARTDATE),
                   ENDDATE = as.Date(ENDDATE),
@@ -4710,7 +4710,7 @@ process_spatial <- function(gdb_folder,
 
   sf::st_geometry(global.ctry.01) <- NULL
 
-  ## Province shapes ===============
+  # Province shapes ===============
   global.prov.01 <- sf::st_read(dsn = gdb_folder, layer = "GLOBAL_ADM1") |>
     dplyr::mutate(STARTDATE = as.Date(STARTDATE),
                   ENDDATE = as.Date(ENDDATE),
@@ -4729,4 +4729,17 @@ process_spatial <- function(gdb_folder,
   readr::write_rds(global.prov.01, file = output_folder)
 
   sf::st_geometry(global.prov.01) <- NULL
+
+  ## District shapes ===============
+  global.dist.01 <- sf::st_read(dsn = gdb_folder, layer = "GLOBAL_ADM2") |>
+    dplyr::mutate(STARTDATE = as.Date(STARTDATE),
+                  ENDDATE = as.Date(ENDDATE),
+                  yr.st = lubridate::year(STARTDATE),
+                  yr.end = lubridate::year(ENDDATE),
+                  ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"), "COTE D IVOIRE", ADM0_NAME))
+
+  # save global province geodatabase in RDS file:
+  readr::write_rds(global.dist.01, file = output_folder)
+
+  sf::st_geometry(global.dist.01) <- NULL
 }
