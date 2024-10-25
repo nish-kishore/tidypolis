@@ -4764,10 +4764,37 @@ process_spatial <- function(gdb_folder,
       dplyr::summarise(no.of.shapes = dplyr::n()) |>
       dplyr::filter(no.of.shapes > 1)
 
-  utils::write.csv(prov.shape.issue.01, paste0(output_folder, "/prov_shape_multiple_",
+    utils::write.csv(prov.shape.issue.01, paste0(output_folder, "/prov_shape_multiple_",
                                                paste(min(prov.shape.issue.01$active.year.01, na.rm = T),
                                                      max(prov.shape.issue.01$active.year.01, na.rm = T),
                                                      sep = "_"), ".csv"))
   }
+
+  # District long shape
+
+  df.list <- list()
+
+  for (i in startyr:endyr) {
+    df02 <- sirfunctions:::f.yrs.01(global.dist.01, i)
+
+    df.list[[i]] <- df02
+  }
+
+  long.global.dist.01 <- do.call(rbind, df.list)
+
+  if (endyr == year(format(Sys.time())) & startyr == 2000) {
+    dist.shape.issue.01 <- long.global.dist.01 |>
+      dplyr::group_by(ADM0_NAME, ADM1_NAME, ADM2_NAME, active.year.01) |>
+      dplyr::summarise(no.of.shapes = dplyr::n()) |>
+      dplyr::filter(no.of.shapes > 1)
+
+    utils::write.csv(dist.shape.issue.01, paste0(output_folder, "/dist_shape_multiple_",
+                                                 paste(min(dist.shape.issue.01$active.year.01, na.rm = T),
+                                                       max(dist.shape.issue.01$active.year.01, na.rm = T),
+                                                       sep = "_"), ".csv"))
+  }
+
+  remove(df.list, df02)
+
 
 }
