@@ -4692,5 +4692,19 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 #' @param output_folder str folder location to write outputs to
 process_spatial <- function(gdb_folder,
                             output_folder){
+  # Read the shapes in as sf dataframe ======================
+  # and remove the shape from these files
+  # by saving as regular dataframe
 
+  ## Country shapes ===============
+  global.ctry.01 <- sf::st_read(dsn = gdb_folder, layer = "GLOBAL_ADM0") |>
+    dplyr::mutate(STARTDATE = as.Date(STARTDATE),
+                  ENDDATE = as.Date(ENDDATE),
+                  yr.st = year(STARTDATE),
+                  yr.end = year(ENDDATE),
+                  ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"), "COTE D IVOIRE", ADM0_NAME)
+    )
+
+  # save global country geodatabase in RDS file:
+  readr::write_rds(global.ctry.01, file = output_folder)
 }
