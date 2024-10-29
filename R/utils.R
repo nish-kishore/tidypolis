@@ -4690,11 +4690,18 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 #' @import dplyr sf lubridate stringr readr tibble
 #' @param gdb_folder str the folder location of spatial datasets, should end with .gdb
 #' @param output_folder str folder location to write outputs to
+#' @param edav boolean T or F, whether gdb is on EDAV or local
 process_spatial <- function(gdb_folder,
-                            output_folder) {
-  # Read the shapes in as sf dataframe
-  # and remove the shape from these files
-  # by saving as regular dataframe
+                            output_folder,
+                            edav) {
+  if(edav) {
+    azcontainer = suppressMessages(get_azure_storage_connection())
+    dest <- tempdir()
+    AzureStor::storage_download(container = azcontainer, gdb_folder, paste0(dest, "/temp.gdb.zip"), overwrite = T)
+
+    unlink(dest)
+  }
+
 
   # Country shapes ===============
   global.ctry.01 <- sf::st_read(dsn = gdb_folder, layer = "GLOBAL_ADM0") |>
