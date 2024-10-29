@@ -4687,8 +4687,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
 #' @description
 #' a function to process WHO spatial datasets
-#' @import dplyr sf lubridate stringr readr tibble
-#' @param gdb_folder str the folder location of spatial datasets, should end with .gdb
+#' @import dplyr sf lubridate stringr readr tibble utils
+#' @param gdb_folder str the folder location of spatial datasets, should end with .gdb, if on edav the gdb will need to be zipped,
+#' ensure that the gdb and the zipped file name are the same
 #' @param output_folder str folder location to write outputs to
 #' @param edav boolean T or F, whether gdb is on EDAV or local
 process_spatial <- function(gdb_folder,
@@ -4697,8 +4698,17 @@ process_spatial <- function(gdb_folder,
   if(edav) {
     azcontainer = suppressMessages(get_azure_storage_connection())
     dest <- tempdir()
-    AzureStor::storage_download(container = azcontainer, gdb_folder, paste0(dest, "/temp.gdb.zip"), overwrite = T)
+    AzureStor::storage_download(container = azcontainer, gdb_folder, paste0(dest, "/gdb.zip"), overwrite = T)
 
+    utils::unzip(zipfile = paste0(dest, "/gdb.zip"), exdir = dest)
+
+    global.ctry.01 <- sf::st_read(dsn = stringr::str_remove(paste0(dest, "/", sub(".*\\/", "", gdb_folder)), ".zip"),
+                                  layer = "GLOBAL_ADM0") |>
+      dplyr::mutate(STARTDATE = as.Date(STARTDATE),
+                    ENDDATE = as.Date(ENDDATE),
+                    yr.st = lubridate::year(STARTDATE),
+                    yr.end = lubridate::year(ENDDATE),
+                    ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"), "COTE D IVOIRE", ADM0_NAME))
     unlink(dest)
   }
 
