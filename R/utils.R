@@ -4702,6 +4702,7 @@ process_spatial <- function(gdb_folder,
 
     utils::unzip(zipfile = paste0(dest, "/gdb.zip"), exdir = dest)
 
+    # Country shapes EDAV===============
     global.ctry.01 <- sf::st_read(dsn = stringr::str_remove(paste0(dest, "/", sub(".*\\/", "", gdb_folder)), ".zip"),
                                   layer = "GLOBAL_ADM0") |>
       dplyr::mutate(STARTDATE = as.Date(STARTDATE),
@@ -4710,6 +4711,7 @@ process_spatial <- function(gdb_folder,
                     yr.end = lubridate::year(ENDDATE),
                     ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"), "COTE D IVOIRE", ADM0_NAME))
 
+    # Province shapes EDAV===============
     global.prov.01 <- sf::st_read(dsn = stringr::str_remove(paste0(dest, "/", sub(".*\\/", "", gdb_folder)), ".zip"),
                                   layer = "GLOBAL_ADM1") |>
       dplyr::mutate(STARTDATE = as.Date(STARTDATE),
@@ -4719,6 +4721,7 @@ process_spatial <- function(gdb_folder,
                     ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"), "COTE D IVOIRE", ADM0_NAME)
       )
 
+    # District shapes EDAV===============
     global.dist.01 <- sf::st_read(dsn = stringr::str_remove(paste0(dest, "/", sub(".*\\/", "", gdb_folder)), ".zip"),
                                   layer = "GLOBAL_ADM2") |>
       dplyr::mutate(STARTDATE = as.Date(STARTDATE),
@@ -4729,6 +4732,31 @@ process_spatial <- function(gdb_folder,
 
     unlink(dest)
   }else{
+
+    # Country shapes local===============
+    global.ctry.01 <- sf::st_read(dsn = gdb_folder, layer = "GLOBAL_ADM0") |>
+      dplyr::mutate(STARTDATE = as.Date(STARTDATE),
+                    ENDDATE = as.Date(ENDDATE),
+                    yr.st = lubridate::year(STARTDATE),
+                    yr.end = lubridate::year(ENDDATE),
+                    ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"), "COTE D IVOIRE", ADM0_NAME))
+
+    # Province shapes local===============
+    global.prov.01 <- sf::st_read(dsn = gdb_folder, layer = "GLOBAL_ADM1") |>
+      dplyr::mutate(STARTDATE = as.Date(STARTDATE),
+                    ENDDATE = as.Date(ENDDATE),
+                    yr.st = lubridate::year(STARTDATE),
+                    yr.end = lubridate::year(ENDDATE),
+                    ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"), "COTE D IVOIRE", ADM0_NAME)
+      )
+
+    # District shapes local===============
+    global.dist.01 <- sf::st_read(dsn = gdb_folder, layer = "GLOBAL_ADM2") |>
+      dplyr::mutate(STARTDATE = as.Date(STARTDATE),
+                    ENDDATE = as.Date(ENDDATE),
+                    yr.st = lubridate::year(STARTDATE),
+                    yr.end = lubridate::year(ENDDATE),
+                    ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"), "COTE D IVOIRE", ADM0_NAME))
 
   }
 
@@ -4762,15 +4790,6 @@ process_spatial <- function(gdb_folder,
 
   sf::st_geometry(global.ctry.01) <- NULL
 
-  # Province shapes ===============
-  global.prov.01 <- sf::st_read(dsn = gdb_folder, layer = "GLOBAL_ADM1") |>
-    dplyr::mutate(STARTDATE = as.Date(STARTDATE),
-                  ENDDATE = as.Date(ENDDATE),
-                  yr.st = lubridate::year(STARTDATE),
-                  yr.end = lubridate::year(ENDDATE),
-                  ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"), "COTE D IVOIRE", ADM0_NAME)
-    )
-
 
   # Province shapes overlapping in Lower Juba in Somalia.
   global.prov.01 <- global.prov.01 |>
@@ -4801,15 +4820,6 @@ process_spatial <- function(gdb_folder,
   readr::write_rds(global.prov.01, file = paste0(output_folder, "/global.prov.01.rds"))
 
   sf::st_geometry(global.prov.01) <- NULL
-
-  # District shapes ===============
-  global.dist.01 <- sf::st_read(dsn = gdb_folder, layer = "GLOBAL_ADM2") |>
-    dplyr::mutate(STARTDATE = as.Date(STARTDATE),
-                  ENDDATE = as.Date(ENDDATE),
-                  yr.st = lubridate::year(STARTDATE),
-                  yr.end = lubridate::year(ENDDATE),
-                  ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"), "COTE D IVOIRE", ADM0_NAME))
-
 
   check.dist.valid <- tibble::as_tibble(sf::st_is_valid(global.dist.01))
   row.num.dist <- which(check.dist.valid$value == FALSE)
