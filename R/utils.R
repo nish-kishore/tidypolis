@@ -4731,7 +4731,7 @@ process_spatial <- function(gdb_folder,
                     ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"), "COTE D IVOIRE", ADM0_NAME))
 
     unlink(dest)
-  }else{
+  } else {
 
     # Country shapes local===============
     global.ctry.01 <- sf::st_read(dsn = gdb_folder, layer = "GLOBAL_ADM0") |>
@@ -4760,10 +4760,6 @@ process_spatial <- function(gdb_folder,
 
   }
 
-
-
-
-
   #identifying bad shapes
   check.ctry.valid <- tibble::as_tibble(sf::st_is_valid(global.ctry.01))
   row.num.ctry <- which(check.ctry.valid$value == FALSE)
@@ -4774,6 +4770,15 @@ process_spatial <- function(gdb_folder,
 
   sf::st_geometry(invalid.ctry.shapes) <- NULL
 
+  if(edav) {
+    tidypolis_io(io = "write", edav = T,
+                 file_path = paste0(output_folder, "/invalid_ctry_shapes.csv"),
+                 obj = invalid.ctry.shapes)
+  } else {
+    tidypolis_io(io = "write", edav = F,
+                 file_path = paste0(output_folder, "/invalid_ctry_shapes.csv"),
+                 obj = invalid.ctry.shapes)
+  }
   utils::write.csv(invalid.ctry.shapes, file = paste0(output_folder, "/invalid_ctry_shapes.csv"))
 
   empty.ctry <- global.ctry.01 |>
