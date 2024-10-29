@@ -4709,17 +4709,31 @@ process_spatial <- function(gdb_folder,
                     yr.st = lubridate::year(STARTDATE),
                     yr.end = lubridate::year(ENDDATE),
                     ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"), "COTE D IVOIRE", ADM0_NAME))
+
+    global.prov.01 <- sf::st_read(dsn = stringr::str_remove(paste0(dest, "/", sub(".*\\/", "", gdb_folder)), ".zip"),
+                                  layer = "GLOBAL_ADM1") |>
+      dplyr::mutate(STARTDATE = as.Date(STARTDATE),
+                    ENDDATE = as.Date(ENDDATE),
+                    yr.st = lubridate::year(STARTDATE),
+                    yr.end = lubridate::year(ENDDATE),
+                    ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"), "COTE D IVOIRE", ADM0_NAME)
+      )
+
+    global.dist.01 <- sf::st_read(dsn = stringr::str_remove(paste0(dest, "/", sub(".*\\/", "", gdb_folder)), ".zip"),
+                                  layer = "GLOBAL_ADM2") |>
+      dplyr::mutate(STARTDATE = as.Date(STARTDATE),
+                    ENDDATE = as.Date(ENDDATE),
+                    yr.st = lubridate::year(STARTDATE),
+                    yr.end = lubridate::year(ENDDATE),
+                    ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"), "COTE D IVOIRE", ADM0_NAME))
+
     unlink(dest)
+  }else{
+
   }
 
 
-  # Country shapes ===============
-  global.ctry.01 <- sf::st_read(dsn = gdb_folder, layer = "GLOBAL_ADM0") |>
-    dplyr::mutate(STARTDATE = as.Date(STARTDATE),
-                  ENDDATE = as.Date(ENDDATE),
-                  yr.st = lubridate::year(STARTDATE),
-                  yr.end = lubridate::year(ENDDATE),
-                  ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"), "COTE D IVOIRE", ADM0_NAME))
+
 
 
   #identifying bad shapes
