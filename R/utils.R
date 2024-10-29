@@ -4779,14 +4779,23 @@ process_spatial <- function(gdb_folder,
                  file_path = paste0(output_folder, "/invalid_ctry_shapes.csv"),
                  obj = invalid.ctry.shapes)
   }
-  utils::write.csv(invalid.ctry.shapes, file = paste0(output_folder, "/invalid_ctry_shapes.csv"))
 
   empty.ctry <- global.ctry.01 |>
     dplyr::mutate(empty = sf::st_is_empty(Shape)) |>
     dplyr::filter(empty == TRUE)
 
+  sf::st_geometry(empty.ctry) <- NULL
+
   if(nrow(empty.ctry) > 0) {
-    utils::write.csv(empty.ctry, file = paste0(output_folder, "empty_ctry_shapes.csv"))
+    if(edav) {
+      tidypolis_io(io = "write", edav = T,
+                   file_path = paste0(output_folder, "/empty_ctry_shapes.csv"),
+                   obj = empty.ctry)
+    } else {
+      tidypolis_io(io = "write", edav = F,
+                   file_path = paste0(output_folder, "/empty_ctry_shapes.csv"),
+                   obj = empty.ctry)
+    }
   }
 
   rm(invalid.ctry.shapes, check.ctry.valid, row.num.ctry, empty.ctry)
