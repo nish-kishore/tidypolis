@@ -4855,7 +4855,15 @@ process_spatial <- function(gdb_folder,
 
   rm(check.prov.valid, row.num.prov, invalid.prov.shapes, empty.prov)
   # save global province geodatabase in RDS file:
-  readr::write_rds(global.prov.01, file = paste0(output_folder, "/global.prov.01.rds"))
+  if(edav) {
+    tidypolis_io(io = "write", edav = T,
+                 file_path = paste0(output_folder, "/global.prov.01.rds"),
+                 obj = global.prov.01)
+  } else {
+    tidypolis_io(io = "write", edav = F,
+                 file_path = paste0(output_folder, "/global.prov.01.rds"),
+                 obj = global.prov.01)
+  }
 
   sf::st_geometry(global.prov.01) <- NULL
 
