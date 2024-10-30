@@ -4842,7 +4842,15 @@ process_spatial <- function(gdb_folder,
     dplyr::filter(empty == TRUE)
 
   if(nrow(empty.prov) > 0) {
-    utils::write.csv(empty.prov, file = paste0(output_folder, "/empty_prov_shapes.csv"))
+    if(edav) {
+      tidypolis_io(io = "write", edav = T,
+                   file_path = paste0(output_folder, "/empty_prov_shapes.csv"),
+                   obj = empty.prov)
+    } else {
+      tidypolis_io(io = "write", edav = F,
+                   file_path = paste0(output_folder, "/empty_prov_shapes.csv"),
+                   obj = empty.prov)
+    }
   }
 
   rm(check.prov.valid, row.num.prov, invalid.prov.shapes, empty.prov)
