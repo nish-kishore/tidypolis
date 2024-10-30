@@ -4800,7 +4800,15 @@ process_spatial <- function(gdb_folder,
 
   rm(invalid.ctry.shapes, check.ctry.valid, row.num.ctry, empty.ctry)
   # save global country geodatabase in RDS file:
-  readr::write_rds(global.ctry.01, file = paste0(output_folder, "/global.ctry.01.rds"))
+  if(edav) {
+    tidypolis_io(io = "write", edav = T,
+                 file_path = paste0(output_folder, "/global.ctry.rds"),
+                 obj = global.ctry.01)
+  } else {
+    tidypolis_io(io = "write", edav = F,
+                 file_path = paste0(output_folder, "/global.ctry.rds"),
+                 obj = global.ctry.01)
+  }
 
   sf::st_geometry(global.ctry.01) <- NULL
 
