@@ -4891,11 +4891,21 @@ process_spatial <- function(gdb_folder,
     dplyr::filter(empty == TRUE)
 
   if(nrow(empty.dist) > 0) {
-    utils::write.csv(empty.dist, file = paste0(output_folder, "/empty_dist_shapes.csv"))
+    if(edav) {
+      tidypolis_io(io = "write", edav = T,
+                   file_path = paste0(output_folder, "/empty_dist_shapes.csv"),
+                   obj = empty.dist)
+    } else {
+      tidypolis_io(io = "write", edav = F,
+                   file_path = paste0(output_folder, "/empty_dist_shapes.csv"),
+                   obj = empty.dist)
+    }
   }
 
   rm(check.dist.valid, row.num.dist, invalid.dist.shapes, empty.dist)
   # save global province geodatabase in RDS file:
+
+
   readr::write_rds(global.dist.01, file = paste0(output_folder, "/global.dist.01.rds"))
 
   sf::st_geometry(global.dist.01) <- NULL
