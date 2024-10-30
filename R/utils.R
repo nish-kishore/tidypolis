@@ -4827,7 +4827,15 @@ process_spatial <- function(gdb_folder,
 
   sf::st_geometry(invalid.prov.shapes) <- NULL
 
-  utils::write.csv(invalid.prov.shapes, file = paste0(output_folder, "/invalid_prov_shapes.csv"))
+  if(edav) {
+    tidypolis_io(io = "write", edav = T,
+                 file_path = paste0(output_folder, "/invalid_prov_shapes.csv"),
+                 obj = invalid.prov.shapes)
+  } else {
+    tidypolis_io(io = "write", edav = F,
+                 file_path = paste0(output_folder, "/invalid_prov_shapes.csv"),
+                 obj = invalid.prov.shapes)
+  }
 
   empty.prov <- global.prov.01 |>
     dplyr::mutate(empty = sf::st_is_empty(SHAPE)) |>
