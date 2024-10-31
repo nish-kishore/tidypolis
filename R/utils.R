@@ -4972,10 +4972,21 @@ process_spatial <- function(gdb_folder,
       dplyr::summarise(no.of.shapes = dplyr::n()) |>
       dplyr::filter(no.of.shapes > 1)
 
-    utils::write.csv(dist.shape.issue.01, paste0(output_folder, "/dist_shape_multiple_",
-                                                 paste(min(dist.shape.issue.01$active.year.01, na.rm = T),
-                                                       max(dist.shape.issue.01$active.year.01, na.rm = T),
-                                                       sep = "_"), ".csv"))
+    if(edav) {
+      tidypolis_io(io = "write", edav = T,
+                   file_path = paste0(output_folder, "/dist_shape_multiple_",
+                                      paste(min(dist.shape.issue.01$active.year.01, na.rm = T),
+                                            max(dist.shape.issue.01$active.year.01, na.rm = T),
+                                            sep = "_"), ".csv"),
+                   obj = dist.shape.issue.01)
+    } else {
+      tidypolis_io(io = "write", edav = F,
+                   file_path = paste0(output_folder, "/dist_shape_multiple_",
+                                      paste(min(dist.shape.issue.01$active.year.01, na.rm = T),
+                                            max(dist.shape.issue.01$active.year.01, na.rm = T),
+                                            sep = "_"), ".csv"),
+                   obj = dist.shape.issue.01)
+    }
   }
 
   remove(df.list, df02)
