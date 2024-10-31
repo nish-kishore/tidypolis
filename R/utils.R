@@ -4695,7 +4695,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 process_spatial <- function(gdb_folder,
                             output_folder,
                             edav) {
-  output_folder <- stringr::str_replace(output_folder, paste0("GID/PEB/SIR/"), "")
+  if(edav) {
+    output_folder <- stringr::str_replace(output_folder, paste0("GID/PEB/SIR/"), "")
+  }
 
   if(edav) {
     azcontainer = suppressMessages(get_azure_storage_connection())
