@@ -1171,6 +1171,15 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
   tidypolis_io(io = "write", file_path = paste0(polis_data_folder, "/Core_Ready_Files/afp_empty_coords.csv"),
                obj = empty.coord)
 
+  cli::cli_process_start("Spatially joining AFP cases to global districts")
+  #create sf object from lat lon and make global.dist valid
+  df01.sf <- df01 |>
+    dplyr::filter(!epid %in% empty.coord$epid) |>
+    dplyr::mutate(lon = polis.longitude,
+                  lat = polis.latitude) |>
+    sf::st_as_sf(coords = c(x = "lon" , y = "lat"), crs = 4326)
+
+  global.dist.02 <- sf::st_make_valid(global.dist.01)
 }
 
 
