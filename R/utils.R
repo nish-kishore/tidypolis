@@ -1169,7 +1169,8 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
     dplyr::filter(is.na(polis.latitude) | is.na(polis.longitude) | (polis.latitude == 0 & polis.longitude == 0))
 
   tidypolis_io(io = "write", file_path = paste0(polis_data_folder, "/Core_Ready_Files/afp_empty_coords.csv"),
-               obj = empty.coord)
+               obj = empty.coord |>
+                 dplyr::select(polis.case.id, epid, date.onset, place.admin.0, polis.latitude, polis.longitude))
 
   cli::cli_process_start("Spatially joining AFP cases to global districts")
   #create sf object from lat lon and make global.dist valid
@@ -1206,6 +1207,13 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
   sf_use_s2(T)
 
   cli::cli_process_done()
+
+  #bind back together df02 and df03
+  df04 <- dplyr::bind_rows(df02, df03)
+
+  cli::cli_process_done()
+
+
 
 }
 
