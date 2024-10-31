@@ -4859,11 +4859,11 @@ process_spatial <- function(gdb_folder,
   # save global province geodatabase in RDS file:
   if(edav) {
     tidypolis_io(io = "write", edav = T,
-                 file_path = paste0(output_folder, "/global.prov.01.rds"),
+                 file_path = paste0(output_folder, "/global.prov.rds"),
                  obj = global.prov.01)
   } else {
     tidypolis_io(io = "write", edav = F,
-                 file_path = paste0(output_folder, "/global.prov.01.rds"),
+                 file_path = paste0(output_folder, "/global.prov.rds"),
                  obj = global.prov.01)
   }
 
@@ -4908,11 +4908,11 @@ process_spatial <- function(gdb_folder,
   # save global province geodatabase in RDS file:
   if(edav) {
     tidypolis_io(io = "write", edav = T,
-                 file_path = paste0(output_folder, "/global.dist.01.rds"),
+                 file_path = paste0(output_folder, "/global.dist.rds"),
                  obj = global.dist.01)
   } else {
     tidypolis_io(io = "write", edav = F,
-                 file_path = paste0(output_folder, "/global.dist.01.rds"),
+                 file_path = paste0(output_folder, "/global.dist.rds"),
                  obj = global.dist.01)
   }
 
