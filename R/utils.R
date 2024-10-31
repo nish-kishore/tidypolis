@@ -1188,6 +1188,13 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
   valid.shapes <- global.dist.02 |>
     dplyr::slice(-row.num.2) |>
     dplyr::select(GUID, ADM1_GUID, ADM0_GUID, yr.st, yr.end, SHAPE)
+
+  cli::cli_process_start("Evaluating invalid district shapes")
+  #invalid shapes for which we'll turn off s2
+  invalid.shapes <- global.dist.02 |>
+    dplyr::slice(row.num.2) |>
+    dplyr::select(GUID, ADM1_GUID, ADM0_GUID, yr.st, yr.end, SHAPE)
+
 }
 
 
