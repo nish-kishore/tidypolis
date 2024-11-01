@@ -4684,3 +4684,315 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 #'
 #' }
 #'
+
+#' @description
+#' a function to process WHO spatial datasets
+#' @import dplyr sf lubridate stringr readr tibble utils
+#' @param gdb_folder str the folder location of spatial datasets, should end with .gdb, if on edav the gdb will need to be zipped,
+#' ensure that the gdb and the zipped file name are the same
+#' @param output_folder str folder location to write outputs to
+#' @param edav boolean T or F, whether gdb is on EDAV or local
+process_spatial <- function(gdb_folder,
+                            output_folder,
+                            edav) {
+  if(edav) {
+    output_folder <- stringr::str_replace(output_folder, paste0("GID/PEB/SIR/"), "")
+  }
+
+  if(edav) {
+    azcontainer = suppressMessages(get_azure_storage_connection())
+    dest <- tempdir()
+    AzureStor::storage_download(container = azcontainer, gdb_folder, paste0(dest, "/gdb.zip"), overwrite = T)
+
+    utils::unzip(zipfile = paste0(dest, "/gdb.zip"), exdir = dest)
+
+    # Country shapes EDAV===============
+    global.ctry.01 <- sf::st_read(dsn = stringr::str_remove(paste0(dest, "/", sub(".*\\/", "", gdb_folder)), ".zip"),
+                                  layer = "GLOBAL_ADM0") |>
+      dplyr::mutate(STARTDATE = as.Date(STARTDATE),
+                    ENDDATE = as.Date(ENDDATE),
+                    yr.st = lubridate::year(STARTDATE),
+                    yr.end = lubridate::year(ENDDATE),
+                    ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"), "COTE D IVOIRE", ADM0_NAME))
+
+    # Province shapes EDAV===============
+    global.prov.01 <- sf::st_read(dsn = stringr::str_remove(paste0(dest, "/", sub(".*\\/", "", gdb_folder)), ".zip"),
+                                  layer = "GLOBAL_ADM1") |>
+      dplyr::mutate(STARTDATE = as.Date(STARTDATE),
+                    ENDDATE = as.Date(ENDDATE),
+                    yr.st = lubridate::year(STARTDATE),
+                    yr.end = lubridate::year(ENDDATE),
+                    ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"), "COTE D IVOIRE", ADM0_NAME)
+      )
+
+    # District shapes EDAV===============
+    global.dist.01 <- sf::st_read(dsn = stringr::str_remove(paste0(dest, "/", sub(".*\\/", "", gdb_folder)), ".zip"),
+                                  layer = "GLOBAL_ADM2") |>
+      dplyr::mutate(STARTDATE = as.Date(STARTDATE),
+                    ENDDATE = as.Date(ENDDATE),
+                    yr.st = lubridate::year(STARTDATE),
+                    yr.end = lubridate::year(ENDDATE),
+                    ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"), "COTE D IVOIRE", ADM0_NAME))
+
+    unlink(dest)
+  } else {
+
+    # Country shapes local===============
+    global.ctry.01 <- sf::st_read(dsn = gdb_folder, layer = "GLOBAL_ADM0") |>
+      dplyr::mutate(STARTDATE = as.Date(STARTDATE),
+                    ENDDATE = as.Date(ENDDATE),
+                    yr.st = lubridate::year(STARTDATE),
+                    yr.end = lubridate::year(ENDDATE),
+                    ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"), "COTE D IVOIRE", ADM0_NAME))
+
+    # Province shapes local===============
+    global.prov.01 <- sf::st_read(dsn = gdb_folder, layer = "GLOBAL_ADM1") |>
+      dplyr::mutate(STARTDATE = as.Date(STARTDATE),
+                    ENDDATE = as.Date(ENDDATE),
+                    yr.st = lubridate::year(STARTDATE),
+                    yr.end = lubridate::year(ENDDATE),
+                    ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"), "COTE D IVOIRE", ADM0_NAME)
+      )
+
+    # District shapes local===============
+    global.dist.01 <- sf::st_read(dsn = gdb_folder, layer = "GLOBAL_ADM2") |>
+      dplyr::mutate(STARTDATE = as.Date(STARTDATE),
+                    ENDDATE = as.Date(ENDDATE),
+                    yr.st = lubridate::year(STARTDATE),
+                    yr.end = lubridate::year(ENDDATE),
+                    ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"), "COTE D IVOIRE", ADM0_NAME))
+
+  }
+
+  #identifying bad shapes
+  check.ctry.valid <- tibble::as_tibble(sf::st_is_valid(global.ctry.01))
+  row.num.ctry <- which(check.ctry.valid$value == FALSE)
+  invalid.ctry.shapes <- global.ctry.01 |>
+    dplyr::slice(row.num.ctry) |>
+    dplyr::select(ADM0_NAME, GUID, yr.st, yr.end, Shape) |>
+    dplyr::arrange(ADM0_NAME)
+
+  sf::st_geometry(invalid.ctry.shapes) <- NULL
+
+  if(edav) {
+    tidypolis_io(io = "write", edav = T,
+                 file_path = paste0(output_folder, "/invalid_ctry_shapes.csv"),
+                 obj = invalid.ctry.shapes)
+  } else {
+    tidypolis_io(io = "write", edav = F,
+                 file_path = paste0(output_folder, "/invalid_ctry_shapes.csv"),
+                 obj = invalid.ctry.shapes)
+  }
+
+  empty.ctry <- global.ctry.01 |>
+    dplyr::mutate(empty = sf::st_is_empty(Shape)) |>
+    dplyr::filter(empty == TRUE)
+
+  sf::st_geometry(empty.ctry) <- NULL
+
+  if(nrow(empty.ctry) > 0) {
+    if(edav) {
+      tidypolis_io(io = "write", edav = T,
+                   file_path = paste0(output_folder, "/empty_ctry_shapes.csv"),
+                   obj = empty.ctry)
+    } else {
+      tidypolis_io(io = "write", edav = F,
+                   file_path = paste0(output_folder, "/empty_ctry_shapes.csv"),
+                   obj = empty.ctry)
+    }
+  }
+
+  rm(invalid.ctry.shapes, check.ctry.valid, row.num.ctry, empty.ctry)
+  # save global country geodatabase in RDS file:
+  if(edav) {
+    tidypolis_io(io = "write", edav = T,
+                 file_path = paste0(output_folder, "/global.ctry.rds"),
+                 obj = global.ctry.01)
+  } else {
+    tidypolis_io(io = "write", edav = F,
+                 file_path = paste0(output_folder, "/global.ctry.rds"),
+                 obj = global.ctry.01)
+  }
+
+  sf::st_geometry(global.ctry.01) <- NULL
+
+
+  # Province shapes overlapping in Lower Juba in Somalia.
+  global.prov.01 <- global.prov.01 |>
+    dplyr::mutate(yr.end = ifelse(ADM0_GUID == '{B5FF48B9-7282-445C-8CD2-BEFCE4E0BDA7}' &
+                                    GUID == '{EE73F3EA-DD35-480F-8FEA-5904274087C4}', 2021, yr.end))
+
+  check.prov.valid <- tibble::as_tibble(sf::st_is_valid(global.prov.01))
+  row.num.prov <- which(check.prov.valid$value == FALSE)
+  invalid.prov.shapes <- global.prov.01 |>
+    dplyr::slice(row.num.prov) |>
+    dplyr::select(ADM0_NAME, ADM1_NAME, GUID, yr.st, yr.end, SHAPE) |>
+    dplyr::arrange(ADM0_NAME)
+
+  sf::st_geometry(invalid.prov.shapes) <- NULL
+
+  if(edav) {
+    tidypolis_io(io = "write", edav = T,
+                 file_path = paste0(output_folder, "/invalid_prov_shapes.csv"),
+                 obj = invalid.prov.shapes)
+  } else {
+    tidypolis_io(io = "write", edav = F,
+                 file_path = paste0(output_folder, "/invalid_prov_shapes.csv"),
+                 obj = invalid.prov.shapes)
+  }
+
+  empty.prov <- global.prov.01 |>
+    dplyr::mutate(empty = sf::st_is_empty(SHAPE)) |>
+    dplyr::filter(empty == TRUE)
+
+  if(nrow(empty.prov) > 0) {
+    if(edav) {
+      tidypolis_io(io = "write", edav = T,
+                   file_path = paste0(output_folder, "/empty_prov_shapes.csv"),
+                   obj = empty.prov)
+    } else {
+      tidypolis_io(io = "write", edav = F,
+                   file_path = paste0(output_folder, "/empty_prov_shapes.csv"),
+                   obj = empty.prov)
+    }
+  }
+
+  rm(check.prov.valid, row.num.prov, invalid.prov.shapes, empty.prov)
+  # save global province geodatabase in RDS file:
+  if(edav) {
+    tidypolis_io(io = "write", edav = T,
+                 file_path = paste0(output_folder, "/global.prov.rds"),
+                 obj = global.prov.01)
+  } else {
+    tidypolis_io(io = "write", edav = F,
+                 file_path = paste0(output_folder, "/global.prov.rds"),
+                 obj = global.prov.01)
+  }
+
+  sf::st_geometry(global.prov.01) <- NULL
+
+  check.dist.valid <- tibble::as_tibble(sf::st_is_valid(global.dist.01))
+  row.num.dist <- which(check.dist.valid$value == FALSE)
+  invalid.dist.shapes <- global.dist.01 |>
+    dplyr::slice(row.num.dist) |>
+    dplyr::select(ADM0_NAME, ADM1_NAME, ADM2_NAME, GUID, yr.st, yr.end, SHAPE) |>
+    dplyr::arrange(ADM0_NAME)
+
+  sf::st_geometry(invalid.dist.shapes) <- NULL
+
+  if(edav) {
+    tidypolis_io(io = "write", edav = T,
+                 file_path = paste0(output_folder, "/invalid_dist_shapes.csv"),
+                 obj = invalid.dist.shapes)
+  } else {
+    tidypolis_io(io = "write", edav = F,
+                 file_path = paste0(output_folder, "/invalid_dist_shapes.csv"),
+                 obj = invalid.dist.shapes)
+  }
+
+  empty.dist <- global.dist.01 |>
+    dplyr::mutate(empty = sf::st_is_empty(SHAPE)) |>
+    dplyr::filter(empty == TRUE)
+
+  if(nrow(empty.dist) > 0) {
+    if(edav) {
+      tidypolis_io(io = "write", edav = T,
+                   file_path = paste0(output_folder, "/empty_dist_shapes.csv"),
+                   obj = empty.dist)
+    } else {
+      tidypolis_io(io = "write", edav = F,
+                   file_path = paste0(output_folder, "/empty_dist_shapes.csv"),
+                   obj = empty.dist)
+    }
+  }
+
+  rm(check.dist.valid, row.num.dist, invalid.dist.shapes, empty.dist)
+  # save global province geodatabase in RDS file:
+  if(edav) {
+    tidypolis_io(io = "write", edav = T,
+                 file_path = paste0(output_folder, "/global.dist.rds"),
+                 obj = global.dist.01)
+  } else {
+    tidypolis_io(io = "write", edav = F,
+                 file_path = paste0(output_folder, "/global.dist.rds"),
+                 obj = global.dist.01)
+  }
+
+  sf::st_geometry(global.dist.01) <- NULL
+
+  endyr <- year(format(Sys.time()))
+  startyr <- 2000
+
+  # Province long shape
+
+  df.list <- list()
+
+  for(i in startyr:endyr) {
+    df02 <- sirfunctions:::f.yrs.01(global.prov.01, i)
+
+    df.list[[i]] <- df02
+  }
+
+  long.global.prov.01 <- do.call(rbind, df.list)
+
+  if(endyr == lubridate::year(format(Sys.time())) & startyr == 2000) {
+    prov.shape.issue.01 <- long.global.prov.01 |>
+      dplyr::group_by(ADM0_NAME, ADM1_NAME, active.year.01) |>
+      dplyr::summarise(no.of.shapes = dplyr::n()) |>
+      dplyr::filter(no.of.shapes > 1)
+
+    if(edav) {
+      tidypolis_io(io = "write", edav = T,
+                   file_path = paste0(output_folder, "/prov_shape_multiple_",
+                                      paste(min(prov.shape.issue.01$active.year.01, na.rm = T),
+                                            max(prov.shape.issue.01$active.year.01, na.rm = T),
+                                            sep = "_"), ".csv"),
+                   obj = prov.shape.issue.01)
+    } else {
+      tidypolis_io(io = "write", edav = F,
+                   file_path = paste0(output_folder, "/prov_shape_multiple_",
+                                      paste(min(prov.shape.issue.01$active.year.01, na.rm = T),
+                                            max(prov.shape.issue.01$active.year.01, na.rm = T),
+                                            sep = "_"), ".csv"),
+                   obj = prov.shape.issue.01)
+    }
+  }
+
+  # District long shape
+
+  df.list <- list()
+
+  for(i in startyr:endyr) {
+    df02 <- sirfunctions:::f.yrs.01(global.dist.01, i)
+
+    df.list[[i]] <- df02
+  }
+
+  long.global.dist.01 <- do.call(rbind, df.list)
+
+  if(endyr == year(format(Sys.time())) & startyr == 2000) {
+    dist.shape.issue.01 <- long.global.dist.01 |>
+      dplyr::group_by(ADM0_NAME, ADM1_NAME, ADM2_NAME, active.year.01) |>
+      dplyr::summarise(no.of.shapes = dplyr::n()) |>
+      dplyr::filter(no.of.shapes > 1)
+
+    if(edav) {
+      tidypolis_io(io = "write", edav = T,
+                   file_path = paste0(output_folder, "/dist_shape_multiple_",
+                                      paste(min(dist.shape.issue.01$active.year.01, na.rm = T),
+                                            max(dist.shape.issue.01$active.year.01, na.rm = T),
+                                            sep = "_"), ".csv"),
+                   obj = dist.shape.issue.01)
+    } else {
+      tidypolis_io(io = "write", edav = F,
+                   file_path = paste0(output_folder, "/dist_shape_multiple_",
+                                      paste(min(dist.shape.issue.01$active.year.01, na.rm = T),
+                                            max(dist.shape.issue.01$active.year.01, na.rm = T),
+                                            sep = "_"), ".csv"),
+                   obj = dist.shape.issue.01)
+    }
+  }
+
+  remove(df.list, df02)
+
+}
