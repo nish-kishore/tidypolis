@@ -1637,39 +1637,19 @@ cluster_dates <- function(x,
 #' @param df dataframe of SIAs to identify rounds by vaccine type
 cluster_dates_for_sias <- function(sia){
 
-
   tick <- Sys.time()
 
   sia.01 <- sia |>
     dplyr::filter(yr.sia >= 2010)
-  #original vax types
-  out_mopv2 <- sia.01 |>
-    run_cluster_dates(min_obs = 4, type = "mOPV2")
+  #get all vax types in SIA data
+  vax.types <- sia |>
+    dplyr::pull(vaccine.type) |>
+    unique()
 
-  out_nopv2 <- sia.01 |>
-    run_cluster_dates(min_obs = 4, type = "nOPV2")
-
-  out_topv <- sia.01 |>
-    run_cluster_dates(min_obs = 4, type = "tOPV")
-
-  #add all vaccine types
-  out_bopv <- sia.01 |>
-    run_cluster_dates(min_obs = 4, type = "bOPV")
-
-  out_fipv <- sia.01 |>
-    run_cluster_dates(min_obs = 4, type = "f-IPV")
-
-  out_ipv <- sia.01 |>
-    run_cluster_dates(min_obs = 4, type = "IPV")
-
-  out_ipv_bopv <- sia.01 |>
-    run_cluster_dates(min_obs = 4, type = "IPV + bOPV")
-
-  out_mopv1 <- sia.01 |>
-    run_cluster_dates(min_obs = 4, type = "mOPV1")
-
-  out_mopv3 <- sia.01 |>
-    run_cluster_dates(min_obs = 4, type = "mOPV3")
+  for(i in 1:length(vax.types)) {
+    sia.01 |>
+      run_cluster_dates(min_obs = 4, type = vax.types[i])
+  }
 
   tock <- Sys.time()
 
