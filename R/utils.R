@@ -1646,9 +1646,9 @@ cluster_dates_for_sias <- function(sia){
     dplyr::pull(vaccine.type) |>
     unique()
 
-  for(i in 1:length(vax.types)) {
+  for(i in vax.types) {
     sia.01 |>
-      run_cluster_dates(min_obs = 4, type = vax.types[i])
+      run_cluster_dates(min_obs = 4, type = i)
   }
 
   tock <- Sys.time()
