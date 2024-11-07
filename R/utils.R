@@ -1664,7 +1664,10 @@ create_response_vars <- function(pos){
                   planned.campaigns = ifelse(is.na(planned.campaigns), 0, planned.campaigns),
                   ipv.campaigns = ifelse(is.na(ipv.campaigns), 0, ipv.campaigns))
 
+  pos.final <- dplyr::left_join(pos, pos.sub.03) |>
+    unique()
 
+  return(pos.final)
 }
 
 
