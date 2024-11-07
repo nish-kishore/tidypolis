@@ -1579,11 +1579,52 @@ create_response_vars <- function(pos){
 
   sia <- tidypolis_io(io = "read", file_path = path[grepl("sia_2000", path)])
 
+  sia.sub <- sia |>
+    dplyr::select(sia.code, sia.sub.activity.code, activity.start.date,
+                  sub.activity.start.date, vaccine.type, adm2guid)
+
   pos.sub <- pos |>
     dplyr::select(epid, dateonset, yronset, measurement, ntchanges, emergencegroup,
                   place.admin.0, place.admin.1, place.admin.2, adm0guid, adm1guid,
                   admin2guid) |>
     dplyr::filter(measurement %in% c("cVDPV 1", "cVDPV 2", "cVDPV 3"))
+
+  #attach all sias post onset/collection for appropriate type and filter to 6 months
+  #cVDPV2 <- tOPV / nOPV2 / mOPV2
+  #cVDPV1 <- tOPV / bOPV / mOPV1
+  #cVDPV3 <- tOPV / bOPV / mOPV3
+  type1 <- dplyr::left_join(pos.sub |> dplyr::filter(measurement == "cVDPV 1"),
+                            sia.sub |> dplyr::filter(vaccine.type %in% c("tOPV", "bOPV", "mOPV1")),
+                            by = c("admin2guid" = "adm2guid")) |>
+    dplyr::mutate(time.to.response = difftime(sub.activity.start.date, dateonset, units = "days")) |>
+    dplyr::filter(dateonset < sub.activity.start.date,
+                  time.to.response <= 120) |>
+    unique()
+
+  type2 <- dplyr::left_join(pos.sub |> dplyr::filter(measurement == "cVDPV 2"),
+                            sia.sub |> dplyr::filter(vaccine.type %in% c("tOPV", "nOPV2", "mOPV2")),
+                            by = c("admin2guid" = "adm2guid")) |>
+    dplyr::mutate(time.to.response = difftime(sub.activity.start.date, dateonset, units = "days")) |>
+    dplyr::filter(dateonset < sub.activity.start.date,
+                  time.to.response <= 120) |>
+    unique()
+
+  type3 <- dplyr::left_join(pos.sub |> dplyr::filter(measurement == "cVDPV 3"),
+                            sia.sub |> dplyr::filter(vaccine.type %in% c("tOPV", "bOPV", "mOPV3")),
+                            by = c("admin2guid" = "adm2guid")) |>
+    dplyr::mutate(time.to.response = difftime(sub.activity.start.date, dateonset, units = "days")) |>
+    dplyr::filter(dateonset < sub.activity.start.date,
+                  time.to.response <= 120) |>
+    unique()
+
+  finished.responses <- rbind(type1, type2, type3) |>
+    dplyr::group_by(epid, ntchanges, emergencegroup) |>
+    dplyr::mutate(finished.responses = n()) |>
+    dplyr::ungroup() |>
+    dplyr::select(epid, dateonset, ntchanges, emergencegroup, finished.responses) |>
+    unique()
+
+  rm(type1, type2, type3)
 
 
 
