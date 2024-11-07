@@ -1639,7 +1639,7 @@ create_response_vars <- function(pos){
                                         by = c("admin2guid" = "adm2guid")) |>
     dplyr::mutate(planned.campaigns = ifelse(is.na(planned.campaigns), 0, planned.campaigns)) |>
     unique() |>
-    dplyr::select(epid, ntchanges, emergencegroup, planned.campaigns)
+    dplyr::select(epid, dateonset, ntchanges, emergencegroup, planned.campaigns)
 
   #identify completed ipv campaigns
   ipv.camp <- sia.sub |>
@@ -1654,9 +1654,15 @@ create_response_vars <- function(pos){
                                    ipv.camp |> dplyr::select(sub.activity.start.date, adm2guid, ipv.campaigns),
                                    by = c("admin2guid" = "adm2guid")) |>
     dplyr::filter(dateonset < sub.activity.start.date) |>
-    dplyr::select(epid, ntchanges, emergencegroup, ipv.campaigns) |>
+    dplyr::select(epid, dateonset, ntchanges, emergencegroup, ipv.campaigns) |>
     unique()
 
+  pos.sub.01 <- dplyr::left_join(pos.sub, finished.responses, by = c("epid", "dateonset", "ntchanges", "emergencegroup"))
+  pos.sub.02 <- dplyr::left_join(pos.sub.01, planned.responses, by = c("epid", "dateonset", "ntchanges", "emergencegroup"))
+  pos.sub.03 <- dplyr::left_join(pos.sub.02, ipv.response, by = c("epid", "dateonset", "ntchanges", "emergencegroup")) |>
+    dplyr::mutate(finished.responses = ifelse(is.na(finished.responses), 0, finished.responses),
+                  planned.campaigns = ifelse(is.na(planned.campaigns), 0, planned.campaigns),
+                  ipv.campaigns = ifelse(is.na(ipv.campaigns), 0, ipv.campaigns))
 
 
 }
