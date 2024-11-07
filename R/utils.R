@@ -1572,7 +1572,20 @@ remove_character_dates <- function(type,
 #' a function to create summary SIA response variables for cVDPVs
 #' @import dplyr
 #' @param pos tibble a df of positive viruses
-create_response_vars <- function(df){
+create_response_vars <- function(pos){
+
+  #bring in processed SIA data
+  path <- tidypolis_io(io = "list", file_path = file.path(polis_data_folder, "Core_Ready_Files"), full_names = T)
+
+  sia <- tidypolis_io(io = "read", file_path = path[grepl("sia_2000", path)])
+
+  pos.sub <- pos |>
+    dplyr::select(epid, dateonset, yronset, measurement, ntchanges, emergencegroup,
+                  place.admin.0, place.admin.1, place.admin.2, adm0guid, adm1guid,
+                  admin2guid) |>
+    dplyr::filter(measurement %in% c("cVDPV 1", "cVDPV 2", "cVDPV 3"))
+
+
 
 }
 
