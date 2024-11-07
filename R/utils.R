@@ -1626,6 +1626,37 @@ create_response_vars <- function(pos){
 
   rm(type1, type2, type3)
 
+  #identify planned sias and attach them to positive cases
+  planned.sia <- sia.sub |>
+    dplyr::filter(activity.start.date > Sys.Date()) |>
+    dplyr::select(sia.code, sia.sub.activity.code, activity.start.date,
+                  vaccine.type, adm2guid) |>
+    dplyr::group_by(adm2guid) |>
+    dplyr::mutate(planned.campaigns = n()) |>
+    dplyr::ungroup()
+
+  planned.responses <- dplyr::left_join(pos.sub, planned.sia |> dplyr::select(adm2guid, planned.campaigns),
+                                        by = c("admin2guid" = "adm2guid")) |>
+    dplyr::mutate(planned.campaigns = ifelse(is.na(planned.campaigns), 0, planned.campaigns)) |>
+    unique() |>
+    dplyr::select(epid, ntchanges, emergencegroup, planned.campaigns)
+
+  #identify completed ipv campaigns
+  ipv.camp <- sia.sub |>
+    dplyr::filter(vaccine.type == "IPV",
+                  sub.activity.start.date < Sys.Date()) |>
+    dplyr::group_by(adm2guid) |>
+    dplyr::mutate(ipv.campaigns = n()) |>
+    dplyr::ungroup()
+
+
+  ipv.response <- dplyr::left_join(pos.sub,
+                                   ipv.camp |> dplyr::select(sub.activity.start.date, adm2guid, ipv.campaigns),
+                                   by = c("admin2guid" = "adm2guid")) |>
+    dplyr::filter(dateonset < sub.activity.start.date) |>
+    dplyr::select(epid, ntchanges, emergencegroup, ipv.campaigns) |>
+    unique()
+
 
 
 }
