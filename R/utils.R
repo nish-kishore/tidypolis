@@ -4573,7 +4573,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   afp.es.virus.02 <- remove_character_dates(type = "POS", df = afp.es.virus.01)
 
-
+  afp.es.virus.03 <- create_response_vars(afp.es.virus.02)
 
   cli::cli_process_done()
 
@@ -4674,8 +4674,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     in_old_not_new <- tibble()
     in_new_and_old_but_modified <- list()
   }
-
-
 
   #identify updated viruses logging change from VDPV to cVDPV
   class.updated <- afp.es.virus.01 |>
