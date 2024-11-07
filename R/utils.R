@@ -1568,6 +1568,14 @@ remove_character_dates <- function(type,
   return(df.02)
 }
 
+#' @description
+#' a function to create summary SIA response variables for cVDPVs
+#' @import dplyr
+#' @param pos tibble a df of positive viruses
+create_response_vars <- function(df){
+
+}
+
 
 #### Pre-processing ####
 
@@ -4470,6 +4478,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
              measurement == "WILD 1" ~ datenotificationtohq))
 
   afp.es.virus.02 <- remove_character_dates(type = "POS", df = afp.es.virus.01)
+
+
 
   cli::cli_process_done()
 
