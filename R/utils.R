@@ -1630,7 +1630,7 @@ create_response_vars <- function(pos){
   planned.sia <- sia.sub |>
     dplyr::filter(activity.start.date > Sys.Date()) |>
     dplyr::select(sia.code, sia.sub.activity.code, activity.start.date,
-                  vaccine.type, adm2guid) |>
+                  sub.activity.start.date, vaccine.type, adm2guid) |>
     dplyr::group_by(adm2guid) |>
     dplyr::mutate(planned.campaigns = n()) |>
     dplyr::ungroup()
@@ -1639,7 +1639,8 @@ create_response_vars <- function(pos){
                                         by = c("admin2guid" = "adm2guid")) |>
     dplyr::mutate(planned.campaigns = ifelse(is.na(planned.campaigns), 0, planned.campaigns)) |>
     unique() |>
-    dplyr::select(epid, dateonset, ntchanges, emergencegroup, planned.campaigns)
+    dplyr::select(epid, dateonset, ntchanges, emergencegroup, planned.campaigns) |>
+    dplyr::filter(difftime(dateonset, sub.activity.start.date, units = "days") <= 120)
 
   #identify completed ipv campaigns
   ipv.camp <- sia.sub |>
@@ -1653,7 +1654,8 @@ create_response_vars <- function(pos){
   ipv.response <- dplyr::left_join(pos.sub,
                                    ipv.camp |> dplyr::select(sub.activity.start.date, adm2guid, ipv.campaigns),
                                    by = c("admin2guid" = "adm2guid")) |>
-    dplyr::filter(dateonset < sub.activity.start.date) |>
+    dplyr::filter(dateonset < sub.activity.start.date,
+                  difftime(sub.activity.start.date, dateonset, units = "days") <= 120) |>
     dplyr::select(epid, dateonset, ntchanges, emergencegroup, ipv.campaigns) |>
     unique()
 
