@@ -1635,7 +1635,8 @@ create_response_vars <- function(pos){
     dplyr::mutate(planned.campaigns = n()) |>
     dplyr::ungroup()
 
-  planned.responses <- dplyr::left_join(pos.sub, planned.sia |> dplyr::select(adm2guid, planned.campaigns),
+  planned.responses <- dplyr::left_join(pos.sub, planned.sia |> dplyr::select(adm2guid, planned.campaigns,
+                                                                              sub.activity.start.date),
                                         by = c("admin2guid" = "adm2guid")) |>
     dplyr::mutate(planned.campaigns = ifelse(is.na(planned.campaigns), 0, planned.campaigns)) |>
     unique() |>
