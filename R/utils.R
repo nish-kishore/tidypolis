@@ -1598,7 +1598,7 @@ create_response_vars <- function(pos){
                             by = c("admin2guid" = "adm2guid")) |>
     dplyr::mutate(time.to.response = difftime(sub.activity.start.date, dateonset, units = "days")) |>
     dplyr::filter(dateonset < sub.activity.start.date,
-                  time.to.response <= 120) |>
+                  time.to.response <= 180) |>
     unique()
 
   type2 <- dplyr::left_join(pos.sub |> dplyr::filter(measurement == "cVDPV 2"),
@@ -1606,7 +1606,7 @@ create_response_vars <- function(pos){
                             by = c("admin2guid" = "adm2guid")) |>
     dplyr::mutate(time.to.response = difftime(sub.activity.start.date, dateonset, units = "days")) |>
     dplyr::filter(dateonset < sub.activity.start.date,
-                  time.to.response <= 120) |>
+                  time.to.response <= 180) |>
     unique()
 
   type3 <- dplyr::left_join(pos.sub |> dplyr::filter(measurement == "cVDPV 3"),
@@ -1614,7 +1614,7 @@ create_response_vars <- function(pos){
                             by = c("admin2guid" = "adm2guid")) |>
     dplyr::mutate(time.to.response = difftime(sub.activity.start.date, dateonset, units = "days")) |>
     dplyr::filter(dateonset < sub.activity.start.date,
-                  time.to.response <= 120) |>
+                  time.to.response <= 180) |>
     unique()
 
   finished.responses <- rbind(type1, type2, type3) |>
@@ -1641,7 +1641,7 @@ create_response_vars <- function(pos){
     dplyr::mutate(planned.campaigns = ifelse(is.na(planned.campaigns), 0, planned.campaigns)) |>
     unique() |>
     dplyr::select(epid, dateonset, ntchanges, emergencegroup, planned.campaigns, sub.activity.start.date) |>
-    dplyr::filter(difftime(dateonset, sub.activity.start.date, units = "days") <= 120)
+    dplyr::filter(difftime(dateonset, sub.activity.start.date, units = "days") <= 180)
 
   #identify completed ipv campaigns
   ipv.camp <- sia.sub |>
@@ -1656,7 +1656,7 @@ create_response_vars <- function(pos){
                                    ipv.camp |> dplyr::select(sub.activity.start.date, adm2guid, ipv.campaigns),
                                    by = c("admin2guid" = "adm2guid")) |>
     dplyr::filter(dateonset < sub.activity.start.date,
-                  difftime(sub.activity.start.date, dateonset, units = "days") <= 120) |>
+                  difftime(sub.activity.start.date, dateonset, units = "days") <= 180) |>
     dplyr::select(epid, dateonset, ntchanges, emergencegroup, ipv.campaigns) |>
     unique()
 
@@ -1668,6 +1668,7 @@ create_response_vars <- function(pos){
                   ipv.campaigns = ifelse(is.na(ipv.campaigns), 0, ipv.campaigns))
 
   pos.final <- dplyr::left_join(pos, pos.sub.03) |>
+    dplyr::select(-sub.activity.start.date) |>
     unique()
 
   return(pos.final)
