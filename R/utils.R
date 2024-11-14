@@ -1641,7 +1641,7 @@ create_response_vars <- function(pos){
     dplyr::mutate(planned.campaigns = ifelse(is.na(planned.campaigns), 0, planned.campaigns)) |>
     unique() |>
     dplyr::select(epid, dateonset, ntchanges, emergencegroup, planned.campaigns, sub.activity.start.date) |>
-    dplyr::filter(difftime(dateonset, sub.activity.start.date, units = "days") <= 180)
+    dplyr::filter(difftime(sub.activity.start.date, dateonset, units = "days") <= 180)
 
   #identify completed ipv campaigns
   ipv.camp <- sia.sub |>
