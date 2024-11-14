@@ -1640,7 +1640,7 @@ create_response_vars <- function(pos){
                                         by = c("admin2guid" = "adm2guid")) |>
     dplyr::mutate(planned.campaigns = ifelse(is.na(planned.campaigns), 0, planned.campaigns)) |>
     unique() |>
-    dplyr::select(epid, dateonset, ntchanges, emergencegroup, planned.campaigns) |>
+    dplyr::select(epid, dateonset, ntchanges, emergencegroup, planned.campaigns, sub.activity.start.date) |>
     dplyr::filter(difftime(dateonset, sub.activity.start.date, units = "days") <= 120)
 
   #identify completed ipv campaigns
