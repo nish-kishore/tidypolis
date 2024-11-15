@@ -1597,7 +1597,8 @@ create_response_vars <- function(pos){
                             sia.sub |> dplyr::filter(vaccine.type %in% c("tOPV", "bOPV", "mOPV1")),
                             by = c("admin2guid" = "adm2guid")) |>
     dplyr::mutate(time.to.response = difftime(sub.activity.start.date, dateonset, units = "days")) |>
-    dplyr::filter(dateonset < sub.activity.start.date,
+    dplyr::filter(sub.activity.start.date < Sys.Date(),
+                  dateonset < sub.activity.start.date,
                   time.to.response <= 180) |>
     unique()
 
@@ -1605,7 +1606,8 @@ create_response_vars <- function(pos){
                             sia.sub |> dplyr::filter(vaccine.type %in% c("tOPV", "nOPV2", "mOPV2")),
                             by = c("admin2guid" = "adm2guid")) |>
     dplyr::mutate(time.to.response = difftime(sub.activity.start.date, dateonset, units = "days")) |>
-    dplyr::filter(dateonset < sub.activity.start.date,
+    dplyr::filter(sub.activity.start.date < Sys.Date(),
+                  dateonset < sub.activity.start.date,
                   time.to.response <= 180) |>
     unique()
 
@@ -1613,7 +1615,8 @@ create_response_vars <- function(pos){
                             sia.sub |> dplyr::filter(vaccine.type %in% c("tOPV", "bOPV", "mOPV3")),
                             by = c("admin2guid" = "adm2guid")) |>
     dplyr::mutate(time.to.response = difftime(sub.activity.start.date, dateonset, units = "days")) |>
-    dplyr::filter(dateonset < sub.activity.start.date,
+    dplyr::filter(sub.activity.start.date < Sys.Date(),
+                  dateonset < sub.activity.start.date,
                   time.to.response <= 180) |>
     unique()
 
