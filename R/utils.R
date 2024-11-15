@@ -1647,19 +1647,16 @@ create_response_vars <- function(pos){
     dplyr::filter(difftime(sub.activity.start.date, dateonset, units = "days") <= 180)
 
   #identify completed ipv campaigns
-  ipv.camp <- sia.sub |>
-    dplyr::filter(vaccine.type == "IPV",
-                  sub.activity.start.date < Sys.Date()) |>
-    dplyr::group_by(adm2guid) |>
-    dplyr::mutate(ipv.campaigns = n()) |>
-    dplyr::ungroup()
-
-
   ipv.response <- dplyr::left_join(pos.sub,
-                                   ipv.camp |> dplyr::select(sub.activity.start.date, adm2guid, ipv.campaigns),
+                                   sia.sub |>
+                                     dplyr::filter(vaccine.type == "IPV") |>
+                                     dplyr::select(sub.activity.start.date, adm2guid),
                                    by = c("admin2guid" = "adm2guid")) |>
     dplyr::filter(dateonset < sub.activity.start.date,
                   difftime(sub.activity.start.date, dateonset, units = "days") <= 180) |>
+    dplyr::group_by(epid, ntchanges, emergencegroup, admin2guid) |>
+    dplyr::mutate(ipv.campaigns = n()) |>
+    dplyr::ungroup() |>
     dplyr::select(epid, dateonset, ntchanges, emergencegroup, ipv.campaigns) |>
     unique()
 
