@@ -1251,6 +1251,15 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
   dropped.obs <- dplyr::anti_join(df01, df04, by = "epid") |>
     dplyr::filter(!epid %in% df04$epid & epid %in% df01.sf$epid)
 
+  #bring df05 and dropped observations back together, create lat/lon var from sf object previously created
+  df06 <- dplyr::bind_cols(
+    tibble::as_tibble(df05),
+    sf::st_coordinates(df05) |>
+      tibble::as_tibble() |>
+      dplyr::rename("lon" = "X", "lat" = "Y")) |>
+    dplyr::bind_rows(dropped.obs) |>
+    dplyr::select(-c("GUID", "yr.st", "yr.end"))
+
 }
 
 
@@ -2627,6 +2636,29 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   gc()
   cli::cli_process_done()
 
+  cli::cli_process_start("Checking duplicated AFP EPIDs")
+
+  #identify duplicate EPIDs with differing place and onsets
+  dup.epid <- afp.raw.01 |>
+    dplyr::group_by(epid) |>
+    dplyr::mutate(dup_epid = dplyr::n()) |>
+    dplyr::filter(dup_epid > 1) |>
+    dplyr::ungroup() |>
+    dplyr::select(epid, date.onset, yronset, diagnosis.final, classification, classificationvdpv,
+                  final.cell.culture.result, poliovirustypes, person.sex, place.admin.0,
+                  place.admin.1, place.admin.2) |>
+    dplyr::distinct() |>
+    dplyr::arrange(epid)
+
+  tidypolis_io(obj = dup.epid, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/", paste("duplicate_AFP_epids_Polis",
+                                                                                                              min(dup.epid$yronset, na.rm = T),
+                                                                                                              max(dup.epid$yronset, na.rm = T),
+                                                                                                              sep = "_"), ".csv", sep = "")
+  )
+
+  cli::cli_process_done()
+
+
   cli::cli_process_start("Checking GUIDs")
 
 
@@ -2652,8 +2684,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   # add dummy variable which will appear as missing if no match in area is found
   shapes$match <- 1
   shapenames$match01 <- 1
-
-
 
   # matching by guid and marking unmatched provinces
 
@@ -2920,29 +2950,10 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   gc()
   cli::cli_process_done()
 
-  cli::cli_process_start("Checking duplicated AFP EPIDs")
 
   afp.linelist.02 <- afp.linelist.01 |>
     dplyr::filter(surveillancetypename == "AFP") |>
     dplyr::distinct()# this gives us an AFP line list
-
-  #identify duplicate EPIDs with differing place and onsets
-  dup.epid <- afp.linelist.02 |>
-    dplyr::group_by(epid) |>
-    dplyr::mutate(dup_epid = dplyr::n()) |>
-    dplyr::filter(dup_epid > 1) |>
-    dplyr::ungroup() |>
-    dplyr::select(epid, date.onset, yronset, diagnosis.final, classification, classificationvdpv,
-           final.cell.culture.result, poliovirustypes, person.sex, place.admin.0,
-           place.admin.1, place.admin.2) |>
-    dplyr::distinct() |>
-    dplyr::arrange(epid)
-
-  tidypolis_io(obj = dup.epid, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/", paste("duplicate_AFP_epids_Polis",
-                                                      min(dup.epid$yronset, na.rm = T),
-                                                      max(dup.epid$yronset, na.rm = T),
-                                                      sep = "_"), ".csv", sep = "")
-  )
 
   # remove duplicates in afp linelist
   afp.linelist.02 <- afp.linelist.02[!duplicated(afp.linelist.02$epid), ]
@@ -2953,9 +2964,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   not.afp <- afp.linelist.01 |>
     dplyr::filter(surveillancetypename != "AFP") # this gives us non-AFP line list
-
-  # remove duplicates in non-afp linelist
-  not.afp <- not.afp[!duplicated(not.afp$epid), ]
 
   unknown.afp <- afp.linelist.01 |>
     dplyr::filter(is.na(surveillancetypename) == T) # this gives us unknown surveillance type line list
