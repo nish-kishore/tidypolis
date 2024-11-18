@@ -2636,31 +2636,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   gc()
   cli::cli_process_done()
 
-  cli::cli_process_start("Checking duplicated AFP EPIDs")
-
-  #identify duplicate EPIDs with differing place and onsets
-  dup.epid <- afp.raw.01 |>
-    dplyr::group_by(epid) |>
-    dplyr::mutate(dup_epid = dplyr::n()) |>
-    dplyr::filter(dup_epid > 1) |>
-    dplyr::ungroup() |>
-    dplyr::select(epid, date.onset, yronset, diagnosis.final, classification, classificationvdpv,
-                  final.cell.culture.result, poliovirustypes, person.sex, place.admin.0,
-                  place.admin.1, place.admin.2) |>
-    dplyr::distinct() |>
-    dplyr::arrange(epid)
-
-  tidypolis_io(obj = dup.epid, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/", paste("duplicate_AFP_epids_Polis",
-                                                                                                              min(dup.epid$yronset, na.rm = T),
-                                                                                                              max(dup.epid$yronset, na.rm = T),
-                                                                                                              sep = "_"), ".csv", sep = "")
-  )
-
-  cli::cli_process_done()
-
-
   cli::cli_process_start("Checking GUIDs")
-
 
   afp.linelist.01 <- afp.raw.01 |>
     dplyr::mutate(
@@ -2668,7 +2644,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
       Admin1GUID = paste0("{", toupper(admin1guid), "}"),
       Admin0GUID = paste0("{", toupper(admin0guid), "}")
     )
-
 
   shapes <- long.global.dist.01 |>
     tibble::as_tibble() |>
@@ -2782,6 +2757,30 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   rm("afp.linelist.fixed.02")
   gc()
+
+  cli::cli_process_start("Checking duplicated AFP EPIDs")
+  #identify duplicate EPIDs with differing place and onsets
+  dup.epid <- afp.linelist.fixed.03 |>
+    dplyr::group_by(epid) |>
+    dplyr::mutate(dup_epid = dplyr::n()) |>
+    dplyr::filter(dup_epid > 1) |>
+    dplyr::ungroup() |>
+    dplyr::select(epid, date.onset, yronset, diagnosis.final, classification, classificationvdpv,
+                  final.cell.culture.result, poliovirustypes, person.sex, place.admin.0,
+                  place.admin.1, place.admin.2) |>
+    dplyr::distinct() |>
+    dplyr::arrange(epid)
+
+  tidypolis_io(obj = dup.epid, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/", paste("duplicate_AFP_epids_Polis",
+                                                                                                              min(dup.epid$yronset, na.rm = T),
+                                                                                                              max(dup.epid$yronset, na.rm = T),
+                                                                                                              sep = "_"), ".csv", sep = "")
+  )
+
+  # remove duplicates in afp linelist
+  afp.linelist.fixed.03 <- afp.linelist.fixed.03[!duplicated(afp.linelist.fixed.03$epid), ]
+
+  cli::cli_process_done()
 
 
   global.dist.01 <- sirfunctions::load_clean_dist_sp()
