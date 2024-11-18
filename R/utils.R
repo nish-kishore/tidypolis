@@ -1234,6 +1234,10 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
     dplyr::ungroup() |>
     dplyr::select(-n)
 
+  #fixed duplicates
+  dupes.fixed <- dplyr::bind_rows(dupes.01, dupes.02)
+
+  rm(dupes, dupes.01, dupes.02)
 
 }
 
