@@ -1202,7 +1202,7 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
 
   #second st_join is for invalid shapes and those attached cases, turning off s2
   sf_use_s2(F)
-  df03 <- sf::st_join(df01.sf |> dplyr::filter(!Admin2GUID %in% invalid.shapes$GUID), invalid.shapes, left = T) |>
+  df03 <- sf::st_join(df01.sf |> dplyr::filter(!Admin2GUID %in% valid.shapes$GUID), invalid.shapes, left = T) |>
     dplyr::filter(yronset >= yr.st & yronset <= yr.end)
   sf_use_s2(T)
 
