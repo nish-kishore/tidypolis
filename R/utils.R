@@ -1311,6 +1311,33 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
     bind_rows()
 
   cli::cli_process_done()
+
+  pt01_joined <- dplyr::bind_cols(
+    pt01,
+    empty.coord.02 |>
+      tibble::as_tibble() |>
+      dplyr::select(GUID, nperarm) |>
+      tidyr::uncount(nperarm)
+  ) |>
+    dplyr::left_join(tibble::as_tibble(empty.coord.02) |>
+                       dplyr::select(-SHAPE),
+                     by = "GUID")
+
+  pt02 <- pt01_joined |>
+    tibble::as_tibble() |>
+    dplyr::select(-nperarm, -id) |>
+    dplyr::group_by(GUID)|>
+    dplyr::arrange(GUID, .by_group = TRUE) |>
+    dplyr::mutate(id = dplyr::row_number()) |>
+    as.data.frame()
+
+  pt03 <- empty.coord |>
+    dplyr::group_by(Admin2GUID) |>
+    dplyr::arrange(Admin2GUID, .by_group = TRUE) |>
+    dplyr::mutate(id = dplyr::row_number()) |>
+    dplyr::ungroup()
+
+  pt04 <- dplyr::full_join(pt03, pt02, by = c("Admin2GUID" = "GUID", "id"))
 }
 
 
