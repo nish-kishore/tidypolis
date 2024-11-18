@@ -1338,6 +1338,17 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
     dplyr::ungroup()
 
   pt04 <- dplyr::full_join(pt03, pt02, by = c("Admin2GUID" = "GUID", "id"))
+
+  pt05 <- pt04 |>
+    dplyr::bind_cols(
+      tibble::as_tibble(pt04$x),
+      sf::st_coordinates(pt04$x) |>
+        tibble::as_tibble() |>
+        dplyr::rename("lon" = "X", "lat" = "Y")) |>
+    dplyr::select(-id)
+
+  pt05$x <- NULL
+  pt05$geometry <- NULL
 }
 
 
