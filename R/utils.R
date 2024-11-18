@@ -2866,7 +2866,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     dplyr::distinct() |>
     dplyr::arrange(epid)
 
-  tidypolis_io(obj = dup.epid, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/", paste("duplicate_AFP_epids_Polis",
+  tidypolis_io(obj = dup.epid, io = "write", file_path = paste(Sys.getenv("POLIS_DATA_CACHE"), "/Core_Ready_Files/", paste("duplicate_AFP_epids_Polis",
                                                                                                               min(dup.epid$yronset, na.rm = T),
                                                                                                               max(dup.epid$yronset, na.rm = T),
                                                                                                               sep = "_"), ".csv", sep = "")
