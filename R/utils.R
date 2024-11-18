@@ -2784,6 +2784,15 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
 
   global.dist.01 <- sirfunctions::load_clean_dist_sp()
+
+  #identify afp cases w/ bad adm2guids
+  cli::cli_process_start("Checking District GUIDs")
+  afp.noshape <- dplyr::anti_join(afp.linelist.fixed.03, global.dist.01, by=c("Admin2GUID"="GUID"))
+
+  tidypolis_io(obj = afp.noshape, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/AFP_epids_bad_guid.csv", sep = ""))
+
+  cli::cli_process_done()
+
   shape.file.names <- names(global.dist.01)
   shape.file.names <- shape.file.names[!shape.file.names %in% c("SHAPE")]
   col.afp.raw.01 <- colnames(afp.raw.01)
@@ -2953,9 +2962,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   afp.linelist.02 <- afp.linelist.01 |>
     dplyr::filter(surveillancetypename == "AFP") |>
     dplyr::distinct()# this gives us an AFP line list
-
-  # remove duplicates in afp linelist
-  afp.linelist.02 <- afp.linelist.02[!duplicated(afp.linelist.02$epid), ]
 
   cli::cli_process_done()
 
