@@ -1168,7 +1168,7 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
   empty.coord <- df01 |>
     dplyr::filter(is.na(polis.latitude) | is.na(polis.longitude) | (polis.latitude == 0 & polis.longitude == 0))
 
-  tidypolis_io(io = "write", file_path = paste0(polis_data_folder, "/Core_Ready_Files/afp_empty_coords.csv"),
+  tidypolis_io(io = "write", file_path = paste0(Sys.getenv("POLIS_DATA_CACHE"), "/Core_Ready_Files/afp_empty_coords.csv"),
                obj = empty.coord |>
                  dplyr::select(polis.case.id, epid, date.onset, place.admin.0, polis.latitude, polis.longitude))
 
@@ -2884,7 +2884,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_start("Checking District GUIDs")
   afp.noshape <- dplyr::anti_join(afp.linelist.fixed.03, global.dist.01, by=c("Admin2GUID"="GUID"))
 
-  tidypolis_io(obj = afp.noshape, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/AFP_epids_bad_guid.csv", sep = ""))
+  tidypolis_io(obj = afp.noshape, io = "write", file_path = paste(Sys.getenv("POLIS_DATA_CACHE"), "/Core_Ready_Files/AFP_epids_bad_guid.csv", sep = ""))
 
   cli::cli_process_done()
 
