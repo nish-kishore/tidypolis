@@ -1232,8 +1232,7 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
     dplyr::group_by(epid) |>
     dplyr::slice(1) |>
     dplyr::ungroup() |>
-    dplyr::select(-n) |>
-    dplyr::mutate(Admin2GUID = GUID)
+    dplyr::select(-n)
 
 
 }
