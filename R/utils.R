@@ -1260,6 +1260,24 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
     dplyr::bind_rows(dropped.obs) |>
     dplyr::select(-c("GUID", "yr.st", "yr.end"))
 
+  df06$geometry <- NULL
+
+  #feed only cases with empty coordinates into st_sample (vars = GUID, nperarm, id, SHAPE)
+  empty.coord.01 <- empty.coord |>
+    tibble::as_tibble() |>
+    dplyr::group_by(Admin2GUID) |>
+    dplyr::summarise(nperarm = dplyr::n()) |>
+    dplyr::arrange(Admin2GUID) |>
+    dplyr::mutate(id = dplyr::row_number()) |>
+    dplyr::ungroup() |>
+    dplyr::filter(Admin2GUID != "{NA}")
+
+  empty.coord.02 <- global.dist.01 |>
+    dplyr::select(GUID) |>
+    dplyr::filter(GUID %in% empty.coord.01$Admin2GUID) |>
+    dplyr::left_join(empty.coord.01, by = c("GUID" = "Admin2GUID"))
+
+
 }
 
 
