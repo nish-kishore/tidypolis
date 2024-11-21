@@ -2886,6 +2886,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   cli::cli_process_done()
 
+  col.afp.raw.01 <- colnames(afp.raw.01)
   rm("afp.raw.01")
   gc()
   # Function to create lat & long for AFP cases
@@ -3342,7 +3343,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_start("Clearing memory")
 
   rm('afp.clean.01', 'afp.clean.light', 'afp.files.01', 'afp.files.02',
-      'afp.linelist.01', 'afp.linelist.02', 'afp.linelist.latlong',
+     'afp.linelist.01', 'afp.linelist.02', 'afp.linelist.latlong',
      'afp.missing.01', 'afp.missing.02', 'afp_metadata_comparison',
      'col.afp.raw.01', 'dup.epid', 'issuesbyCtry', 'issuesbyyear',
      'endyr', 'global.dist.01', 'in_new_and_old_but_modified',
@@ -3352,7 +3353,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
      'not.afp', 'not.afp.01', 'not_afp_metadata_comparison', 'old',
      'old.file', 'old_table_metadata', 'startyr',
      'unknown.afp', 'x', "afp.new", "afp.to.combine", "non.afp.new",
-     "non.afp.to.combine"
+     "non.afp.to.combine", "afp.noshape"
   )
 
   gc()
