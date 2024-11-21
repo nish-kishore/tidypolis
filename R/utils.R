@@ -3353,7 +3353,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
      'not.afp', 'not.afp.01', 'not_afp_metadata_comparison', 'old',
      'old.file', 'old_table_metadata', 'startyr',
      'unknown.afp', 'x', "afp.new", "afp.to.combine", "non.afp.new",
-     "non.afp.to.combine", "afp.noshape"
+     "non.afp.to.combine", "afp.noshape", "guid.check.vars"
   )
 
   gc()
