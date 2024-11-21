@@ -3820,8 +3820,11 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     dplyr::ungroup() |>
     dplyr::mutate(cdc.last.camp = ifelse(cdc.max.round == sub.activity.start.date, 1, 0))
 
+  sia.clean.02 <- dplyr::left_join(sia.clean.01, sia.rounds |>
+                                     dplyr::select(sia.code, sia.sub.activity.code, adm2guid, cluster, cluster_method, cdc.round.num, cdc.max.round, cdc.last.camp),
+                                   by = c("sia.code", "sia.sub.activity.code", "adm2guid"))
 
-  tidypolis_io(obj = sia.clean.01, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/",
+  tidypolis_io(obj = sia.clean.02, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/",
                                 paste("sia", min(sia.clean.01$yr.sia, na.rm = T),
                                       max(sia.clean.01$yr.sia, na.rm = T),
                                       sep = "_"
