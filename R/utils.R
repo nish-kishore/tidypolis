@@ -3799,6 +3799,28 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   cluster_dates_for_sias(sia.clean.01)
 
+  sia.clusters <- edav_io(io = "list", file_loc = "GID/PEB/SIR/Data/sia_cluster_cache",
+                          default_dir = NULL) |>
+    dplyr::filter(grepl("data_cluster_cache", name)) |>
+    dplyr::pull(name)
+
+  sia.cluster.data <- list()
+
+  for(i in 1:length(sia.clusters)){
+    sia.cluster.data[[length(sia.cluster.data) + 1]] <- edav_io(io = "read", file_loc = sia.clusters[i], default_dir = NULL)
+  }
+
+  sia.rounds <- do.call(rbind.data.frame, sia.cluster.data) |>
+    dplyr::arrange(adm2guid, sub.activity.start.date) |>
+    dplyr::group_by(adm2guid, vaccine.type, cluster) |>
+    dplyr::mutate(cdc.round.num = row_number()) |>
+    dplyr::ungroup() |>
+    dplyr::group_by(adm2guid) |>
+    dplyr::mutate(cdc.max.round = max(sub.activity.start.date)) |>
+    dplyr::ungroup() |>
+    dplyr::mutate(cdc.last.camp = ifelse(cdc.max.round == sub.activity.start.date, 1, 0))
+
+
   tidypolis_io(obj = sia.clean.01, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/",
                                 paste("sia", min(sia.clean.01$yr.sia, na.rm = T),
                                       max(sia.clean.01$yr.sia, na.rm = T),
