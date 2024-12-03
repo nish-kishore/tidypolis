@@ -1568,6 +1568,112 @@ remove_character_dates <- function(type,
   return(df.02)
 }
 
+#' @description
+#' a function to create summary SIA response variables for cVDPVs
+#' @import dplyr
+#' @param pos tibble a df of positive viruses
+create_response_vars <- function(pos){
+
+  #bring in processed SIA data
+  path <- tidypolis_io(io = "list", file_path = file.path(Sys.getenv("POLIS_DATA_CACHE"), "/Core_Ready_Files"), full_names = T)
+
+  sia <- tidypolis_io(io = "read", file_path = path[grepl("sia_2000", path)])
+
+  sia.sub <- sia |>
+    dplyr::select(sia.code, sia.sub.activity.code, activity.start.date,
+                  sub.activity.start.date, vaccine.type, adm2guid)
+
+  pos.sub <- pos |>
+    dplyr::select(epid, dateonset, yronset, measurement, ntchanges, emergencegroup,
+                  place.admin.0, place.admin.1, place.admin.2, adm0guid, adm1guid,
+                  admin2guid) |>
+    dplyr::filter(measurement %in% c("cVDPV 1", "cVDPV 2", "cVDPV 3"))
+
+  #attach all sias post onset/collection for appropriate type and filter to 6 months
+  #cVDPV2 <- tOPV / nOPV2 / mOPV2
+  #cVDPV1 <- tOPV / bOPV / mOPV1
+  #cVDPV3 <- tOPV / bOPV / mOPV3
+  type1 <- dplyr::left_join(pos.sub |> dplyr::filter(measurement == "cVDPV 1"),
+                            sia.sub |> dplyr::filter(vaccine.type %in% c("tOPV", "bOPV", "mOPV1")),
+                            by = c("admin2guid" = "adm2guid")) |>
+    dplyr::mutate(time.to.response = difftime(sub.activity.start.date, dateonset, units = "days")) |>
+    dplyr::filter(sub.activity.start.date < Sys.Date(),
+                  dateonset < sub.activity.start.date,
+                  time.to.response <= 180) |>
+    unique()
+
+  type2 <- dplyr::left_join(pos.sub |> dplyr::filter(measurement == "cVDPV 2"),
+                            sia.sub |> dplyr::filter(vaccine.type %in% c("tOPV", "nOPV2", "mOPV2")),
+                            by = c("admin2guid" = "adm2guid")) |>
+    dplyr::mutate(time.to.response = difftime(sub.activity.start.date, dateonset, units = "days")) |>
+    dplyr::filter(sub.activity.start.date < Sys.Date(),
+                  dateonset < sub.activity.start.date,
+                  time.to.response <= 180) |>
+    unique()
+
+  type3 <- dplyr::left_join(pos.sub |> dplyr::filter(measurement == "cVDPV 3"),
+                            sia.sub |> dplyr::filter(vaccine.type %in% c("tOPV", "bOPV", "mOPV3")),
+                            by = c("admin2guid" = "adm2guid")) |>
+    dplyr::mutate(time.to.response = difftime(sub.activity.start.date, dateonset, units = "days")) |>
+    dplyr::filter(sub.activity.start.date < Sys.Date(),
+                  dateonset < sub.activity.start.date,
+                  time.to.response <= 180) |>
+    unique()
+
+  finished.responses <- rbind(type1, type2, type3) |>
+    dplyr::group_by(epid, ntchanges, emergencegroup) |>
+    dplyr::mutate(finished.responses = n()) |>
+    dplyr::ungroup() |>
+    dplyr::select(epid, dateonset, ntchanges, emergencegroup, finished.responses) |>
+    unique()
+
+  rm(type1, type2, type3)
+
+  #identify planned sias and attach them to positive cases
+  planned.sia <- sia.sub |>
+    dplyr::filter(activity.start.date > Sys.Date()) |>
+    dplyr::select(sia.code, sia.sub.activity.code, activity.start.date,
+                  sub.activity.start.date, vaccine.type, adm2guid) |>
+    dplyr::group_by(adm2guid) |>
+    dplyr::mutate(planned.campaigns = n()) |>
+    dplyr::ungroup()
+
+  planned.responses <- dplyr::left_join(pos.sub, planned.sia |> dplyr::select(adm2guid, planned.campaigns,
+                                                                              sub.activity.start.date),
+                                        by = c("admin2guid" = "adm2guid")) |>
+    dplyr::mutate(planned.campaigns = ifelse(is.na(planned.campaigns), 0, planned.campaigns)) |>
+    unique() |>
+    dplyr::select(epid, dateonset, ntchanges, emergencegroup, planned.campaigns, sub.activity.start.date) |>
+    dplyr::filter(difftime(sub.activity.start.date, dateonset, units = "days") <= 180)
+
+  #identify completed ipv campaigns
+  ipv.response <- dplyr::left_join(pos.sub,
+                                   sia.sub |>
+                                     dplyr::filter(vaccine.type == "IPV") |>
+                                     dplyr::select(sub.activity.start.date, adm2guid),
+                                   by = c("admin2guid" = "adm2guid")) |>
+    dplyr::filter(dateonset < sub.activity.start.date,
+                  difftime(sub.activity.start.date, dateonset, units = "days") <= 180) |>
+    dplyr::group_by(epid, ntchanges, emergencegroup, admin2guid) |>
+    dplyr::mutate(ipv.campaigns = n()) |>
+    dplyr::ungroup() |>
+    dplyr::select(epid, dateonset, ntchanges, emergencegroup, ipv.campaigns) |>
+    unique()
+
+  pos.sub.01 <- dplyr::left_join(pos.sub, finished.responses, by = c("epid", "dateonset", "ntchanges", "emergencegroup"))
+  pos.sub.02 <- dplyr::left_join(pos.sub.01, planned.responses, by = c("epid", "dateonset", "ntchanges", "emergencegroup"))
+  pos.sub.03 <- dplyr::left_join(pos.sub.02, ipv.response, by = c("epid", "dateonset", "ntchanges", "emergencegroup")) |>
+    dplyr::mutate(finished.responses = ifelse(is.na(finished.responses), 0, finished.responses),
+                  planned.campaigns = ifelse(is.na(planned.campaigns), 0, planned.campaigns),
+                  ipv.campaigns = ifelse(is.na(ipv.campaigns), 0, ipv.campaigns))
+
+  pos.final <- dplyr::left_join(pos, pos.sub.03) |>
+    dplyr::select(-sub.activity.start.date) |>
+    unique()
+
+  return(pos.final)
+}
+
 
 #Cluster Function
 #this function identifies "cluster" or OBX response so we can identify rounds
@@ -4693,12 +4799,14 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   afp.es.virus.02 <- remove_character_dates(type = "POS", df = afp.es.virus.01)
 
+  afp.es.virus.03 <- create_response_vars(afp.es.virus.02)
+
   cli::cli_process_done()
 
   cli::cli_process_start("Checking for variables that don't match last weeks pull")
 
   #Compare the final file to last week's final file to identify any differences in var_names, var_classes, or categorical responses
-  new_table_metadata <- f.summarise.metadata(afp.es.virus.02)
+  new_table_metadata <- f.summarise.metadata(afp.es.virus.03)
 
   x <- tidypolis_io(io = "list", file_path = file.path(polis_data_folder, "Core_Ready_Files/Archive", latest_folder_in_archive), full_names = T)
 
@@ -4713,7 +4821,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     old_table_metadata <- f.summarise.metadata(old.es)
     positives_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata, "POS")
 
-    new <- afp.es.virus.02 |>
+    new <- afp.es.virus.03 |>
       unique() |>
       dplyr::mutate(epid = stringr::str_squish(epid)) |>
       dplyr::group_by(epid)|>
@@ -4793,8 +4901,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     in_new_and_old_but_modified <- list()
   }
 
-
-
   #identify updated viruses logging change from VDPV to cVDPV
   class.updated <- afp.es.virus.01 |>
     dplyr::filter(vdpvclassificationchangedate <= Sys.Date() & vdpvclassificationchangedate > (Sys.Date()- 7)) |>
@@ -4820,7 +4926,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
                                    "POS Class Changed Records: ", length(unique(class.updated$epid))),
                    .event_type = "INFO")
 
-  tidypolis_io(obj = afp.es.virus.02,
+  tidypolis_io(obj = afp.es.virus.03,
                io = "write",
                file_path = paste(polis_data_folder, "/Core_Ready_Files/",
                                    paste("positives", min(afp.es.virus.01$dateonset, na.rm = T),
@@ -4837,7 +4943,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_start("Checking for positives that don't match to GUIDs")
 
   # AFP and ES that do not match to shape file
-  unmatched.afp.es.viruses.01 <- dplyr::anti_join(afp.es.virus.02, long.global.dist.01, by = c("admin2guid" = "GUID", "yronset" = "active.year.01"))
+  unmatched.afp.es.viruses.01 <- dplyr::anti_join(afp.es.virus.03, long.global.dist.01, by = c("admin2guid" = "GUID", "yronset" = "active.year.01"))
 
   # CSV file listing out unmatch virus
 
