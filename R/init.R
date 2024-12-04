@@ -7,7 +7,7 @@
 #' @import cli yaml tibble dplyr readr lubridate sirfunctions
 #' @param polis_folder `str` Location of folder where to store all information from POLIS.
 #' @param edav `bool` Should the system use EDAV as it's cache; default `FALSE`.
-#'
+#' @param api_debug boolean: if true will log all api calls
 #' @returns Messages on process.
 #' @examples
 #' \dontrun{
@@ -18,8 +18,13 @@
 #' @export
 init_tidypolis <- function(
     polis_folder = "POLIS",
-    edav = F
+    edav = F,
+    api_debug = F
     ){
+
+  if(api_debug){
+    Sys.setenv("API_DEBUG" = TRUE)
+  }
 
   if(edav){
     tryCatch(
