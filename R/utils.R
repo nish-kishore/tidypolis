@@ -610,6 +610,13 @@ call_single_url <- function(url,
 
   #response <- httr::GET(url=url, httr::add_headers("authorization-token" = api_key))
 
+  #capture API calls
+  capture_calls <- Sys.getenv("API_DEBUG") |> as.logical()
+
+  if(capture_calls){
+    update_polis_api_call_log(.call = url, .event = "MADE CALL")
+  }
+
   response <- httr::RETRY(
     verb = "GET",
     url = url,
@@ -618,6 +625,10 @@ call_single_url <- function(url,
     quiet = TRUE,
     terminate_on_success = TRUE
   )
+
+  if(capture_calls){
+    update_polis_api_call_log(.call = url, .event = "FINISHED CALL")
+  }
 
   out <- jsonlite::fromJSON(rawToChar(response$content))
 
@@ -772,6 +783,44 @@ update_polis_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
     tidypolis_io(io = "write", file_path = log_file_path)
 
     }
+}
+
+#' Create/Update POLIS debugging API call log
+#'
+#' @description Create/Update POLIS debugging API call log
+#' @import readr tibble
+#' @param log_file str: location of cache file
+#' @param .time dttm: time of update
+#' @param .call str: URL of API call conducted
+#' @param .event str: event to be logged
+#' @returns Return true if cache updated
+update_polis_api_call_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
+                             .time = Sys.time(),
+                             .call,
+                             .event){
+
+  log_file_path <- log_file |>
+    stringr::str_replace("/log.rds", "/api_call_log.rds")
+
+  log_exists <- tidypolis_io(io = "exists.file", file_path = log_file_path)
+
+  if(!log_exists){
+    tibble::tibble(
+      time = .time,
+      call = "INIT",
+      event = "INIT"
+    ) |>
+      tidypolis_io(io = "write", file_path = log_file_path)
+  }
+
+  log_file <- tidypolis_io(io = "read", file_path = log_file_path)
+
+  log_file |>
+    tibble::add_row(time = .time,
+                    call = .call,
+                    event = .event) |>
+    tidypolis_io(io = "write", file_path = log_file_path)
+
 }
 
 #### Local Cache ####
