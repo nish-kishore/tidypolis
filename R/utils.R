@@ -1164,37 +1164,127 @@ f.download.compare.02 <- function(df.from.f.download.compare.01, old.download, n
 #' @returns tibble with lat/lon for all unsampled locations
 f.pre.stsample.01 <- function(df01, global.dist.01) {
 
-  df01.noshape <- dplyr::anti_join(df01, global.dist.01, by=c("Admin2GUID"="GUID"))
+  #need to identify cases with no lat/lon
+  empty.coord <- df01 |>
+    dplyr::filter(is.na(polis.latitude) | is.na(polis.longitude) | (polis.latitude == 0 & polis.longitude == 0))
 
-  df01.shape <- dplyr::right_join(global.dist.01, df01 |> dplyr::filter(!is.na(Admin2GUID)), by=c("GUID"="Admin2GUID"))
+  tidypolis_io(io = "write", file_path = paste0(Sys.getenv("POLIS_DATA_CACHE"), "/Core_Ready_Files/afp_empty_coords.csv"),
+               obj = empty.coord |>
+                 dplyr::select(polis.case.id, epid, date.onset, place.admin.0, polis.latitude, polis.longitude))
 
-  df01.shape$empty.01 <- sf::st_is_empty(df01.shape)
-  df01.shape <- dplyr::filter(df01.shape, !empty.01)
+  cli::cli_process_start("Spatially joining AFP cases to global districts")
+  #create sf object from lat lon and make global.dist valid
+  df01.sf <- df01 |>
+    dplyr::filter(!epid %in% empty.coord$epid) |>
+    dplyr::mutate(lon = polis.longitude,
+                  lat = polis.latitude) |>
+    sf::st_as_sf(coords = c(x = "lon" , y = "lat"), crs = 4326)
 
-  df02.ref <- df01.shape |>
+  global.dist.02 <- sf::st_make_valid(global.dist.01)
+
+  #identify bad shape rows after make_valid
+  check.dist.2 <- as_tibble(st_is_valid(global.dist.02))
+  row.num.2 <- which(check.dist.2$value == FALSE)
+  #removing all bad shapes post make valid
+  valid.shapes <- global.dist.02 |>
+    dplyr::slice(-row.num.2) |>
+    dplyr::select(GUID, ADM1_GUID, ADM0_GUID, yr.st, yr.end, SHAPE)
+
+  cli::cli_process_start("Evaluating invalid district shapes")
+  #invalid shapes for which we'll turn off s2
+  invalid.shapes <- global.dist.02 |>
+    dplyr::slice(row.num.2) |>
+    dplyr::select(GUID, ADM1_GUID, ADM0_GUID, yr.st, yr.end, SHAPE)
+
+  #do 2 seperate st_joins the first, df02, is for valid shapes and those attached cases
+  df02 <- sf::st_join(df01.sf |> dplyr::filter(!Admin2GUID %in% invalid.shapes$GUID), valid.shapes, left = T) |>
+    dplyr::filter(yronset >= yr.st & yronset <= yr.end)
+
+  #second st_join is for invalid shapes and those attached cases, turning off s2
+  sf_use_s2(F)
+  df03 <- sf::st_join(df01.sf |> dplyr::filter(!Admin2GUID %in% valid.shapes$GUID), invalid.shapes, left = T) |>
+    dplyr::filter(yronset >= yr.st & yronset <= yr.end)
+  sf_use_s2(T)
+
+  cli::cli_process_done()
+
+  #bind back together df02 and df03
+  df04 <- dplyr::bind_rows(df02, df03)
+
+  cli::cli_process_done()
+
+  #df04 has a lot of dupes due to overlapping shapes, need to appropriately de dupe
+  #identify duplicate obs
+  dupes <- df04 |>
+    dplyr::group_by(epid) |>
+    dplyr::mutate(n = n()) |>
+    dplyr::ungroup() |>
+    dplyr::filter(n >1)
+
+  #duplicate obs where adm2guid matches GUID in shapefile
+  dupes.01 <- dupes |>
+    dplyr::filter(Admin2GUID == GUID) |>
+    dplyr::select(-n)
+
+  #duplicate obs where adm2guid is NA or doesn't match to shapefile
+  dupes.02 <- dupes |>
+    dplyr::filter(!epid %in% dupes.01$epid) |>
+    dplyr::group_by(epid) |>
+    dplyr::slice(1) |>
+    dplyr::ungroup() |>
+    dplyr::select(-n)
+
+  #fixed duplicates
+  dupes.fixed <- dplyr::bind_rows(dupes.01, dupes.02)
+
+  rm(dupes, dupes.01, dupes.02)
+
+  #remove the duplicate cases from df04 and bind back the fixed dupes
+  df05 <- df04 |>
+    dplyr::filter(!epid %in% dupes.fixed$epid) |>
+    dplyr::bind_rows(dupes.fixed)
+
+  #identify dropped obs. obs are dropped primarily because they match to a shape that doesn't
+  #exist for the case's year onset (there are holes in the global map for certain years)
+  df04$geometry <- NULL
+  #antijoin from df01 to keep polis.lat/lon
+  dropped.obs <- dplyr::anti_join(df01, df04, by = "epid") |>
+    dplyr::filter(!epid %in% df04$epid & epid %in% df01.sf$epid)
+
+  #bring df05 and dropped observations back together, create lat/lon var from sf object previously created
+  df06 <- dplyr::bind_cols(
+    tibble::as_tibble(df05),
+    sf::st_coordinates(df05) |>
+      tibble::as_tibble() |>
+      dplyr::rename("lon" = "X", "lat" = "Y")) |>
+    dplyr::bind_rows(dropped.obs) |>
+    dplyr::select(-c("GUID", "yr.st", "yr.end"))
+
+  df06$geometry <- NULL
+
+  #feed only cases with empty coordinates into st_sample (vars = GUID, nperarm, id, SHAPE)
+  empty.coord.01 <- empty.coord |>
     tibble::as_tibble() |>
-    dplyr::group_by(GUID) |>
+    dplyr::group_by(Admin2GUID) |>
     dplyr::summarise(nperarm = dplyr::n()) |>
-    dplyr::arrange(GUID) |>
+    dplyr::arrange(Admin2GUID) |>
     dplyr::mutate(id = dplyr::row_number()) |>
-    dplyr::ungroup()
+    dplyr::ungroup() |>
+    dplyr::filter(Admin2GUID != "{NA}")
 
-  df02 <- global.dist.01 |>
+  empty.coord.02 <- global.dist.01 |>
     dplyr::select(GUID) |>
-    dplyr::filter(GUID %in% df02.ref$GUID) |>
-    dplyr::left_join(df02.ref, by = "GUID")
+    dplyr::filter(GUID %in% empty.coord.01$Admin2GUID) |>
+    dplyr::left_join(empty.coord.01, by = c("GUID" = "Admin2GUID"))
 
-  cli::cli_process_start("Placing random points")
- # pt01 <- suppressMessages(sf::st_sample(df02, df02$nperarm,
-  #                                       exact = T, progress = T))
-
-  pt01 <- lapply(1:nrow(df02), function(x){
+  cli::cli_process_start("Placing random points for cases with bad coordinates")
+  pt01 <- lapply(1:nrow(empty.coord.02), function(x){
 
     tryCatch(
-      expr = {suppressMessages(sf::st_sample(df02[x,], pull(df02[x,], "nperarm"),
-                                            exact = T)) |> st_as_sf()},
+      expr = {suppressMessages(sf::st_sample(empty.coord.02[x,], pull(empty.coord.02[x,], "nperarm"),
+                                             exact = T)) |> st_as_sf()},
       error = function(e) {
-        guid = df02[x, ]$GUID[1]
+        guid = empty.coord.02[x, ]$GUID[1]
         ctry_prov_dist_name = global.dist.01 |> filter(GUID == guid) |> select(ADM0_NAME, ADM1_NAME, ADM2_NAME)
         cli::cli_alert_warning(paste0("Fixing errors for:\n",
                                       "Country: ", ctry_prov_dist_name$ADM0_NAME,"\n",
@@ -1203,14 +1293,14 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
 
         suppressWarnings(
           {
-          sf_use_s2(F)
-          int <- df02[x,] |> st_centroid(of_largest_polygon = T)
-          sf_use_s2(T)
+            sf_use_s2(F)
+            int <- empty.coord.02[x,] |> st_centroid(of_largest_polygon = T)
+            sf_use_s2(T)
 
-          st_buffer(int, dist = 3000) |>
-                   st_sample(slice(df02, x) |>
-                               pull(nperarm)) |>
-                   st_as_sf()
+            st_buffer(int, dist = 3000) |>
+              st_sample(slice(empty.coord.02, x) |>
+                          pull(nperarm)) |>
+              st_as_sf()
           }
         )
 
@@ -1222,29 +1312,18 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
 
   cli::cli_process_done()
 
-  pt01_sf <- pt01
-
   pt01_joined <- dplyr::bind_cols(
-    pt01_sf,
-    df02 |>
+    pt01,
+    empty.coord.02 |>
       tibble::as_tibble() |>
       dplyr::select(GUID, nperarm) |>
       tidyr::uncount(nperarm)
   ) |>
-    dplyr::left_join(tibble::as_tibble(df02) |> dplyr::select(-SHAPE), by = "GUID")
+    dplyr::left_join(tibble::as_tibble(empty.coord.02) |>
+                       dplyr::select(-SHAPE),
+                     by = "GUID")
 
-
-
-  #pt01_joined <- sf::st_join(pt01_sf, df02)
-
-  pt01_joined <- dplyr::bind_cols(
-    tibble::as_tibble(pt01_joined),
-    sf::st_coordinates(pt01_joined) |>
-      tibble::as_tibble() |>
-      dplyr::rename("lon" = "X", "lat" = "Y")
-  )
-
-  df03 <- pt01_joined |>
+  pt02 <- pt01_joined |>
     tibble::as_tibble() |>
     dplyr::select(-nperarm, -id) |>
     dplyr::group_by(GUID)|>
@@ -1252,18 +1331,30 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
     dplyr::mutate(id = dplyr::row_number()) |>
     as.data.frame()
 
-  df04 <- df01.shape |>
-    dplyr::group_by(GUID)|>
-    dplyr::arrange(GUID, .by_group = TRUE) |>
-    dplyr::mutate(id = dplyr::row_number())
+  pt03 <- empty.coord |>
+    dplyr::group_by(Admin2GUID) |>
+    dplyr::arrange(Admin2GUID, .by_group = TRUE) |>
+    dplyr::mutate(id = dplyr::row_number()) |>
+    dplyr::ungroup()
 
-  df05 <- dplyr::full_join(df04, df03, by = c("GUID", "id"))
+  pt04 <- dplyr::full_join(pt03, pt02, by = c("Admin2GUID" = "GUID", "id"))
 
-  sf::st_geometry(df05) <- NULL
+  pt05 <- pt04 |>
+    dplyr::bind_cols(
+      tibble::as_tibble(pt04$x),
+      sf::st_coordinates(pt04$x) |>
+        tibble::as_tibble() |>
+        dplyr::rename("lon" = "X", "lat" = "Y")) |>
+    dplyr::select(-id)
 
-  df06 <- dplyr::bind_rows(df05, df01.noshape)
+  pt05$x <- NULL
+  pt05$geometry <- NULL
 
-  return(df06)
+  #bind back placed point cases with df06 and finished
+  df07 <- dplyr::bind_rows(df06, pt05) |>
+    dplyr::select(-c("wrongAdmin1GUID", "wrongAdmin2GUID", "ADM1_GUID", "ADM0_GUID"))
+
+  return(df07)
 }
 
 
@@ -2943,14 +3034,12 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   cli::cli_process_start("Checking GUIDs")
 
-
   afp.linelist.01 <- afp.raw.01 |>
     dplyr::mutate(
       Admin2GUID = paste0("{", toupper(admin2guid), "}"),
       Admin1GUID = paste0("{", toupper(admin1guid), "}"),
       Admin0GUID = paste0("{", toupper(admin0guid), "}")
     )
-
 
   shapes <- long.global.dist.01 |>
     tibble::as_tibble() |>
@@ -2966,8 +3055,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   # add dummy variable which will appear as missing if no match in area is found
   shapes$match <- 1
   shapenames$match01 <- 1
-
-
 
   # matching by guid and marking unmatched provinces
 
@@ -3051,8 +3138,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
       wrongbothGUID = sum(wrongAdmin1GUID == "yes" & wrongAdmin2GUID == "yes")
     )
 
-
-
   rm("afp.linelist.01", "afp.linelist.fixed", "shapes", "shapenames")
 
   cli::cli_process_done()
@@ -3067,19 +3152,47 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   rm("afp.linelist.fixed.02")
   gc()
 
+  cli::cli_process_start("Checking duplicated AFP EPIDs")
+  #identify duplicate EPIDs with differing place and onsets
+  dup.epid <- afp.linelist.fixed.03 |>
+    dplyr::group_by(epid) |>
+    dplyr::mutate(dup_epid = dplyr::n()) |>
+    dplyr::filter(dup_epid > 1) |>
+    dplyr::ungroup() |>
+    dplyr::select(epid, date.onset, yronset, diagnosis.final, classification, classificationvdpv,
+                  final.cell.culture.result, poliovirustypes, person.sex, place.admin.0,
+                  place.admin.1, place.admin.2) |>
+    dplyr::distinct() |>
+    dplyr::arrange(epid)
+
+  tidypolis_io(obj = dup.epid, io = "write", file_path = paste(Sys.getenv("POLIS_DATA_CACHE"), "/Core_Ready_Files/", paste("duplicate_AFP_epids_Polis",
+                                                                                                              min(dup.epid$yronset, na.rm = T),
+                                                                                                              max(dup.epid$yronset, na.rm = T),
+                                                                                                              sep = "_"), ".csv", sep = "")
+  )
+
+  # remove duplicates in afp linelist
+  afp.linelist.fixed.03 <- afp.linelist.fixed.03[!duplicated(afp.linelist.fixed.03$epid), ]
+
+  cli::cli_process_done()
+
 
   global.dist.01 <- sirfunctions::load_clean_dist_sp()
-  shape.file.names <- names(global.dist.01)
-  shape.file.names <- shape.file.names[!shape.file.names %in% c("SHAPE")]
+
+  #identify afp cases w/ bad adm2guids
+  cli::cli_process_start("Checking District GUIDs")
+  afp.noshape <- dplyr::anti_join(afp.linelist.fixed.03, global.dist.01, by=c("Admin2GUID"="GUID"))
+
+  tidypolis_io(obj = afp.noshape, io = "write", file_path = paste(Sys.getenv("POLIS_DATA_CACHE"), "/Core_Ready_Files/AFP_epids_bad_guid.csv", sep = ""))
+
+  cli::cli_process_done()
+
   col.afp.raw.01 <- colnames(afp.raw.01)
   rm("afp.raw.01")
   gc()
   # Function to create lat & long for AFP cases
   afp.linelist.fixed.04 <- f.pre.stsample.01(afp.linelist.fixed.03, global.dist.01)
   rm("afp.linelist.fixed.03")
-
-  #vars created during stsample
-  stsample.vars <- c("id", "empty.01", "x")
 
   cli::cli_process_done()
 
@@ -3228,38 +3341,16 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
          emergence.group = `emergence.group(s)`
   ) |>
     dplyr::filter(!is.na(epid)) |>
-    dplyr::select(-c(shape.file.names, guid.check.vars, stsample.vars))
+    dplyr::select(-c(Admin2GUID, Admin1GUID, Admin0GUID))
 
   rm("afp.linelist.fixed.04")
   gc()
   cli::cli_process_done()
 
-  cli::cli_process_start("Checking duplicated AFP EPIDs")
 
   afp.linelist.02 <- afp.linelist.01 |>
     dplyr::filter(surveillancetypename == "AFP") |>
     dplyr::distinct()# this gives us an AFP line list
-
-  #identify duplicate EPIDs with differing place and onsets
-  dup.epid <- afp.linelist.02 |>
-    dplyr::group_by(epid) |>
-    dplyr::mutate(dup_epid = dplyr::n()) |>
-    dplyr::filter(dup_epid > 1) |>
-    dplyr::ungroup() |>
-    dplyr::select(epid, date.onset, yronset, diagnosis.final, classification, classificationvdpv,
-           final.cell.culture.result, poliovirustypes, person.sex, place.admin.0,
-           place.admin.1, place.admin.2) |>
-    dplyr::distinct() |>
-    dplyr::arrange(epid)
-
-  tidypolis_io(obj = dup.epid, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/", paste("duplicate_AFP_epids_Polis",
-                                                      min(dup.epid$yronset, na.rm = T),
-                                                      max(dup.epid$yronset, na.rm = T),
-                                                      sep = "_"), ".csv", sep = "")
-  )
-
-  # remove duplicates in afp linelist
-  afp.linelist.02 <- afp.linelist.02[!duplicated(afp.linelist.02$epid), ]
 
   cli::cli_process_done()
 
@@ -3267,9 +3358,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   not.afp <- afp.linelist.01 |>
     dplyr::filter(surveillancetypename != "AFP") # this gives us non-AFP line list
-
-  # remove duplicates in non-afp linelist
-  not.afp <- not.afp[!duplicated(not.afp$epid), ]
 
   unknown.afp <- afp.linelist.01 |>
     dplyr::filter(is.na(surveillancetypename) == T) # this gives us unknown surveillance type line list
@@ -3556,7 +3644,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_start("Clearing memory")
 
   rm('afp.clean.01', 'afp.clean.light', 'afp.files.01', 'afp.files.02',
-      'afp.linelist.01', 'afp.linelist.02', 'afp.linelist.latlong',
+     'afp.linelist.01', 'afp.linelist.02', 'afp.linelist.latlong',
      'afp.missing.01', 'afp.missing.02', 'afp_metadata_comparison',
      'col.afp.raw.01', 'dup.epid', 'issuesbyCtry', 'issuesbyyear',
      'endyr', 'global.dist.01', 'in_new_and_old_but_modified',
@@ -3566,7 +3654,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
      'not.afp', 'not.afp.01', 'not_afp_metadata_comparison', 'old',
      'old.file', 'old_table_metadata', 'startyr',
      'unknown.afp', 'x', "afp.new", "afp.to.combine", "non.afp.new",
-     "non.afp.to.combine"
+     "non.afp.to.combine", "afp.noshape", "guid.check.vars"
   )
 
   gc()
