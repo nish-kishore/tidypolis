@@ -2699,6 +2699,12 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   cli::cli_process_done()
 
+  #write out epids with no dateonset
+  tidypolis_io(io = "write", obj = afp.raw.01 |>
+                 dplyr::select(epid, dateonset) |>
+                 dplyr::filter(is.na(dateonset)),
+               file_path = paste0(Sys.getenv("POLIS_DATA_CACHE"), "/Core_Ready_Files/afp_no_onset.csv"))
+
   cli::cli_process_start("Checking for missingness in key variables")
   check_missingness(afp.raw.01)
   cli::cli_process_done("Check afp_missingess.rds for missing key varialbes")
