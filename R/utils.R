@@ -2598,9 +2598,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   gc()
   cli::cli_process_done()
 
-  cli::cli_process_start("Checking for missingness in key variables")
-  cli::cli_process_done("Check   for missing key varialbes")
-
   #Find out if there are duplicate epids.
   cli::cli_process_start("Checking for duplicated EPIDs")
   afp.raw.dup <- afp.raw.new |>
