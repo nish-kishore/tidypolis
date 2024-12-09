@@ -4075,6 +4075,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   remove("es.dup.01")
 
+  cli::cli_process_start("Checking for missingness in key ES vars")
+  cli::cli_process_done("Review missing vars in es_missingness.rds")
+
   cli::cli_process_start("Cleaning 'virus.type' and creating CDC variables")
 
   es.space.02 <- es.02 |>
