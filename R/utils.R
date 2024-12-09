@@ -1780,6 +1780,16 @@ check_missingness <- function(data,
                 "case.date", "date.onset", "stool.date.sent.to.lab", "clinical.admitted.date",
                 "followup.date", "stool.1.condition", "stool.2.condition", "age.months")
 
+  if(type == "AFP") {
+
+    missing_by_group <- data |>
+      dplyr::select(yronset, place.admin.0, all_of(afp.vars)) |>
+      dplyr::group_by(yronset, place.admin.0) |>
+      summarise(dplyr::across(dplyr::everything(), ~ mean(is.na(.)) * 100)) |>
+      dplyr::ungroup() |>
+      dplyr::filter(dplyr::if_any(afp.vars, ~ . >= 10))
+
+  }
 
 }
 
