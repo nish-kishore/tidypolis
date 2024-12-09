@@ -2668,6 +2668,10 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   cli::cli_process_done()
 
+  cli::cli_process_start("Checking for missingness in key variables")
+
+  cli::cli_process_done("Check   for missing key varialbes")
+
   cli::cli_process_start("Classification of cases using lab data")
   # this uses the laboratory data "poliovirustypes" to assign virus type (WPV1 WPV3 and vdpv1,2,2)
   # vtype assigns the polioviruses found in stool excluding sabin
