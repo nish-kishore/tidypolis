@@ -1764,6 +1764,16 @@ run_cluster_dates <- function(data,
   return(out)
 }
 
+
+#' @description
+#' a function to assess key variable missingness
+#'
+#' @import dplyr
+#' @param df tibble the datatable for which we want to check key variable missingness
+#' @param type str "AFP", "ES", or "POS", type of dataset to check missingness
+check_missingness <- function(data,
+                              type) {}
+
 #### Pre-processing ####
 
 
