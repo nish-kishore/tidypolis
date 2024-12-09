@@ -1772,7 +1772,16 @@ run_cluster_dates <- function(data,
 #' @param df tibble the datatable for which we want to check key variable missingness
 #' @param type str "AFP", "ES", or "POS", type of dataset to check missingness
 check_missingness <- function(data,
-                              type) {}
+                              type) {
+
+  afp.vars <- c("notification.date", "investigation.date",
+                "stool.1.collection.date", "stool.2.collection.date",
+                "date.notification.to.hq", "results.seq.date.to.program", "specimen.date",
+                "case.date", "date.onset", "stool.date.sent.to.lab", "clinical.admitted.date",
+                "followup.date", "stool.1.condition", "stool.2.condition", "age.months")
+
+
+}
 
 #### Pre-processing ####
 
