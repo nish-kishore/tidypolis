@@ -1789,7 +1789,9 @@ check_missingness <- function(data,
       dplyr::ungroup() |>
       dplyr::filter(dplyr::if_any(afp.vars, ~ . >= 10))
 
+    tidypolis_io(io = "write", obj = missing_by_group, file_path = paste0(Sys.getenv("POLIS_DATA_CACHE"), "/Core_Ready_Files/afp_missingess.rds"))
   }
+
 
 }
 
