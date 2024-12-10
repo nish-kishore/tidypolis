@@ -4392,8 +4392,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     cli::cli_alert_info("No previous Virus table identified")
   }
 
-
-
   # Step 5: check virus types and virus type names to ensure that novel derived viruses are properly
   # accounted for
 
@@ -4524,6 +4522,11 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   } else {
     cli::cli_alert_info("If no duplicates found, then proceed")
   }
+
+  tidypolis_io(io = "write", obj = virus.01 |>
+                 dplyr::select(epid, dateonset) |>
+                 dplyr::filter(is.na(dateonset)),
+               file_path = paste0(Sys.getenv("POLIS_DATA_CACHE"), "/Core_Ready_Files/virus_missing_onset.csv"))
 
   # Human virus dataset with sabin 2 and positive viruses only
   human.virus.01 <- virus.01 |>
