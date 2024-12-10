@@ -1784,9 +1784,7 @@ check_missingness <- function(data,
 
     missing_by_group <- data |>
       dplyr::select(yronset, place.admin.0, all_of(afp.vars)) |>
-      dplyr::group_by(yronset, place.admin.0) |>
-      summarise(dplyr::across(dplyr::everything(), ~ mean(is.na(.)) * 100)) |>
-      dplyr::ungroup() |>
+      dplyr::summarise(dplyr::across(dplyr::everything(), ~ mean(is.na(.)) * 100), .by = c("yronset", "place.admin.0")) |>
       dplyr::filter(dplyr::if_any(afp.vars, ~ . >= 10))
 
     tidypolis_io(io = "write", obj = missing_by_group, file_path = paste0(Sys.getenv("POLIS_DATA_CACHE"), "/Core_Ready_Files/afp_missingess.rds"))
@@ -1796,15 +1794,12 @@ check_missingness <- function(data,
 
     missing_by_group <- data |>
       dplyr::select(collect.yr, admin.0, who.region, collection.date) |>
-      dplyr::group_by(collect.yr, admin.0) |>
-      summarise(dplyr::across(dplyr::everything(), ~ mean(is.na(.)) * 100)) |>
-      dplyr::ungroup() |>
+      dplyr::summarise(dplyr::across(dplyr::everything(), ~ mean(is.na(.)) * 100), .by = c("collect.yr", "admin.0")) |>
       dplyr::filter(who.region >= 10 | collection.date >= 10)
 
     if(nrow(missing_by_group) > 0) {
       tidypolis_io(io = "write", obj = missing_by_group, file_path = paste0(Sys.getenv("POLIS_DATA_CACHE"), "/Core_Ready_Files/es_missingess.rds"))
     }
-
   }
 }
 
