@@ -1774,13 +1774,13 @@ run_cluster_dates <- function(data,
 check_missingness <- function(data,
                               type) {
 
-  afp.vars <- c("notification.date", "investigation.date",
-                "stool.1.collection.date", "stool.2.collection.date",
-                "date.notification.to.hq", "results.seq.date.to.program", "specimen.date",
-                "case.date", "date.onset", "stool.date.sent.to.lab", "clinical.admitted.date",
-                "followup.date", "stool.1.condition", "stool.2.condition", "age.months")
-
   if(type == "AFP") {
+
+    afp.vars <- c("notification.date", "investigation.date",
+                  "stool.1.collection.date", "stool.2.collection.date",
+                  "date.notification.to.hq", "results.seq.date.to.program", "specimen.date",
+                  "case.date", "date.onset", "stool.date.sent.to.lab", "clinical.admitted.date",
+                  "followup.date", "stool.1.condition", "stool.2.condition", "age.months")
 
     missing_by_group <- data |>
       dplyr::select(yronset, place.admin.0, all_of(afp.vars)) |>
