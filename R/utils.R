@@ -796,6 +796,7 @@ update_polis_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
 #' @param .time dttm: time of update
 #' @param .call str: URL of API call conducted
 #' @param .event str: event to be logged
+#' @export
 #' @returns Return true if cache updated
 update_polis_api_call_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
                              .time = Sys.time(),
