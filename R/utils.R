@@ -579,11 +579,25 @@ call_urls <- function(urls) {
         x = xs,
         .packages = c("tidypolis", "tibble", "jsonlite", "httr")
       ), {
+
+
+        #capture API calls
+        capture_calls <- Sys.getenv("API_DEBUG") |> as.logical()
+
+        if(capture_calls){
+          update_polis_api_call_log(.call = urls[x], .event = "MADE CALL")
+        }
+
         # signal a progression update
         p()
         # jitter the parallel calls to not overwhelm the server
         #Sys.sleep(1 + stats::rpois(1, 10)/100)
         call_single_url(urls[x])
+
+
+        if(capture_calls){
+          update_polis_api_call_log(.call = urls[x], .event = "FINISHED CALL")
+        }
       })
   })
 
@@ -610,13 +624,6 @@ call_single_url <- function(url,
 
   #response <- httr::GET(url=url, httr::add_headers("authorization-token" = api_key))
 
-  #capture API calls
-  capture_calls <- Sys.getenv("API_DEBUG") |> as.logical()
-
-  if(capture_calls){
-    update_polis_api_call_log(.call = url, .event = "MADE CALL")
-  }
-
   response <- httr::RETRY(
     verb = "GET",
     url = url,
@@ -625,10 +632,6 @@ call_single_url <- function(url,
     quiet = TRUE,
     terminate_on_success = TRUE
   )
-
-  if(capture_calls){
-    update_polis_api_call_log(.call = url, .event = "FINISHED CALL")
-  }
 
   out <- jsonlite::fromJSON(rawToChar(response$content))
 
