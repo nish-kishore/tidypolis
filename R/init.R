@@ -24,7 +24,11 @@ init_tidypolis <- function(
 
   if(api_debug){
     Sys.setenv("API_DEBUG" = TRUE)
+  }else{
+    Sys.setenv("API_DEBUG" = FALSE)
   }
+
+  cli::cli_alert_info(paste0("API Debug set to: ", Sys.getenv("API_DEBUG")))
 
   if(edav){
     tryCatch(
