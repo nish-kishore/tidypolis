@@ -1774,7 +1774,7 @@ run_cluster_dates <- function(data,
 check_missingness <- function(data,
                               type) {
 
-  if(type == "AFP") {
+  if (type == "AFP") {
 
     afp.vars <- c("notification.date", "investigation.date",
                   "stool.1.collection.date", "stool.2.collection.date",
@@ -1783,14 +1783,14 @@ check_missingness <- function(data,
                   "followup.date", "stool.1.condition", "stool.2.condition", "age.months")
 
     missing_by_group <- data |>
-      dplyr::select(yronset, place.admin.0, all_of(afp.vars)) |>
+      dplyr::select(yronset, place.admin.0, dplyr::all_of(afp.vars)) |>
       dplyr::summarise(dplyr::across(dplyr::everything(), ~ mean(is.na(.)) * 100), .by = c("yronset", "place.admin.0")) |>
       dplyr::filter(dplyr::if_any(afp.vars, ~ . >= 10))
 
-    tidypolis_io(io = "write", obj = missing_by_group, file_path = paste0(Sys.getenv("POLIS_DATA_CACHE"), "/Core_Ready_Files/afp_missingess.rds"))
+    tidypolis_io(io = "write", obj = missing_by_group, file_path = paste0(Sys.getenv("POLIS_DATA_CACHE"), "/Core_Ready_Files/afp_missingness.rds"))
   }
 
-  if(type == "ES"){
+  if (type == "ES") {
 
     missing_by_group <- data |>
       dplyr::select(collect.yr, admin.0, who.region, collection.date) |>
@@ -1798,7 +1798,7 @@ check_missingness <- function(data,
       dplyr::filter(who.region >= 10 | collection.date >= 10)
 
     if(nrow(missing_by_group) > 0) {
-      tidypolis_io(io = "write", obj = missing_by_group, file_path = paste0(Sys.getenv("POLIS_DATA_CACHE"), "/Core_Ready_Files/es_missingess.rds"))
+      tidypolis_io(io = "write", obj = missing_by_group, file_path = paste0(Sys.getenv("POLIS_DATA_CACHE"), "/Core_Ready_Files/es_missingness.rds"))
     }
   }
 }
@@ -2715,7 +2715,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   cli::cli_process_start("Checking for missingness in key variables")
   check_missingness(data = afp.raw.01, type = "AFP")
-  cli::cli_process_done("Check afp_missingess.rds for missing key varialbes")
+  cli::cli_process_done("Check afp_missingness.rds for missing key variables")
 
   cli::cli_process_start("Classification of cases using lab data")
   # this uses the laboratory data "poliovirustypes" to assign virus type (WPV1 WPV3 and vdpv1,2,2)
