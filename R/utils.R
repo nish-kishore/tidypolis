@@ -1783,9 +1783,9 @@ check_missingness <- function(data,
                   "followup.date", "stool.1.condition", "stool.2.condition", "age.months")
 
     missing_by_group <- data |>
-      dplyr::select(yronset, place.admin.0, dplyr::all_of(afp.vars)) |>
+      dplyr::select("yronset", "place.admin.0", dplyr::any_of(afp.vars)) |>
       dplyr::summarise(dplyr::across(dplyr::everything(), ~ mean(is.na(.)) * 100), .by = c("yronset", "place.admin.0")) |>
-      dplyr::filter(dplyr::if_any(afp.vars, ~ . >= 10))
+      dplyr::filter(dplyr::if_any(dplyr::any_of(afp.vars), ~ . >= 10))
 
     tidypolis_io(io = "write", obj = missing_by_group, file_path = paste0(Sys.getenv("POLIS_DATA_CACHE"), "/Core_Ready_Files/afp_missingness.rds"))
   }
@@ -1797,10 +1797,12 @@ check_missingness <- function(data,
       dplyr::summarise(dplyr::across(dplyr::everything(), ~ mean(is.na(.)) * 100), .by = c("collect.yr", "admin.0")) |>
       dplyr::filter(who.region >= 10 | collection.date >= 10)
 
-    if(nrow(missing_by_group) > 0) {
+    if (nrow(missing_by_group) > 0) {
       tidypolis_io(io = "write", obj = missing_by_group, file_path = paste0(Sys.getenv("POLIS_DATA_CACHE"), "/Core_Ready_Files/es_missingness.rds"))
     }
   }
+
+  return(missing_by_group)
 }
 
 #### Pre-processing ####
