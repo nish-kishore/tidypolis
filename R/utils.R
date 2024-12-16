@@ -1462,11 +1462,17 @@ f.compare.metadata <- function(new_table_metadata, old_table_metadata, table){
 
 #' Summarize metadata from a tibble
 #' @description Summarize metadata from tibble
-#' @import skimr tidyselect
+#' @import skimr dplyr
 #' @param dataframe tibble
 #' @param categorical_max int: maximum number of categories considered
 #' @returns tibble: metadata
 f.summarise.metadata <- function(dataframe, categorical_max = 10){
+
+  if (!requireNamespace("tidyselect", quietly = TRUE)) {
+    stop('Package "tidyselect" must be installed to use this function.',
+         .call = FALSE
+    )
+  }
   #ungroup dataframe
   dataframe <- dataframe |>
     dplyr::ungroup()
@@ -2023,6 +2029,13 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
          .call = FALSE
     )
   }
+
+  if (!requireNamespace("tidyselect", quietly = TRUE)) {
+    stop('Package "tidyselect" must be installed to use this function.',
+         .call = FALSE
+    )
+  }
+
   #Step 0 - create a CORE datafiles to combine folder and check for datasets before continuing with pre-p =========
   if(!tidypolis_io(io = "exists.dir", file_path = paste0(polis_data_folder, "/core_files_to_combine"))){
     tidypolis_io(io = "create", file_path = paste0(polis_data_folder, "/core_files_to_combine"))
