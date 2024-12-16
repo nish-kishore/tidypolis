@@ -790,7 +790,7 @@ get_polis_cache <- function(cache_file = Sys.getenv("POLIS_CACHE_FILE"),
 #' Update local POLIS cache
 #'
 #' @description Update the POLIS cache directory
-#' @import readr dplyr lubridate
+#' @import dplyr lubridate
 #' @param cache_file str: location of cache file
 #' @param .table str: table to be updated
 #' @param .nrow double: nrow of table to be updated
