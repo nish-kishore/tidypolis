@@ -1862,6 +1862,7 @@ cluster_dates_for_sias <- function(sia){
 #' @export
 #' @import dplyr readr
 #' @param data df dataframe on which to run cluster dates function
+#' @param cache_folder str location of sia cluster cache on CDC EDAV
 #' @param min_obs int
 #' @param type str vaccine type
 run_cluster_dates <- function(data,
