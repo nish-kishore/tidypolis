@@ -2023,7 +2023,7 @@ check_missingness <- function(data,
 #'
 #' @description
 #' Process POLIS data into analytic datasets needed for CDC
-#' @import cli sirfunctions dplyr readr lubridate stringr rio tidyr openxlsx stringi purrr pbapply lwgeom
+#' @import cli sirfunctions dplyr readr lubridate stringr tidyr openxlsx stringi
 #' @param polis_data_folder str: location of the POLIS data folder, defaults to value stored from init_tidypolis
 #' @return Outputs intermediary core ready files
 preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
