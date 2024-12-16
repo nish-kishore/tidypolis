@@ -172,7 +172,7 @@ tidypolis_io <- function(
 #'
 #' @description
 #' Manages read/write/list/create/delete functions for tidypolis
-#' @import sirfunctions dplyr AzureStor readr
+#' @import sirfunctions dplyr AzureStor readr cli
 #' @param core_ready_folder str: Local folder with CDC processed files
 #' @param azcontainer Azure Token Container Object
 #' @param output_folder Location to write out Core Files
