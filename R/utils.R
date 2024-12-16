@@ -1157,7 +1157,7 @@ f.download.compare.02 <- function(df.from.f.download.compare.01, old.download, n
 
 #' Sample points for missing lat/lon
 #' @description Create random samples of points for missing GPS data
-#' @import dplyr sf tidyr tibble
+#' @import dplyr sf tidyr tibble cli
 #' @param df01 tibble: table of afp data
 #' @param global.dist.01 sf: spatial file of all locations
 #' @returns tibble with lat/lon for all unsampled locations
@@ -1182,7 +1182,7 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
   global.dist.02 <- sf::st_make_valid(global.dist.01)
 
   #identify bad shape rows after make_valid
-  check.dist.2 <- as_tibble(st_is_valid(global.dist.02))
+  check.dist.2 <- tibble::as_tibble(sf::st_is_valid(global.dist.02))
   row.num.2 <- which(check.dist.2$value == FALSE)
   #removing all bad shapes post make valid
   valid.shapes <- global.dist.02 |>
@@ -1200,10 +1200,10 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
     dplyr::filter(yronset >= yr.st & yronset <= yr.end)
 
   #second st_join is for invalid shapes and those attached cases, turning off s2
-  sf_use_s2(F)
+  sf::sf_use_s2(F)
   df03 <- sf::st_join(df01.sf |> dplyr::filter(!Admin2GUID %in% valid.shapes$GUID), invalid.shapes, left = T) |>
     dplyr::filter(yronset >= yr.st & yronset <= yr.end)
-  sf_use_s2(T)
+  sf::sf_use_s2(T)
 
   cli::cli_process_done()
 
@@ -1280,11 +1280,13 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
   pt01 <- lapply(1:nrow(empty.coord.02), function(x){
 
     tryCatch(
-      expr = {suppressMessages(sf::st_sample(empty.coord.02[x,], pull(empty.coord.02[x,], "nperarm"),
-                                             exact = T)) |> st_as_sf()},
+      expr = {suppressMessages(sf::st_sample(empty.coord.02[x,], dplyr::pull(empty.coord.02[x,], "nperarm"),
+                                             exact = T)) |> sf::st_as_sf()},
       error = function(e) {
         guid = empty.coord.02[x, ]$GUID[1]
-        ctry_prov_dist_name = global.dist.01 |> filter(GUID == guid) |> select(ADM0_NAME, ADM1_NAME, ADM2_NAME)
+        ctry_prov_dist_name = global.dist.01 |>
+          dplyr::filter(GUID == guid) |>
+          dplyr::select(ADM0_NAME, ADM1_NAME, ADM2_NAME)
         cli::cli_alert_warning(paste0("Fixing errors for:\n",
                                       "Country: ", ctry_prov_dist_name$ADM0_NAME,"\n",
                                       "Province: ", ctry_prov_dist_name$ADM1_NAME, "\n",
@@ -1292,14 +1294,14 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
 
         suppressWarnings(
           {
-            sf_use_s2(F)
-            int <- empty.coord.02[x,] |> st_centroid(of_largest_polygon = T)
-            sf_use_s2(T)
+            sf::sf_use_s2(F)
+            int <- empty.coord.02[x,] |> sf::st_centroid(of_largest_polygon = T)
+            sf::sf_use_s2(T)
 
-            st_buffer(int, dist = 3000) |>
-              st_sample(slice(empty.coord.02, x) |>
-                          pull(nperarm)) |>
-              st_as_sf()
+            sf::st_buffer(int, dist = 3000) |>
+              sf::st_sample(dplyr::slice(empty.coord.02, x) |>
+                          dplyr::pull(nperarm)) |>
+              sf::st_as_sf()
           }
         )
 
@@ -1307,7 +1309,7 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
     )
 
   }) |>
-    bind_rows()
+    dplyr::bind_rows()
 
   cli::cli_process_done()
 
