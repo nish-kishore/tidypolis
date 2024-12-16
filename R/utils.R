@@ -1870,7 +1870,7 @@ cluster_dates_for_sias <- function(sia){
 #' @description
 #' Wrapper around the cluster_dates function to do some error checking
 #' @export
-#' @import dplyr readr
+#' @import dplyr
 #' @param data df dataframe on which to run cluster dates function
 #' @param cache_folder str location of sia cluster cache on CDC EDAV
 #' @param min_obs int
