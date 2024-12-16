@@ -4,7 +4,7 @@
 #'
 #' @description
 #' Manages read/write/list/create/delete functions for tidypolis
-#' @import sirfunctions dplyr AzureStor readr
+#' @import sirfunctions dplyr AzureStor readr stringr
 #' @param obj str: object to be loaded into EDAV
 #' @param io str: read/write/list/exists/create/delete
 #' @param file_path str: absolute path of file
