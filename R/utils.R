@@ -1367,14 +1367,13 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
 #' @returns quality controlled date variable
 f.datecheck.onset <- function(date1, date2) {
   date1.qa <-
-    case_when(
+    dplyr::case_when(
       is.na(date1) == T ~ "date missing",
       is.na(date2) == T ~ "date onset missing",
       abs(date1 - date2) > 365 ~ "data entry error",
       date1 < date2 ~ "date before onset",
       (date1 - date2) <= 365 ~ "useable date"
     )
-
 
   return(date1.qa)
 }
