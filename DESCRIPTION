@@ -37,4 +37,5 @@ Imports:
   tidyselect, 
   pbapply, 
   lwgeom,
-  AzureStor
+  AzureStor, 
+  cluster
