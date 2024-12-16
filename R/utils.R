@@ -5125,16 +5125,16 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
 #Began work on pop processing pipeline but not ready for V1
 
-#' #' Preprocess population data into flat files
-#' #'
-#' #' @description Process POLIS population data using CDC and other standards
-#' #' @import readr dplyr
-#' #' @param type str: "cdc" or "who" (default)
-#' #' @param pop_file tibble: WHO POLIS population file, defaults to tidypolis folder
-#' #' @return list with tibble for ctry, prov and dist
+#' Preprocess population data into flat files
+#'
+#' @description Process POLIS population data using CDC and other standards
+#' @import readr dplyr
+#' @param type str: "cdc" or "who" (default)
+#' @param pop_file tibble: WHO POLIS population file, defaults to tidypolis folder
+#' @return list with tibble for ctry, prov and dist
 #' process_pop <- function(type = "who", pop_file = readr::read_rds(file.path(Sys.getenv("POLIS_DATA_FOLDER"), "data", "pop.rds"))){
 #'
-#'   #subset to <= 15
+#'   subset to <= 15
 #'   pop_file <- pop_file |>
 #'     filter(AgeGroupName == "0 to 15 years")
 #'
