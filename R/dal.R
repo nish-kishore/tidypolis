@@ -204,7 +204,7 @@ upload_cdc_proc_to_edav <- function(
              "sia_2000")
 
   out.table <- lapply(files, function(y) x |> dplyr::filter(stringr::str_starts(name, pattern = y))) |>
-    bind_rows() |>
+    dplyr::bind_rows() |>
     dplyr::mutate(source = full_name,
                   dest = paste0(output_folder, "/",name))
 
