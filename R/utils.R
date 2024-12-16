@@ -718,7 +718,7 @@ run_single_table_diagnostic <-
 #' Update local POLIS interaction log
 #'
 #' @description Update the POLIS log
-#' @import readr tibble
+#' @import tibble
 #' @param log_file str: location of cache file
 #' @param .time dttm: time of update
 #' @param .user double: user who conducted the action
@@ -759,7 +759,6 @@ update_polis_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
                     event_type = .event_type,
                     event = .event) |>
     tidypolis_io(io = "write", file_path = log_file_path)
-
 
     }
 }
