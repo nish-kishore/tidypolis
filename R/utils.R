@@ -1829,6 +1829,7 @@ cluster_dates <- function(x,
   }
 }
 
+#' Manager function for running cluster_dates() funciton
 #' @description
 #' manager function to run the cluster_dates() function using helper function run_cluster_dates to cluster SIAs by type
 #' @export
