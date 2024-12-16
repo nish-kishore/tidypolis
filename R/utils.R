@@ -2023,7 +2023,7 @@ check_missingness <- function(data,
 #'
 #' @description
 #' Process POLIS data into analytic datasets needed for CDC
-#' @import cli sirfunctions dplyr readr lubridate stringr tidyr openxlsx stringi
+#' @import cli sirfunctions dplyr readr lubridate stringr tidyr stringi
 #' @param polis_data_folder str: location of the POLIS data folder, defaults to value stored from init_tidypolis
 #' @return Outputs intermediary core ready files
 preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
@@ -5157,7 +5157,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 #' quality checks
 #' @description
 #' a function to process WHO spatial datasets
-#' @import dplyr sf lubridate stringr readr tibble utils
+#' @import dplyr sf lubridate stringr readr tibble
 #' @param gdb_folder str the folder location of spatial datasets, should end with .gdb,
 #' if on edav the gdb will need to be zipped, ensure that the gdb and the zipped file name are the same
 #' @param output_folder str folder location to write outputs to
@@ -5165,6 +5165,13 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 process_spatial <- function(gdb_folder,
                             output_folder,
                             edav) {
+
+  if (!requireNamespace("utils", quietly = TRUE)) {
+    stop('Package "utils" must be installed to use this function.',
+         .call = FALSE
+    )
+  }
+
   if(edav) {
     output_folder <- stringr::str_replace(output_folder, paste0("GID/PEB/SIR/"), "")
   }
