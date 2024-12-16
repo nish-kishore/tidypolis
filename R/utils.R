@@ -1941,7 +1941,7 @@ run_cluster_dates <- function(data,
     #error catching the return
     if(nrow(dropped) > 0){
 
-      out <- bind_rows(out, out2)
+      out <- dplyr::bind_rows(out, out2)
     }
 
     #data cache
