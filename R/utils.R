@@ -1659,6 +1659,7 @@ remove_character_dates <- function(type,
   return(df.02)
 }
 
+#' This function creates a summary of SIA responses to cVDPV detections in the positives dataset
 #' @description
 #' a function to create summary SIA response variables for cVDPVs
 #' @import dplyr
