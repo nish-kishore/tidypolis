@@ -1036,7 +1036,7 @@ f.compare.dataframe.cols <- function(old, new) {
 
 #' Compare downloaded data
 #' @description Compared downloade data
-#' @import dplyr stringr purrr
+#' @import dplyr stringr
 #' @param old.download tibble
 #' @param new.download tibble
 #' @returns tibble: variables that are new or unaccounted for
