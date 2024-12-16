@@ -1834,7 +1834,7 @@ cluster_dates <- function(x,
 #' manager function to run the cluster_dates() function using helper function run_cluster_dates to cluster SIAs by type
 #' @export
 #' @import dplyr
-#' @param df dataframe of SIAs to identify rounds by vaccine type
+#' @param sia dataframe of SIAs to identify rounds by vaccine type
 cluster_dates_for_sias <- function(sia){
 
   tick <- Sys.time()
@@ -1969,7 +1969,7 @@ run_cluster_dates <- function(data,
 #' @description
 #' a function to assess key variable missingness
 #' @import dplyr
-#' @param df tibble the datatable for which we want to check key variable missingness
+#' @param data tibble the datatable for which we want to check key variable missingness
 #' @param type str "AFP", "ES", or "POS", type of dataset to check missingness
 check_missingness <- function(data,
                               type) {
@@ -5127,11 +5127,11 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
 #' Preprocess population data into flat files
 #'
-#' @description Process POLIS population data using CDC and other standards
-#' @import readr dplyr
-#' @param type str: "cdc" or "who" (default)
-#' @param pop_file tibble: WHO POLIS population file, defaults to tidypolis folder
-#' @return list with tibble for ctry, prov and dist
+#'  Process POLIS population data using CDC and other standards
+#'  readr dplyr
+#' str: "cdc" or "who" (default)
+#'  tibble: WHO POLIS population file, defaults to tidypolis folder
+#'  list with tibble for ctry, prov and dist
 #' process_pop <- function(type = "who", pop_file = readr::read_rds(file.path(Sys.getenv("POLIS_DATA_FOLDER"), "data", "pop.rds"))){
 #'
 #'   subset to <= 15
@@ -5162,8 +5162,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 #' @description
 #' a function to process WHO spatial datasets
 #' @import dplyr sf lubridate stringr readr tibble utils
-#' @param gdb_folder str the folder location of spatial datasets, should end with .gdb, if on edav the gdb will need to be zipped,
-#' ensure that the gdb and the zipped file name are the same
+#' @param gdb_folder str the folder location of spatial datasets, should end with .gdb,
+#' if on edav the gdb will need to be zipped, ensure that the gdb and the zipped file name are the same
 #' @param output_folder str folder location to write outputs to
 #' @param edav boolean T or F, whether gdb is on EDAV or local
 process_spatial <- function(gdb_folder,
