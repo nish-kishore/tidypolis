@@ -995,7 +995,7 @@ remove_empty_columns <- function(dataframe) {
 #' @description
 #' Get all data from crosswalk location
 #' @param file_loc str: location of crosswalk file
-#' @import dplyr cli
+#' @import dplyr cli sirfunctions
 #' @return tibble: crosswalk data
 get_crosswalk_data <- function(
     file_loc = "Data/misc/crosswalk.rds"
