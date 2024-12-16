@@ -2,7 +2,7 @@
 #'
 #' @description Initialize API Key and local data cache for tidypolis. Inspired by the
 #' tidycensus process for managing their API secrets.
-#' @import cli yaml tibble dplyr readr lubridate
+#' @import cli yaml tibble dplyr readr lubridate sirfunctions
 #' @param polis_data_folder str: location of folder where to store all information
 #' @param edav boolean: should the system use EDAV as it's cache; default FALSE
 #' @returns Messages on process
