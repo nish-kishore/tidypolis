@@ -1767,8 +1767,9 @@ create_response_vars <- function(pos){
 }
 
 
-#Cluster Function
-#this function identifies "cluster" or OBX response so we can identify rounds
+#' SIA Cluster Function
+#' @description
+#'this function identifies "cluster" or OBX response so we can identify rounds
 #' @export
 #' @import dplyr stats cluster
 #' @param x df: data to be clustered
