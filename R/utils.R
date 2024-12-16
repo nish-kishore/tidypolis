@@ -768,7 +768,7 @@ update_polis_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
 #' Load local POLIS cache
 #'
 #' @description Pull cache data for a particular table
-#' @import readr cli dplyr
+#' @import cli dplyr
 #' @param cache_file str: location of cache file
 #' @param .table str: table to be loaded
 #' @returns Return tibble with table information
