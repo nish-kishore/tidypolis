@@ -5124,42 +5124,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
 }
 
-#Began work on pop processing pipeline but not ready for V1
 
-#' Preprocess population data into flat files
-#'
-#'  Process POLIS population data using CDC and other standards
-#'  readr dplyr
-#' str: "cdc" or "who" (default)
-#'  tibble: WHO POLIS population file, defaults to tidypolis folder
-#'  list with tibble for ctry, prov and dist
-#' process_pop <- function(type = "who", pop_file = readr::read_rds(file.path(Sys.getenv("POLIS_DATA_FOLDER"), "data", "pop.rds"))){
-#'
-#'   subset to <= 15
-#'   pop_file <- pop_file |>
-#'     filter(AgeGroupName == "0 to 15 years")
-#'
-#'   #extract into country prov and dist
-#'
-#'   x <- lapply(unique(pop_file$Admin0Name), function(x){
-#'     pop_file |>
-#'       filter(is.na(Admin1Name) & is.na(Admin2Name)) |>
-#'       rename(year = Year, u15pop = Value, GUID = Admin0GUID, ctry = Admin0Name) |>
-#'       mutate(u15pop = as.integer(u15pop)) |>
-#'       arrange(year) |>
-#'       filter(ctry == x) |>
-#'       group_by(year) |>
-#'       filter(!is.na(u15pop)) |>
-#'       filter(UpdatedDate == max(UpdatedDate, na.rm = T)) |>
-#'       ungroup() |>
-#'       select(ctry, year, u15pop, GUID) |>
-#'       full_join(tibble(ctry = x, year = 2000:(lubridate::year(Sys.time()))), by = c("ctry", "year"))
-#'   }) |>
-#'     bind_rows()
-#'
-#' }
-#'
-
+#' Process WHO spatial data and output country, province and district level shape files and basic
+#' quality checks
 #' @description
 #' a function to process WHO spatial datasets
 #' @import dplyr sf lubridate stringr readr tibble utils
@@ -5471,3 +5438,41 @@ process_spatial <- function(gdb_folder,
   remove(df.list, df02)
 
 }
+
+
+
+#Began work on pop processing pipeline but not ready for V1
+
+#' Preprocess population data into flat files
+#'
+#'  Process POLIS population data using CDC and other standards
+#'  readr dplyr
+#' str: "cdc" or "who" (default)
+#'  tibble: WHO POLIS population file, defaults to tidypolis folder
+#'  list with tibble for ctry, prov and dist
+#' process_pop <- function(type = "who", pop_file = readr::read_rds(file.path(Sys.getenv("POLIS_DATA_FOLDER"), "data", "pop.rds"))){
+#'
+#'   subset to <= 15
+#'   pop_file <- pop_file |>
+#'     filter(AgeGroupName == "0 to 15 years")
+#'
+#'   #extract into country prov and dist
+#'
+#'   x <- lapply(unique(pop_file$Admin0Name), function(x){
+#'     pop_file |>
+#'       filter(is.na(Admin1Name) & is.na(Admin2Name)) |>
+#'       rename(year = Year, u15pop = Value, GUID = Admin0GUID, ctry = Admin0Name) |>
+#'       mutate(u15pop = as.integer(u15pop)) |>
+#'       arrange(year) |>
+#'       filter(ctry == x) |>
+#'       group_by(year) |>
+#'       filter(!is.na(u15pop)) |>
+#'       filter(UpdatedDate == max(UpdatedDate, na.rm = T)) |>
+#'       ungroup() |>
+#'       select(ctry, year, u15pop, GUID) |>
+#'       full_join(tibble(ctry = x, year = 2000:(lubridate::year(Sys.time()))), by = c("ctry", "year"))
+#'   }) |>
+#'     bind_rows()
+#'
+#' }
+#'
