@@ -1519,7 +1519,6 @@ get_env_site_data <- function(){
 #' @import dplyr readr sirfunctions
 #' @param log_file str: location of POLIS log file
 #' @param polis_data_folder str: location of the POLIS data folder
-
 log_report <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
                        polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")){
 
@@ -1585,7 +1584,6 @@ log_report <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
 #' @import dplyr readr
 #' @param log_file str: location of POLIS log file
 #' @param polis_data_folder str: location of the POLIS data folder
-
 archive_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
                         polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")){
 
