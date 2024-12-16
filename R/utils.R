@@ -1581,7 +1581,7 @@ log_report <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
 #' @description
 #' Function to read in log file and archive entries older than 3 months
 #'
-#' @import dplyr readr
+#' @import dplyr
 #' @param log_file str: location of POLIS log file
 #' @param polis_data_folder str: location of the POLIS data folder
 archive_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
