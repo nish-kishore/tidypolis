@@ -1626,7 +1626,7 @@ archive_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
 #'
 #' @description
 #' remove original date variables from POLIS tables
-#' @import dplyr
+#' @import dplyr lubridate
 #' @param type str: the table on which to remove original date vars, "AFP", "ES", "POS"
 #' @param df tibble: the dataframe from which to remove character formatted dates
 #' @param polis_data_folder str:  location of user's polis data folder
