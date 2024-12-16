@@ -1965,9 +1965,9 @@ run_cluster_dates <- function(data,
 }
 
 
+#' Function to create summary of key variable missingness in CORE datafiles
 #' @description
 #' a function to assess key variable missingness
-#'
 #' @import dplyr
 #' @param df tibble the datatable for which we want to check key variable missingness
 #' @param type str "AFP", "ES", or "POS", type of dataset to check missingness
