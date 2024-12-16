@@ -859,10 +859,6 @@ request_input <- function(request,
 }
 
 
-
-
-
-
 #' Create table URLs
 #'
 #' @description create urls from table size and base url
