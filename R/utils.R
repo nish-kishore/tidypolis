@@ -1856,9 +1856,9 @@ cluster_dates_for_sias <- function(sia){
   print(tock - tick)
 }
 
+#' Wrapper function for cluster_dates, includes error checking and cluster cache management
 #' @description
 #' Wrapper around the cluster_dates function to do some error checking
-#'
 #' @export
 #' @import dplyr readr
 #' @param data df dataframe on which to run cluster dates function
