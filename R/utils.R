@@ -1042,6 +1042,12 @@ f.compare.dataframe.cols <- function(old, new) {
 #' @returns tibble: variables that are new or unaccounted for
 f.download.compare.01 <- function(old.download, new.download) {
 
+  if (!requireNamespace("purr", quietly = TRUE)) {
+    stop('Package "purr" must be installed to use this function.',
+         .call = FALSE
+    )
+  }
+
   # Create dataframe from old download
   old.01 <- old.download |>
     dplyr::mutate_all( ~ as.character(.)) |>
@@ -1085,12 +1091,18 @@ f.download.compare.01 <- function(old.download, new.download) {
 #' THIS FUNCTION WOULD LIST OUT THE DISTINCT VALUES BY VARIABLE
 #' ALL VALUES FOR NEW VARIABLE AND NEW VALUES FOR EXISTING
 #' @description List out distinct values that are not the same by variable
-#' @import dplyr purrr purrr
+#' @import dplyr
 #' @param df.from.f.download.compare.01 tibble: output from f.download.compare.01
 #' @param old.download tibble
 #' @param new.download tibble
 #' @returns tibble of variables to compare
 f.download.compare.02 <- function(df.from.f.download.compare.01, old.download, new.download) {
+
+  if (!requireNamespace("purr", quietly = TRUE)) {
+    stop('Package "purr" must be installed to use this function.',
+         .call = FALSE
+    )
+  }
 
   # dataframe of new values of existing variables
   new.distinct <- df.from.f.download.compare.01 |>
@@ -2005,6 +2017,11 @@ check_missingness <- function(data,
 #' @return Outputs intermediary core ready files
 preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
+  if (!requireNamespace("purr", quietly = TRUE)) {
+    stop('Package "purr" must be installed to use this function.',
+         .call = FALSE
+    )
+  }
   #Step 0 - create a CORE datafiles to combine folder and check for datasets before continuing with pre-p =========
   if(!tidypolis_io(io = "exists.dir", file_path = paste0(polis_data_folder, "/core_files_to_combine"))){
     tidypolis_io(io = "create", file_path = paste0(polis_data_folder, "/core_files_to_combine"))
