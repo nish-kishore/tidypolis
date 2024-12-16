@@ -1961,6 +1961,47 @@ run_cluster_dates <- function(data,
   return(out)
 }
 
+
+#' @description
+#' a function to assess key variable missingness
+#'
+#' @import dplyr
+#' @param df tibble the datatable for which we want to check key variable missingness
+#' @param type str "AFP", "ES", or "POS", type of dataset to check missingness
+check_missingness <- function(data,
+                              type) {
+
+  if (type == "AFP") {
+
+    afp.vars <- c("notification.date", "investigation.date",
+                  "stool.1.collection.date", "stool.2.collection.date",
+                  "date.notification.to.hq", "results.seq.date.to.program", "specimen.date",
+                  "case.date", "date.onset", "stool.date.sent.to.lab", "clinical.admitted.date",
+                  "followup.date", "stool.1.condition", "stool.2.condition", "age.months")
+
+    missing_by_group <- data |>
+      dplyr::select("yronset", "place.admin.0", dplyr::any_of(afp.vars)) |>
+      dplyr::summarise(dplyr::across(dplyr::everything(), ~ mean(is.na(.)) * 100), .by = c("yronset", "place.admin.0")) |>
+      dplyr::filter(dplyr::if_any(dplyr::any_of(afp.vars), ~ . >= 10))
+
+    tidypolis_io(io = "write", obj = missing_by_group, file_path = paste0(Sys.getenv("POLIS_DATA_CACHE"), "/Core_Ready_Files/afp_missingness.rds"))
+  }
+
+  if (type == "ES") {
+
+    missing_by_group <- data |>
+      dplyr::select(collect.yr, admin.0, who.region, collection.date) |>
+      dplyr::summarise(dplyr::across(dplyr::everything(), ~ mean(is.na(.)) * 100), .by = c("collect.yr", "admin.0")) |>
+      dplyr::filter(who.region >= 10 | collection.date >= 10)
+
+    if (nrow(missing_by_group) > 0) {
+      tidypolis_io(io = "write", obj = missing_by_group, file_path = paste0(Sys.getenv("POLIS_DATA_CACHE"), "/Core_Ready_Files/es_missingness.rds"))
+    }
+  }
+
+  return(missing_by_group)
+}
+
 #### Pre-processing ####
 
 
@@ -2864,6 +2905,16 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
       poliovirustypes = stringr::str_replace_all(poliovirustypes, "  ", " "))
 
   cli::cli_process_done()
+
+  #write out epids with no dateonset
+  tidypolis_io(io = "write", obj = afp.raw.01 |>
+                 dplyr::select(epid, dateonset) |>
+                 dplyr::filter(is.na(dateonset)),
+               file_path = paste0(Sys.getenv("POLIS_DATA_CACHE"), "/Core_Ready_Files/afp_no_onset.csv"))
+
+  cli::cli_process_start("Checking for missingness in key variables")
+  check_missingness(data = afp.raw.01, type = "AFP")
+  cli::cli_process_done("Check afp_missingness.rds for missing key variables")
 
   cli::cli_process_start("Classification of cases using lab data")
   # this uses the laboratory data "poliovirustypes" to assign virus type (WPV1 WPV3 and vdpv1,2,2)
@@ -4259,6 +4310,10 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   remove("es.dup.01")
 
+  cli::cli_process_start("Checking for missingness in key ES vars")
+  check_missingness(data = es.02, type = "ES")
+  cli::cli_process_done("Review missing vars in es_missingness.rds")
+
   cli::cli_process_start("Cleaning 'virus.type' and creating CDC variables")
 
   es.space.02 <- es.02 |>
@@ -4558,8 +4613,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     cli::cli_alert_info("No previous Virus table identified")
   }
 
-
-
   # Step 5: check virus types and virus type names to ensure that novel derived viruses are properly
   # accounted for
 
@@ -4690,6 +4743,11 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   } else {
     cli::cli_alert_info("If no duplicates found, then proceed")
   }
+
+  tidypolis_io(io = "write", obj = virus.01 |>
+                 dplyr::select(epid, dateonset) |>
+                 dplyr::filter(is.na(dateonset)),
+               file_path = paste0(Sys.getenv("POLIS_DATA_CACHE"), "/Core_Ready_Files/virus_missing_onset.csv"))
 
   # Human virus dataset with sabin 2 and positive viruses only
   human.virus.01 <- virus.01 |>
