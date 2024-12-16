@@ -973,7 +973,7 @@ remove_empty_columns <- function(dataframe) {
   original_df <- dataframe
 
   dataframe <- dataframe |>
-    mutate(across(everything(), as.character))
+    dplyr::mutate(dplyr::across(dplyr::everything(), as.character))
 
   empty_cols <- colnames(dataframe)[colSums(is.na(dataframe) | dataframe == "") == nrow(dataframe)]
 
