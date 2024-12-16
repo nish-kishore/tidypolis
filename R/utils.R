@@ -404,18 +404,10 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
 
           #garbage clean
           gc()
-
         }
-
-
-
-
       }
-
     }
-
   }
-
 }
 
 #' Get table size from POLIS
