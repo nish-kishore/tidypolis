@@ -1042,8 +1042,8 @@ f.compare.dataframe.cols <- function(old, new) {
 #' @returns tibble: variables that are new or unaccounted for
 f.download.compare.01 <- function(old.download, new.download) {
 
-  if (!requireNamespace("purr", quietly = TRUE)) {
-    stop('Package "purr" must be installed to use this function.',
+  if (!requireNamespace("purrr", quietly = TRUE)) {
+    stop('Package "purrr" must be installed to use this function.',
          .call = FALSE
     )
   }
@@ -1098,8 +1098,8 @@ f.download.compare.01 <- function(old.download, new.download) {
 #' @returns tibble of variables to compare
 f.download.compare.02 <- function(df.from.f.download.compare.01, old.download, new.download) {
 
-  if (!requireNamespace("purr", quietly = TRUE)) {
-    stop('Package "purr" must be installed to use this function.',
+  if (!requireNamespace("purrr", quietly = TRUE)) {
+    stop('Package "purrr" must be installed to use this function.',
          .call = FALSE
     )
   }
@@ -2028,8 +2028,8 @@ check_missingness <- function(data,
 #' @return Outputs intermediary core ready files
 preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
-  if (!requireNamespace("purr", quietly = TRUE)) {
-    stop('Package "purr" must be installed to use this function.',
+  if (!requireNamespace("purrr", quietly = TRUE)) {
+    stop('Package "purrr" must be installed to use this function.',
          .call = FALSE
     )
   }
