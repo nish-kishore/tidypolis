@@ -4245,7 +4245,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
         nvaccine.2 == "Yes"  ~ 1,
         nvaccine.2 == "No"   ~ 0,
       ),
-      ev.detect = dplyr::case_when(who.region == "AFRO" & (
+      ev.detect = dplyr::case_when((
         dplyr::if_any( c("vaccine.1", "vaccine.2", "vaccine.3", "nvaccine.2",
                   "vdpv.1", "vdpv.2", "vdpv.3",
                   "wild.1", "wild.3"), ~stringr::str_detect(., "Yes")) |
@@ -4255,12 +4255,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
           stringr::str_detect(virus.type, "VACCINE") |
           stringr::str_detect(virus.type, "NPE") |
           stringr::str_detect(final.combined.rtpcr.results, "PV") |
-          stringr::str_detect(final.combined.rtpcr.results, "NPE")) ~ 1,
-        who.region != "AFRO" & (
-          dplyr::if_any(c("vaccine.1", "vaccine.2", "vaccine.3",
-                   "nvaccine.2", "vdpv.1", "vdpv.2", "vdpv.3",
-                   "wild.1", "wild.3"), ~stringr::str_detect(., "Yes")) |
-            (npev==1 & !is.na(npev))) ~ 1,
+          stringr::str_detect(final.combined.rtpcr.results, "NPE") |
+          stringr::str_detect(final.cell.culture.result, "Poliovirus") |
+          stringr::str_detect(final.cell.culture.result, "NPENT")) ~ 1,
         TRUE ~ 0),
       ctry.guid = ifelse(is.na(ctry.guid) | ctry.guid == "", NA, paste("{", stringr::str_to_upper(ctry.guid), "}", sep = "")),
       prov.guid = ifelse(is.na(prov.guid) | prov.guid == "", NA, paste("{", stringr::str_to_upper(prov.guid), "}", sep = "")),
