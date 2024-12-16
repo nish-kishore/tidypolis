@@ -1403,7 +1403,7 @@ f.compare.metadata <- function(new_table_metadata, old_table_metadata, table){
   }
 
   lost_vars <- (compare_metadata |>
-                  filter(is.na(var_class.x)))$var_name
+                  dplyr::filter(is.na(var_class.x)))$var_name
 
   if(length(lost_vars) != 0){
     lost_vars <- lost_vars
@@ -1421,12 +1421,12 @@ f.compare.metadata <- function(new_table_metadata, old_table_metadata, table){
 
   class_changed_vars <- compare_metadata |>
     dplyr::filter(!(var_name %in% lost_vars) &
-             !(var_name %in% new_vars) &
-             (var_class.x != var_class.y &
-                !is.null(var_class.x) & !is.null(var_class.y))) |>
+                    !(var_name %in% new_vars) &
+                    (var_class.x != var_class.y &
+                       !is.null(var_class.x) & !is.null(var_class.y))) |>
     dplyr::select(-c(categorical_response_set.x, categorical_response_set.y)) |>
     dplyr::rename(old_var_class = var_class.y,
-           new_var_class = var_class.x)
+                  new_var_class = var_class.x)
 
   if(nrow(class_changed_vars) != 0){
     class_changed_vars <- class_changed_vars
@@ -1438,17 +1438,17 @@ f.compare.metadata <- function(new_table_metadata, old_table_metadata, table){
   #Check for new responses in categorical variables (excluding new variables and class changed variables that have been previously shown)
   new_response <- compare_metadata |>
     dplyr::filter(!(var_name %in% lost_vars) &
-             !(var_name %in% new_vars) &
-             !(var_name %in% class_changed_vars$var_name) &
-             as.character(categorical_response_set.x) != "NULL" &
-             as.character(categorical_response_set.y) != "NULL") |>
+                    !(var_name %in% new_vars) &
+                    !(var_name %in% class_changed_vars$var_name) &
+                    as.character(categorical_response_set.x) != "NULL" &
+                    as.character(categorical_response_set.y) != "NULL") |>
     dplyr::rowwise() |>
     dplyr::mutate(same = toString(intersect(categorical_response_set.x, categorical_response_set.y)),
-           in_old_not_new = toString(setdiff(categorical_response_set.y, categorical_response_set.x)),
-           in_new_not_old = toString(setdiff(categorical_response_set.x, categorical_response_set.y))) |>
+                  in_old_not_new = toString(setdiff(categorical_response_set.y, categorical_response_set.x)),
+                  in_new_not_old = toString(setdiff(categorical_response_set.x, categorical_response_set.y))) |>
     dplyr::filter(in_new_not_old != "") |>
     dplyr::rename(old_categorical_response_set = categorical_response_set.x,
-           new_categorical_response_set = categorical_response_set.y) |>
+                  new_categorical_response_set = categorical_response_set.y) |>
     dplyr::select(var_name, old_categorical_response_set, new_categorical_response_set, same, in_old_not_new, in_new_not_old)
 
   if(nrow(new_response) != 0){
