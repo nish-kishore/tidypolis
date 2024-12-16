@@ -1775,7 +1775,7 @@ create_response_vars <- function(pos){
 #' @description
 #'this function identifies "cluster" or OBX response so we can identify rounds
 #' @export
-#' @import dplyr stats cluster
+#' @import dplyr cluster
 #' @param x df: data to be clustered
 #' @param seed num
 #' @param method str cluster method to use, can be "kmeans" or "mindate"
@@ -1784,6 +1784,12 @@ cluster_dates <- function(x,
                           seed = 1234,
                           method = "kmeans",
                           grouping_days = 365){
+
+  if (!requireNamespace("stats", quietly = TRUE)) {
+    stop('Package "stats" must be installed to use this function.',
+         .call = FALSE
+    )
+  }
 
   if(method == "kmeans"){
     #prepare the data
@@ -2030,6 +2036,12 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   if (!requireNamespace("tidyselect", quietly = TRUE)) {
     stop('Package "tidyselect" must be installed to use this function.',
+         .call = FALSE
+    )
+  }
+
+  if (!requireNamespace("stats", quietly = TRUE)) {
+    stop('Package "stats" must be installed to use this function.',
          .call = FALSE
     )
   }
