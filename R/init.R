@@ -6,6 +6,11 @@
 #' @param polis_data_folder str: location of folder where to store all information
 #' @param edav boolean: should the system use EDAV as it's cache; default FALSE
 #' @returns Messages on process
+#' @examples
+#' \dontrun{
+#' init_tidypolis(polis_data_folder = "POLIS", edav = T)
+#' init_tidypolis("C:/Users/"user_name"/Desktop/polis_test", edav = F)
+#' }
 #' @export
 init_tidypolis <- function(
     polis_data_folder,
