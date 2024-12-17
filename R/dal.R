@@ -10,7 +10,7 @@
 #' @param file_path str: absolute path of file
 #' @param edav boolean defaults to FALSE
 #' @param azcontainer AZ container object returned by
-#' @param full_names boolean: If you want to include the full reference path in the response, dfault FALSE
+#' @param full_names boolean: If you want to include the full reference path in the response, default FALSE
 #' @returns conditional on `io`
 tidypolis_io <- function(
     obj = NULL,

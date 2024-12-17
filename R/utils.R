@@ -7,6 +7,11 @@
 #' @param api_key API Key
 #' @param .table Table value to retrieve
 #' @returns Tibble with reference data
+#' @examples
+#' \dontrun{
+#' get_table_data(.table = "case)
+#' get_table_data(.table = "virus") #must run init_tidypolis first in order to specify API key
+#' }
 get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
                            .table) {
   base_url <- "https://extranet.who.int/polis/api/v2/"
