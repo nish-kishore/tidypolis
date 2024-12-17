@@ -220,7 +220,11 @@ init_tidypolis <- function(
 #' deleted rows are reflected in the local system.
 #' @param type choose to download population data ("pop") or all other data. Default's to "all"
 #' @import dplyr
-#' @export
+#' @examples
+#' \dontrun{
+#' get_polis_data() #must be run after using init_tidypolis and providing a valid API key
+#' }
+#' #' @export
 get_polis_data <- function(type = "all"){
 
   if(type == "all"){
