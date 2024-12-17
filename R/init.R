@@ -306,7 +306,11 @@ freeze_polis_data <- function(){
 #' @param type str: specify the type of preprocessing to complete
 #' @import cli
 #' @returns Analytic rds files
-#' @export
+#' @examples
+#' \dontrun{
+#' preprocess_data(type = "cdc") #must run init_tidypolis to specify POLIS data location first
+#' }
+#' #' @export
 preprocess_data <- function(type){
 
   types <- c("cdc")
