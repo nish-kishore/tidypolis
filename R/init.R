@@ -8,8 +8,8 @@
 #' @returns Messages on process
 #' @examples
 #' \dontrun{
-#' init_tidypolis(polis_data_folder = "POLIS", edav = T)
-#' init_tidypolis("C:/Users/"user_name"/Desktop/polis_test", edav = F)
+#' init_tidypolis(polis_data_folder = "POLIS", edav = T) #create a polis data cache on CDC EDAV
+#' init_tidypolis("C:/Users/"user_name"/Desktop/polis", edav = F) #create a polis data cache on your local desktop
 #' }
 #' @export
 init_tidypolis <- function(
