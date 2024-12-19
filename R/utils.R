@@ -4174,7 +4174,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     es.02.new <- es.01.new |>
       dplyr::select(-dplyr::all_of(var.list.01))
 
-    new.var.es.01 <- f.download.compare.01(es.02.new, es.02.old)
+    new.var.es.01 <- f.download.compare.01(old.download = es.02.old, new.download = es.02.new)
 
     new.df <- new.var.es.01 |>
       dplyr::filter(is.na(old.distinct.01) | diff.distinct.01 >= 1) |>
