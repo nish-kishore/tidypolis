@@ -4188,7 +4188,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
           Please run f.download.compare.01 to see what it is. Preprocessing can not continue until this is adressed.")
 
 
-      es.new.value <- f.download.compare.02(new.var.es.01 |> filter(!(is.na(old.distinct.01)) & variable != "id"), es.02.old, es.02.new)
+      es.new.value <- f.download.compare.02(new.var.es.01 |>
+                                              dplyr::filter(!(is.na(old.distinct.01)) & variable != "id"), es.02.old, es.02.new)
 
 
       update_polis_log(.event = sapply(names(es.new.value), function(x) paste0("New Values in: ", x, " - ", paste0(unique(dplyr::pull(es.new.value, x)), collapse = ", "))) |>
