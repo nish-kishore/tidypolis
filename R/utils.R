@@ -4163,7 +4163,10 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
       "date.shipped.to.ref.lab", "region.id", "region.official.name", "admin.0.officialname", "admin.1.id",
       "admin.1.officialname", "admin.2.id", "admin.2.officialname", "updated.date", "publish.date", "uploaded.date",
       "uploaded.by",  "reporting.year", "date.notification.to.hq", "date.received.in.lab", "created.date", "date.f1.ref.itd",
-      "date.f2.ref.itd", "date.f3.ref.itd","date.f4.ref.itd","date.f5.ref.itd", "date.f6.ref.itd"
+      "date.f2.ref.itd", "date.f3.ref.itd","date.f4.ref.itd","date.f5.ref.itd", "date.f6.ref.itd",
+      "date.final.culture.result", "date.final.results.reported", "date.final.combined.result",
+      "date.isol.sent.seq2", "date.isol.rec.seq2", "date.final.seq.result", "date.res.sent.out.vaccine2",
+      "date.res.sent.out.vdpv2"
     )
 
 
