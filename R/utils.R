@@ -4121,7 +4121,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     'sia.01.old.compare', 'sia.02', 'sia.03', 'sia.04', 'sia.05',
     'sia.06', 'sia.clean.01', 'sia.files.01', 'sia.files.02',
     'sia_metadata_comparison', 'sia.file.path',
-    'startyr', 'tofix', 'var.list.01', "sia.new", "sia.to.combine"
+    'startyr', 'tofix', 'var.list.01', "sia.new", "sia.to.combine",
+    "sia.clean.02", "sia.cluster.data", 'sia.new.value',
+    "sia.rounds"
   )
 
   cli::cli_process_done()
@@ -4516,7 +4518,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     'in_new_and_old_but_modified', 'in_new_not_old', 'in_old_not_new',
     'na.es.01', 'new', 'new.df', 'new.file', 'new.var.es.01', 'new_table_metadata', 'newsites',
     'old', 'old.es.file', 'old.file', 'old_table_metadata', 'savescipen',
-    'shape.name.01', 'truenewsites', 'var.list.01', 'sia.new.value'
+    'shape.name.01', 'truenewsites', 'var.list.01'
   )
   gc()
   cli::cli_process_done()
