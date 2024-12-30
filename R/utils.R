@@ -4561,7 +4561,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
       dplyr::filter(variable != "virus.type(s)" & variable != "vdpv.classification(s)" & variable != "nt.changes" & variable != "emergence.group(s)" &
                       variable != "virus.cluster(s)" & variable != "surveillance.type" &
                       !(variable %in% c("exact.longitude", "exact.latitude", "pons.latitude", "pons.longitude", "pons.environment",
-                                        "pons.seq.date", "pons.administration.type", "pons.spec.type", "location", "country.iso2"))) # list of variables we want evaluated in 2nd QC function
+                                        "pons.seq.date", "pons.administration.type", "pons.spec.type", "location", "country.iso2",
+                                        "nt.changes", "location"))) # list of variables we want evaluated in 2nd QC function
 
 
     var.list.01 <- as.character(var.names.01$variable)
