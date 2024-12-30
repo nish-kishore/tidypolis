@@ -1103,6 +1103,7 @@ f.download.compare.01 <- function(old.download, new.download) {
 #' @param old.download tibble
 #' @param new.download tibble
 #' @param type str name of the df that the comparison is being made on, for use in log
+#' "AFP", "SIA", "ES", "POS"
 #' @returns tibble of variables to compare
 f.download.compare.02 <- function(df.from.f.download.compare.01,
                                   old.download,
