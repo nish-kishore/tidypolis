@@ -1147,7 +1147,7 @@ f.download.compare.02 <- function(df.from.f.download.compare.01,
   }
 
   for (i in 1:length(new.distinct.value.01)) {
-    update_polis_log(.event = paste0("New values for ", x[i], ": ",
+    update_polis_log(.event = paste0("New values in ", type, " for ", x[i], ": ",
                                      paste(unlist(new.distinct.value.01[i]),
                                            collapse = ", ")),
                      .event_type = "ALERT")
@@ -2818,7 +2818,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
       cli::cli_alert_danger("There is either a new variable in the AFP data or new value of an existing variable.
        Please run f.download.compare.02 to see what it is. New values of variables are present in log file.")
 
-      afp.new.value <- f.download.compare.02(new.var.afp.01, afp.raw.old.comp, afp.raw.new.comp)
+      afp.new.value <- f.download.compare.02(new.var.afp.01, afp.raw.old.comp, afp.raw.new.comp, type = "AFP")
 
     } else {
       cli::cli_alert_info("New AFP download is comparable to old AFP download")
@@ -3789,7 +3789,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
       cli::cli_alert_danger("There is either a new variable in the SIA data or new value of an existing variable.
        Please run f.download.compare.02 to see what it is. Preprocessing can not continue until this is adressed.")
 
-      sia.new.value <- f.download.compare.02(new.var.sia.01, sia.01.old.compare, sia.01.new.compare)
+      sia.new.value <- f.download.compare.02(new.var.sia.01, sia.01.old.compare, sia.01.new.compare, type = "SIA")
 
     } else {
 
@@ -4181,7 +4181,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
 
       es.new.value <- f.download.compare.02(new.var.es.01 |>
-                                              dplyr::filter(!(is.na(old.distinct.01)) & variable != "id"), es.02.old, es.02.new)
+                                              dplyr::filter(!(is.na(old.distinct.01)) & variable != "id"), es.02.old, es.02.new, type = "ES")
 
     }else{
       cli::cli_alert_info("No variable change errors")
@@ -4588,7 +4588,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
       # Step 4: Apply compare variables function
 
-      virus.new.value <- f.download.compare.02(new.var.virus.01, virus.raw.old.comp, virus.raw.new.comp)
+      virus.new.value <- f.download.compare.02(new.var.virus.01, virus.raw.old.comp, virus.raw.new.comp, type = "POS")
 
     } else {
       cli::cli_alert_info("New AFP download is comparable to old AFP download")
