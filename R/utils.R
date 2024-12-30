@@ -4116,7 +4116,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     'sia_metadata_comparison', 'sia.file.path',
     'startyr', 'tofix', 'var.list.01', "sia.new", "sia.to.combine",
     "sia.clean.02", "sia.cluster.data", 'sia.new.value',
-    "sia.rounds"
+    "sia.rounds", "sia.clusters"
   )
 
   cli::cli_process_done()
