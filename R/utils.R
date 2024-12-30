@@ -4950,9 +4950,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   if(length(old.file) > 0){
 
-    old.es <- tidypolis_io(io = "read", file_path = old.file)
+    old.pos <- tidypolis_io(io = "read", file_path = old.file)
 
-    old_table_metadata <- f.summarise.metadata(old.es)
+    old_table_metadata <- f.summarise.metadata(old.pos)
     positives_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata, "POS")
 
     new <- afp.es.virus.03 |>
@@ -4963,7 +4963,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
       dplyr::ungroup() |>
       dplyr::mutate_all(as.character)
 
-    old <- old.es |>
+    old <- old.pos |>
       dplyr::mutate(epid = stringr::str_squish(epid)) |>
       dplyr::group_by(epid)|>
       dplyr::slice(1) |>
