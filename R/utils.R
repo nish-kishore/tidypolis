@@ -5018,7 +5018,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     }
 
     # list of records in new but not in old.
-    in_new_not_old <- in_new_not_old |> select(place.admin.0, epid, dateonset, yronset, source, virustype)
+    in_new_not_old <- in_new_not_old |>
+      dplyr::select(place.admin.0, epid, dateonset, yronset, source, virustype)
 
     if(nrow(in_new_not_old) > 0 ){
       # Export records for which virus type has changed from last week to this week in the CSV file:
