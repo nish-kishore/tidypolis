@@ -2816,10 +2816,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
       afp.new.value <- f.download.compare.02(new.var.afp.01, afp.raw.old.comp, afp.raw.new.comp)
 
-      update_polis_log(.event = sapply(names(afp.new.value), function(x) paste0("New Values in: ", x, " - ", paste0(unique(dplyr::pull(afp.new.value, x)), collapse = ", "))) |>
-                         paste0(collapse = "; "),
-                       .event_type = "ALERT")
-
     } else {
       cli::cli_alert_info("New AFP download is comparable to old AFP download")
     }
@@ -3791,10 +3787,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
       sia.new.value <- f.download.compare.02(new.var.sia.01, sia.01.old.compare, sia.01.new.compare)
 
-      update_polis_log(.event = sapply(names(sia.new.value), function(x) paste0("New values in: ", x, " - ", paste0(unique(dplyr::pull(sia.new.value, x)), collapse = ", "))) |>
-                         paste0(collapse = "; "),
-                       .event_type = "ALERT")
-
     } else {
 
       cli::cli_alert_info("New SIA download is comparable to old SIA download")
@@ -4593,10 +4585,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
       # Step 4: Apply compare variables function
 
       virus.new.value <- f.download.compare.02(new.var.virus.01, virus.raw.old.comp, virus.raw.new.comp)
-
-      update_polis_log(.event = sapply(names(virus.new.value), function(x) paste0("New Values in: ", x, " - ", paste0(unique(dplyr::pull(virus.new.value, x)), collapse = ", "))) |>
-                         paste0(collapse = "; "),
-                       .event_type = "ALERT")
 
     } else {
       cli::cli_alert_info("New AFP download is comparable to old AFP download")
