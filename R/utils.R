@@ -5048,16 +5048,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
                  file_path = paste0(polis_data_folder, "/Core_Ready_Files/virus_class_changed_date.csv"))
   }
 
-  log.in.new.and.old.mod <- ifelse(
-    is.list(in_new_and_old_but_modified),
-    NA,
-    length(unique(in_new_and_old_but_modified$epid))
-  )
-
-
   update_polis_log(.event = paste0("POS New Records: ", nrow(in_new_not_old), "; ",
                                    "POS Removed Records: ", nrow(in_old_not_new), "; ",
-                                   "POS Modified Records: ", log.in.new.and.old.mod, "; ",
+                                   "POS Modified Records: ", length(unique(in_new_and_old_but_modified)), "; ",
                                    "POS Class Changed Records: ", length(unique(class.updated$epid))),
                    .event_type = "INFO")
 
