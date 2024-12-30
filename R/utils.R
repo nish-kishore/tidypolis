@@ -1130,7 +1130,17 @@ f.download.compare.02 <- function(df.from.f.download.compare.01, old.download, n
   # strip old and combined data by column. Do merge by those two columns
   # and make a list of dataframes. The size of list is equal to number of variables
   # with new distinct values
+  new.distinct.value.01 <- list()
 
+  for(i in 1:length(x)) {
+    var.check <- dplyr::anti_join(
+      (dplyr::bind_rows(old.download, new.download) |> dplyr::select(x[i]) |> dplyr::distinct()),
+      (old.download |> dplyr::select(x[i]) |> dplyr::distinct()), by = x[i]
+    )
+
+    new.distinct.value.01[[i]] <- var.check
+
+  }
 
 }
 
