@@ -2210,6 +2210,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   crosswalk <- get_crosswalk_data()
 
   cli::cli_process_start("Case")
+  api_case_sub1 <- api_case_sub1 |>
+    dplyr::rename(DosesTotal = DosesOPVNumber)
   api_case_sub2 <- rename_via_crosswalk(api_data = api_case_sub1,
                                         crosswalk = crosswalk,
                                         table_name = "Case")
@@ -4166,7 +4168,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
       "date.f2.ref.itd", "date.f3.ref.itd","date.f4.ref.itd","date.f5.ref.itd", "date.f6.ref.itd",
       "date.final.culture.result", "date.final.results.reported", "date.final.combined.result",
       "date.isol.sent.seq2", "date.isol.rec.seq2", "date.final.seq.result", "date.res.sent.out.vaccine2",
-      "date.res.sent.out.vdpv2"
+      "date.res.sent.out.vdpv2", "nt.changes"
     )
 
 
