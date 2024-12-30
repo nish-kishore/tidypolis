@@ -1132,7 +1132,6 @@ f.download.compare.02 <- function(df.from.f.download.compare.01, old.download, n
   # with new distinct values
 
 
-  return(final.df.01)
 }
 
 #' Sample points for missing lat/lon
