@@ -1142,6 +1142,12 @@ f.download.compare.02 <- function(df.from.f.download.compare.01, old.download, n
 
   }
 
+  for (i in 1:length(new.distinct.value.01)) {
+    update_polis_log(.event = paste0("New values for ", x[i], ": ",
+                                     paste(unlist(new.distinct.value.01[i]),
+                                           collapse = ", ")),
+                     .event_type = "ALERT")
+  }
 }
 
 #' Sample points for missing lat/lon
