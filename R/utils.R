@@ -1131,27 +1131,6 @@ f.download.compare.02 <- function(df.from.f.download.compare.01, old.download, n
   # and make a list of dataframes. The size of list is equal to number of variables
   # with new distinct values
 
-  new.distinct.value.01 <- purrr::map(x,
-                                      ~ dplyr::anti_join(
-                                        (
-                                          dplyr::bind_rows(old.download, new.download) |> dplyr::select(x) |> dplyr::distinct()
-                                        ),
-                                        (old.download |> dplyr::select(x) |> dplyr::distinct())
-                                      ) |> dplyr::mutate(id = dplyr::row_number()))
-
-  # Make a dataframe from list of dataframe
-  new.distinct.value.01.df <- purrr::reduce(new.distinct.value.01, full_join)
-
-  # Identify distinct values of new variable
-  new.distinct.var.01 <- dplyr::bind_rows(old.download, new.download) |>
-    dplyr::select(y) |>
-    dplyr::distinct() |>
-    dplyr::mutate(id = dplyr::row_number())
-
-  # final dataframe with all levels of new variable and new distinct values of existing
-  # variable
-  final.df.01 <- dplyr::full_join(new.distinct.value.01.df, new.distinct.var.01) |>
-    dplyr::select(-id)
 
   return(final.df.01)
 }
