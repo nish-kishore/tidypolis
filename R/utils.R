@@ -1102,8 +1102,12 @@ f.download.compare.01 <- function(old.download, new.download) {
 #' @param df.from.f.download.compare.01 tibble: output from f.download.compare.01
 #' @param old.download tibble
 #' @param new.download tibble
+#' @param type str name of the df that the comparison is being made on, for use in log
 #' @returns tibble of variables to compare
-f.download.compare.02 <- function(df.from.f.download.compare.01, old.download, new.download) {
+f.download.compare.02 <- function(df.from.f.download.compare.01,
+                                  old.download,
+                                  new.download,
+                                  type = NULL) {
 
   # dataframe of new values of existing variables
   new.distinct <- df.from.f.download.compare.01 |>
