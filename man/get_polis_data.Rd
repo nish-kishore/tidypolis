@@ -14,3 +14,9 @@ This function iterates through all tables and loads POLIS data. It
 checks to ensure that new rows are created, data are updated accordingly and
 deleted rows are reflected in the local system.
 }
+\examples{
+\dontrun{
+get_polis_data() #must be run after using init_tidypolis and providing a valid API key
+}
+#' @export
+}
