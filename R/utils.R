@@ -4755,7 +4755,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_start("Processing and cleaning AFP/non-AFP files")
   afp.files.01 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path = file.path(polis_data_folder, "Core_Ready_Files"), full_names = T)) |>
     dplyr::mutate(short_name = stringr::str_replace(name, paste0(polis_data_folder, "/Core_Ready_Files/"), "")) |>
-    dplyr::filter(grepl("^(afp_linelist_2001-01-01_2024).*(.rds)$", short_name)) |>
+    dplyr::filter(grepl("^(afp_linelist_2001-01-01_2025).*(.rds)$", short_name)) |>
     dplyr::pull(name)
   afp.01 <- lapply(afp.files.01, function(x) tidypolis_io(io = "read", file_path = x)) |>
     dplyr::bind_rows() |>
