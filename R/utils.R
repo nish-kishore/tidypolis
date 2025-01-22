@@ -4765,7 +4765,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   non.afp.files.01 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path = file.path(polis_data_folder, "Core_Ready_Files"), full_names = T)) |>
     dplyr::mutate(short_name = stringr::str_replace(name, paste0(polis_data_folder, "/Core_Ready_Files/"), "")) |>
-    dplyr::filter(grepl("^(other_surveillance_type_linelist_2016_2024).*(.rds)$", short_name)) |>
+    dplyr::filter(grepl("^(other_surveillance_type_linelist_2016_2025).*(.rds)$", short_name)) |>
     dplyr::pull(name)
   non.afp.01 <- purrr::map_df(non.afp.files.01, ~ tidypolis_io(io = "read", file_path = .x)) |>
     dplyr::ungroup() |>
