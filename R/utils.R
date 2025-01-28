@@ -1255,7 +1255,11 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
                   Admin1GUID = ifelse(Admin1GUID != ADM1_GUID, ADM1_GUID, Admin1GUID),
                   geo.corrected = 1)
 
-
+  #bind back cases with fixed guids
+  df06 <- df05 |>
+    dplyr::filter(!epid %in% fix.bad.guids$epid) |>
+    dplyr::mutate(geo.corrected = 0) |>
+    dplyr::bind_rows(fix.bad.guids)
 
   #identify dropped obs. obs are dropped primarily because they match to a shape that doesn't
   #exist for the case's year onset (there are holes in the global map for certain years)
