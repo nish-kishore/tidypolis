@@ -1252,7 +1252,8 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
   fix.bad.guids <- df05 |>
     filter(Admin2GUID != GUID | Admin1GUID != ADM1_GUID | Admin0GUID != ADM0_GUID) |>
     mutate(Admin2GUID = ifelse(Admin2GUID != GUID, GUID, Admin2GUID),
-           Admin1GUID = ifelse(Admin1GUID != ADM1_GUID, ADM1_GUID, Admin1GUID))
+           Admin1GUID = ifelse(Admin1GUID != ADM1_GUID, ADM1_GUID, Admin1GUID),
+           geo.corrected = 1)
 
 
 
