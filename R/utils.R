@@ -1248,6 +1248,14 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
     dplyr::filter(!epid %in% dupes.fixed$epid) |>
     dplyr::bind_rows(dupes.fixed)
 
+  #fix guids after de-duping
+  fix.bad.guids <- df05 |>
+    filter(Admin2GUID != GUID | Admin1GUID != ADM1_GUID | Admin0GUID != ADM0_GUID) |>
+    mutate(Admin2GUID = ifelse(Admin2GUID != GUID, GUID, Admin2GUID),
+           Admin1GUID = ifelse(Admin1GUID != ADM1_GUID, ADM1_GUID, Admin1GUID))
+
+
+
   #identify dropped obs. obs are dropped primarily because they match to a shape that doesn't
   #exist for the case's year onset (there are holes in the global map for certain years)
   df04$geometry <- NULL
