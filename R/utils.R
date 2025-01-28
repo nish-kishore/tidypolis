@@ -1378,10 +1378,10 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
   pt05$geometry <- NULL
 
   #bind back placed point cases with df06 and finished
-  df08 <- dplyr::bind_rows(df07, pt05) |>
+  df09 <- dplyr::bind_rows(df08, pt05) |>
     dplyr::select(-c("wrongAdmin1GUID", "wrongAdmin2GUID", "ADM1_GUID", "ADM0_GUID"))
 
-  return(df08)
+  return(df09)
 }
 
 
