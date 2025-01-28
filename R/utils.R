@@ -1185,6 +1185,7 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
 
   global.dist.02 <- sf::st_make_valid(global.dist.01)
 
+  global.dist.02 <- sf::st_set_crs(global.dist.02, 4326)
   #identify bad shape rows after make_valid
   check.dist.2 <- tibble::as_tibble(sf::st_is_valid(global.dist.02))
   row.num.2 <- which(check.dist.2$value == FALSE)
