@@ -1278,7 +1278,7 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
     dplyr::bind_rows(dropped.obs) |>
     dplyr::select(-c("GUID", "yr.st", "yr.end"))
 
-  df06$geometry <- NULL
+  df07$geometry <- NULL
 
   #feed only cases with empty coordinates into st_sample (vars = GUID, nperarm, id, SHAPE)
   empty.coord.01 <- empty.coord |>
@@ -1371,10 +1371,10 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
   pt05$geometry <- NULL
 
   #bind back placed point cases with df06 and finished
-  df07 <- dplyr::bind_rows(df06, pt05) |>
+  df08 <- dplyr::bind_rows(df07, pt05) |>
     dplyr::select(-c("wrongAdmin1GUID", "wrongAdmin2GUID", "ADM1_GUID", "ADM0_GUID"))
 
-  return(df07)
+  return(df08)
 }
 
 
