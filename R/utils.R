@@ -1379,7 +1379,8 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
 
   #bind back placed point cases with df06 and finished
   df09 <- dplyr::bind_rows(df08, pt05) |>
-    dplyr::select(-c("wrongAdmin1GUID", "wrongAdmin2GUID", "ADM1_GUID", "ADM0_GUID"))
+    dplyr::select(-c("wrongAdmin1GUID", "wrongAdmin2GUID", "ADM1_GUID", "ADM0_GUID")) |>
+    dplyr::mutate(geo.corrected = ifelse(is.na(geo.corrected), 0, geo.corrected))
 
   return(df09)
 }
