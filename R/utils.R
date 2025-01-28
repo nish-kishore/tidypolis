@@ -1261,6 +1261,7 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
     dplyr::mutate(geo.corrected = 0) |>
     dplyr::bind_rows(fix.bad.guids)
 
+  rm(fix.bad.guids)
   #identify dropped obs. obs are dropped primarily because they match to a shape that doesn't
   #exist for the case's year onset (there are holes in the global map for certain years)
   df04$geometry <- NULL
