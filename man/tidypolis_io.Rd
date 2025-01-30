@@ -24,7 +24,7 @@ tidypolis_io(
 
 \item{azcontainer}{AZ container object returned by}
 
-\item{full_names}{boolean: If you want to include the full reference path in the response, dfault FALSE}
+\item{full_names}{boolean: If you want to include the full reference path in the response, default FALSE}
 }
 \value{
 conditional on `io`

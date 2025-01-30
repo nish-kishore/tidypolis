@@ -7,6 +7,11 @@
 #' @param api_key API Key
 #' @param .table Table value to retrieve
 #' @returns Tibble with reference data
+#' @examples
+#' \dontrun{
+#' get_table_data(.table = "case")
+#' get_table_data(.table = "virus") #must run init_tidypolis first in order to specify API key
+#' }
 get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
                            .table) {
   base_url <- "https://extranet.who.int/polis/api/v2/"
@@ -404,18 +409,10 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
 
           #garbage clean
           gc()
-
         }
-
-
-
-
       }
-
     }
-
   }
-
 }
 
 #' Get table size from POLIS
@@ -726,7 +723,7 @@ run_single_table_diagnostic <-
 #' Update local POLIS interaction log
 #'
 #' @description Update the POLIS log
-#' @import readr tibble
+#' @import tibble
 #' @param log_file str: location of cache file
 #' @param .time dttm: time of update
 #' @param .user double: user who conducted the action
@@ -768,7 +765,6 @@ update_polis_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
                     event = .event) |>
     tidypolis_io(io = "write", file_path = log_file_path)
 
-
     }
 }
 
@@ -777,7 +773,7 @@ update_polis_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
 #' Load local POLIS cache
 #'
 #' @description Pull cache data for a particular table
-#' @import readr cli dplyr
+#' @import cli dplyr
 #' @param cache_file str: location of cache file
 #' @param .table str: table to be loaded
 #' @returns Return tibble with table information
@@ -799,7 +795,7 @@ get_polis_cache <- function(cache_file = Sys.getenv("POLIS_CACHE_FILE"),
 #' Update local POLIS cache
 #'
 #' @description Update the POLIS cache directory
-#' @import readr dplyr lubridate
+#' @import dplyr lubridate
 #' @param cache_file str: location of cache file
 #' @param .table str: table to be updated
 #' @param .nrow double: nrow of table to be updated
@@ -866,10 +862,6 @@ request_input <- function(request,
   return(val)
 
 }
-
-
-
-
 
 
 #' Create table URLs
@@ -986,7 +978,7 @@ remove_empty_columns <- function(dataframe) {
   original_df <- dataframe
 
   dataframe <- dataframe |>
-    mutate(across(everything(), as.character))
+    dplyr::mutate(dplyr::across(dplyr::everything(), as.character))
 
   empty_cols <- colnames(dataframe)[colSums(is.na(dataframe) | dataframe == "") == nrow(dataframe)]
 
@@ -1008,7 +1000,7 @@ remove_empty_columns <- function(dataframe) {
 #' @description
 #' Get all data from crosswalk location
 #' @param file_loc str: location of crosswalk file
-#' @import dplyr cli
+#' @import dplyr cli sirfunctions
 #' @return tibble: crosswalk data
 get_crosswalk_data <- function(
     file_loc = "Data/misc/crosswalk.rds"
@@ -1049,11 +1041,17 @@ f.compare.dataframe.cols <- function(old, new) {
 
 #' Compare downloaded data
 #' @description Compared downloade data
-#' @import dplyr purrr
+#' @import dplyr stringr
 #' @param old.download tibble
 #' @param new.download tibble
 #' @returns tibble: variables that are new or unaccounted for
 f.download.compare.01 <- function(old.download, new.download) {
+
+  if (!requireNamespace("purrr", quietly = TRUE)) {
+    stop('Package "purrr" must be installed to use this function.',
+         .call = FALSE
+    )
+  }
 
   # Create dataframe from old download
   old.01 <- old.download |>
@@ -1098,12 +1096,18 @@ f.download.compare.01 <- function(old.download, new.download) {
 #' THIS FUNCTION WOULD LIST OUT THE DISTINCT VALUES BY VARIABLE
 #' ALL VALUES FOR NEW VARIABLE AND NEW VALUES FOR EXISTING
 #' @description List out distinct values that are not the same by variable
-#' @import dplyr purrr purrr
+#' @import dplyr
 #' @param df.from.f.download.compare.01 tibble: output from f.download.compare.01
 #' @param old.download tibble
 #' @param new.download tibble
 #' @returns tibble of variables to compare
 f.download.compare.02 <- function(df.from.f.download.compare.01, old.download, new.download) {
+
+  if (!requireNamespace("purrr", quietly = TRUE)) {
+    stop('Package "purrr" must be installed to use this function.',
+         .call = FALSE
+    )
+  }
 
   # dataframe of new values of existing variables
   new.distinct <- df.from.f.download.compare.01 |>
@@ -1158,7 +1162,7 @@ f.download.compare.02 <- function(df.from.f.download.compare.01, old.download, n
 
 #' Sample points for missing lat/lon
 #' @description Create random samples of points for missing GPS data
-#' @import dplyr sf tidyr tibble
+#' @import dplyr sf tidyr tibble cli
 #' @param df01 tibble: table of afp data
 #' @param global.dist.01 sf: spatial file of all locations
 #' @returns tibble with lat/lon for all unsampled locations
@@ -1183,7 +1187,7 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
   global.dist.02 <- sf::st_make_valid(global.dist.01)
 
   #identify bad shape rows after make_valid
-  check.dist.2 <- as_tibble(st_is_valid(global.dist.02))
+  check.dist.2 <- tibble::as_tibble(sf::st_is_valid(global.dist.02))
   row.num.2 <- which(check.dist.2$value == FALSE)
   #removing all bad shapes post make valid
   valid.shapes <- global.dist.02 |>
@@ -1201,10 +1205,10 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
     dplyr::filter(yronset >= yr.st & yronset <= yr.end)
 
   #second st_join is for invalid shapes and those attached cases, turning off s2
-  sf_use_s2(F)
+  sf::sf_use_s2(F)
   df03 <- sf::st_join(df01.sf |> dplyr::filter(!Admin2GUID %in% valid.shapes$GUID), invalid.shapes, left = T) |>
     dplyr::filter(yronset >= yr.st & yronset <= yr.end)
-  sf_use_s2(T)
+  sf::sf_use_s2(T)
 
   cli::cli_process_done()
 
@@ -1281,11 +1285,13 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
   pt01 <- lapply(1:nrow(empty.coord.02), function(x){
 
     tryCatch(
-      expr = {suppressMessages(sf::st_sample(empty.coord.02[x,], pull(empty.coord.02[x,], "nperarm"),
-                                             exact = T)) |> st_as_sf()},
+      expr = {suppressMessages(sf::st_sample(empty.coord.02[x,], dplyr::pull(empty.coord.02[x,], "nperarm"),
+                                             exact = T)) |> sf::st_as_sf()},
       error = function(e) {
         guid = empty.coord.02[x, ]$GUID[1]
-        ctry_prov_dist_name = global.dist.01 |> filter(GUID == guid) |> select(ADM0_NAME, ADM1_NAME, ADM2_NAME)
+        ctry_prov_dist_name = global.dist.01 |>
+          dplyr::filter(GUID == guid) |>
+          dplyr::select(ADM0_NAME, ADM1_NAME, ADM2_NAME)
         cli::cli_alert_warning(paste0("Fixing errors for:\n",
                                       "Country: ", ctry_prov_dist_name$ADM0_NAME,"\n",
                                       "Province: ", ctry_prov_dist_name$ADM1_NAME, "\n",
@@ -1293,14 +1299,14 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
 
         suppressWarnings(
           {
-            sf_use_s2(F)
-            int <- empty.coord.02[x,] |> st_centroid(of_largest_polygon = T)
-            sf_use_s2(T)
+            sf::sf_use_s2(F)
+            int <- empty.coord.02[x,] |> sf::st_centroid(of_largest_polygon = T)
+            sf::sf_use_s2(T)
 
-            st_buffer(int, dist = 3000) |>
-              st_sample(slice(empty.coord.02, x) |>
-                          pull(nperarm)) |>
-              st_as_sf()
+            sf::st_buffer(int, dist = 3000) |>
+              sf::st_sample(dplyr::slice(empty.coord.02, x) |>
+                          dplyr::pull(nperarm)) |>
+              sf::st_as_sf()
           }
         )
 
@@ -1308,7 +1314,7 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
     )
 
   }) |>
-    bind_rows()
+    dplyr::bind_rows()
 
   cli::cli_process_done()
 
@@ -1366,14 +1372,13 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
 #' @returns quality controlled date variable
 f.datecheck.onset <- function(date1, date2) {
   date1.qa <-
-    case_when(
+    dplyr::case_when(
       is.na(date1) == T ~ "date missing",
       is.na(date2) == T ~ "date onset missing",
       abs(date1 - date2) > 365 ~ "data entry error",
       date1 < date2 ~ "date before onset",
       (date1 - date2) <= 365 ~ "useable date"
     )
-
 
   return(date1.qa)
 }
@@ -1403,7 +1408,7 @@ f.compare.metadata <- function(new_table_metadata, old_table_metadata, table){
   }
 
   lost_vars <- (compare_metadata |>
-                  filter(is.na(var_class.x)))$var_name
+                  dplyr::filter(is.na(var_class.x)))$var_name
 
   if(length(lost_vars) != 0){
     lost_vars <- lost_vars
@@ -1421,12 +1426,12 @@ f.compare.metadata <- function(new_table_metadata, old_table_metadata, table){
 
   class_changed_vars <- compare_metadata |>
     dplyr::filter(!(var_name %in% lost_vars) &
-             !(var_name %in% new_vars) &
-             (var_class.x != var_class.y &
-                !is.null(var_class.x) & !is.null(var_class.y))) |>
+                    !(var_name %in% new_vars) &
+                    (var_class.x != var_class.y &
+                       !is.null(var_class.x) & !is.null(var_class.y))) |>
     dplyr::select(-c(categorical_response_set.x, categorical_response_set.y)) |>
     dplyr::rename(old_var_class = var_class.y,
-           new_var_class = var_class.x)
+                  new_var_class = var_class.x)
 
   if(nrow(class_changed_vars) != 0){
     class_changed_vars <- class_changed_vars
@@ -1438,17 +1443,17 @@ f.compare.metadata <- function(new_table_metadata, old_table_metadata, table){
   #Check for new responses in categorical variables (excluding new variables and class changed variables that have been previously shown)
   new_response <- compare_metadata |>
     dplyr::filter(!(var_name %in% lost_vars) &
-             !(var_name %in% new_vars) &
-             !(var_name %in% class_changed_vars$var_name) &
-             as.character(categorical_response_set.x) != "NULL" &
-             as.character(categorical_response_set.y) != "NULL") |>
+                    !(var_name %in% new_vars) &
+                    !(var_name %in% class_changed_vars$var_name) &
+                    as.character(categorical_response_set.x) != "NULL" &
+                    as.character(categorical_response_set.y) != "NULL") |>
     dplyr::rowwise() |>
     dplyr::mutate(same = toString(intersect(categorical_response_set.x, categorical_response_set.y)),
-           in_old_not_new = toString(setdiff(categorical_response_set.y, categorical_response_set.x)),
-           in_new_not_old = toString(setdiff(categorical_response_set.x, categorical_response_set.y))) |>
+                  in_old_not_new = toString(setdiff(categorical_response_set.y, categorical_response_set.x)),
+                  in_new_not_old = toString(setdiff(categorical_response_set.x, categorical_response_set.y))) |>
     dplyr::filter(in_new_not_old != "") |>
     dplyr::rename(old_categorical_response_set = categorical_response_set.x,
-           new_categorical_response_set = categorical_response_set.y) |>
+                  new_categorical_response_set = categorical_response_set.y) |>
     dplyr::select(var_name, old_categorical_response_set, new_categorical_response_set, same, in_old_not_new, in_new_not_old)
 
   if(nrow(new_response) != 0){
@@ -1462,11 +1467,17 @@ f.compare.metadata <- function(new_table_metadata, old_table_metadata, table){
 
 #' Summarize metadata from a tibble
 #' @description Summarize metadata from tibble
-#' @import skimr tidyselect
+#' @import skimr dplyr
 #' @param dataframe tibble
 #' @param categorical_max int: maximum number of categories considered
 #' @returns tibble: metadata
 f.summarise.metadata <- function(dataframe, categorical_max = 10){
+
+  if (!requireNamespace("tidyselect", quietly = TRUE)) {
+    stop('Package "tidyselect" must be installed to use this function.',
+         .call = FALSE
+    )
+  }
   #ungroup dataframe
   dataframe <- dataframe |>
     dplyr::ungroup()
@@ -1499,7 +1510,7 @@ f.summarise.metadata <- function(dataframe, categorical_max = 10){
 
 #' Function to get cached env site data
 #' @description Function to get cached env site data
-#' @import readr
+#' @import sirfunctions
 #' @returns tibble: env site list
 get_env_site_data <- function(){
   envSiteYearList <- sirfunctions::edav_io(io = "read", file_loc = "Data/misc/env_sites.rds")
@@ -1513,7 +1524,6 @@ get_env_site_data <- function(){
 #' @import dplyr readr sirfunctions
 #' @param log_file str: location of POLIS log file
 #' @param polis_data_folder str: location of the POLIS data folder
-
 log_report <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
                        polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")){
 
@@ -1576,10 +1586,9 @@ log_report <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
 #' @description
 #' Function to read in log file and archive entries older than 3 months
 #'
-#' @import dplyr readr
+#' @import dplyr
 #' @param log_file str: location of POLIS log file
 #' @param polis_data_folder str: location of the POLIS data folder
-
 archive_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
                         polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")){
 
@@ -1622,7 +1631,7 @@ archive_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
 #'
 #' @description
 #' remove original date variables from POLIS tables
-#' @import dplyr
+#' @import dplyr lubridate
 #' @param type str: the table on which to remove original date vars, "AFP", "ES", "POS"
 #' @param df tibble: the dataframe from which to remove character formatted dates
 #' @param polis_data_folder str:  location of user's polis data folder
@@ -1659,6 +1668,7 @@ remove_character_dates <- function(type,
   return(df.02)
 }
 
+#' This function creates a summary of SIA responses to cVDPV detections in the positives dataset
 #' @description
 #' a function to create summary SIA response variables for cVDPVs
 #' @import dplyr
@@ -1766,10 +1776,11 @@ create_response_vars <- function(pos){
 }
 
 
-#Cluster Function
-#this function identifies "cluster" or OBX response so we can identify rounds
+#' SIA Cluster Function
+#' @description
+#'this function identifies "cluster" or OBX response so we can identify rounds
 #' @export
-#' @import dplyr stats cluster
+#' @import dplyr cluster
 #' @param x df: data to be clustered
 #' @param seed num
 #' @param method str cluster method to use, can be "kmeans" or "mindate"
@@ -1778,6 +1789,12 @@ cluster_dates <- function(x,
                           seed = 1234,
                           method = "kmeans",
                           grouping_days = 365){
+
+  if (!requireNamespace("stats", quietly = TRUE)) {
+    stop('Package "stats" must be installed to use this function.',
+         .call = FALSE
+    )
+  }
 
   if(method == "kmeans"){
     #prepare the data
@@ -1827,11 +1844,12 @@ cluster_dates <- function(x,
   }
 }
 
+#' Manager function for running cluster_dates() funciton
 #' @description
 #' manager function to run the cluster_dates() function using helper function run_cluster_dates to cluster SIAs by type
 #' @export
 #' @import dplyr
-#' @param df dataframe of SIAs to identify rounds by vaccine type
+#' @param sia dataframe of SIAs to identify rounds by vaccine type
 cluster_dates_for_sias <- function(sia){
 
   tick <- Sys.time()
@@ -1853,12 +1871,13 @@ cluster_dates_for_sias <- function(sia){
   print(tock - tick)
 }
 
+#' Wrapper function for cluster_dates, includes error checking and cluster cache management
 #' @description
 #' Wrapper around the cluster_dates function to do some error checking
-#'
 #' @export
-#' @import dplyr readr
+#' @import dplyr
 #' @param data df dataframe on which to run cluster dates function
+#' @param cache_folder str location of sia cluster cache on CDC EDAV
 #' @param min_obs int
 #' @param type str vaccine type
 run_cluster_dates <- function(data,
@@ -1874,10 +1893,10 @@ run_cluster_dates <- function(data,
     dplyr::summarize(count = n())
 
   #check if cache exists
-  cache_exists <- tidypolis:::tidypolis_io(io = "exists.file", file_path = paste0(cache_folder, "/", type, "_cluster_cache.rds"))
+  cache_exists <- tidypolis_io(io = "exists.file", file_path = paste0(cache_folder, "/", type, "_cluster_cache.rds"))
 
   if(cache_exists){
-    cache <- tidypolis:::tidypolis_io(io = "read", file_path = paste0(cache_folder, "/", type, "_cluster_cache.rds"))
+    cache <- tidypolis_io(io = "read", file_path = paste0(cache_folder, "/", type, "_cluster_cache.rds"))
     in_data <- setdiff(in_data, cache)
 
     print(paste0(nrow(in_data), " potentially new SIAs in [",type,"] found for clustering analysis"))
@@ -1886,10 +1905,10 @@ run_cluster_dates <- function(data,
     cache <- cache |>
       dplyr::filter(!(adm2guid %in% in_data$adm2guid))
 
-    tidypolis:::tidypolis_io(obj = dplyr::bind_rows(in_data, cache), io = "write", file_path = paste0(cache_folder, "/", type,"_cluster_cache.rds"))
+    tidypolis_io(obj = dplyr::bind_rows(in_data, cache), io = "write", file_path = paste0(cache_folder, "/", type,"_cluster_cache.rds"))
   }else{
     print(paste0("No cache found for [", type, "], creating cache and running clustering for ", nrow(in_data), " SIAs"))
-    tidypolis:::tidypolis_io(obj = in_data, io = "write", file_path = paste0(cache_folder, "/", type,"_cluster_cache.rds"))
+    tidypolis_io(obj = in_data, io = "write", file_path = paste0(cache_folder, "/", type,"_cluster_cache.rds"))
   }
 
   if(nrow(in_data) > 0){
@@ -1927,14 +1946,14 @@ run_cluster_dates <- function(data,
     #error catching the return
     if(nrow(dropped) > 0){
 
-      out <- bind_rows(out, out2)
+      out <- dplyr::bind_rows(out, out2)
     }
 
     #data cache
-    data_cache_exists <- tidypolis:::tidypolis_io(io = "exists.file", file_path = paste0(cache_folder, "/", type, "data_cluster_cache.rds"))
+    data_cache_exists <- tidypolis_io(io = "exists.file", file_path = paste0(cache_folder, "/", type, "data_cluster_cache.rds"))
 
     if(data_cache_exists){
-      data_cache <- tidypolis:::tidypolis_io(io = "read", file_path = paste0(cache_folder, "/", type, "data_cluster_cache.rds"))
+      data_cache <- tidypolis_io(io = "read", file_path = paste0(cache_folder, "/", type, "data_cluster_cache.rds"))
 
       out <- filter(data_cache, !sia.sub.activity.code %in% unique(out$sia.sub.activity.code)) |>
         dplyr::bind_rows(out)
@@ -1943,11 +1962,11 @@ run_cluster_dates <- function(data,
       # out <- data_cache2 %>%
       #   bind_rows(out)
 
-      tidypolis:::tidypolis_io(obj = out, io = "write", file_path = paste0(cache_folder, "/", type, "data_cluster_cache.rds"))
+      tidypolis_io(obj = out, io = "write", file_path = paste0(cache_folder, "/", type, "data_cluster_cache.rds"))
 
     }else{
       print(paste0("No data cache found for [", type, "], creating data cache and saving clustering results for ", nrow(out), " SIAs"))
-      tidypolis:::tidypolis_io(obj = out, io = "write", file_path = paste0(cache_folder, "/", type, "data_cluster_cache.rds"))
+      tidypolis_io(obj = out, io = "write", file_path = paste0(cache_folder, "/", type, "data_cluster_cache.rds"))
   }
 
 
@@ -1955,18 +1974,18 @@ run_cluster_dates <- function(data,
 
   }else{
     print(paste0("No new SIA data found for [", type, "], loading cached data!"))
-    out <- tidypolis:::tidypolis_io(io = "read", file_path = paste0(cache_folder, "/", type, "data_cluster_cache.rds"))
+    out <- tidypolis_io(io = "read", file_path = paste0(cache_folder, "/", type, "data_cluster_cache.rds"))
   }
 
   return(out)
 }
 
 
+#' Function to create summary of key variable missingness in CORE datafiles
 #' @description
 #' a function to assess key variable missingness
-#'
 #' @import dplyr
-#' @param df tibble the datatable for which we want to check key variable missingness
+#' @param data tibble the datatable for which we want to check key variable missingness
 #' @param type str "AFP", "ES", or "POS", type of dataset to check missingness
 check_missingness <- function(data,
                               type) {
@@ -2009,10 +2028,28 @@ check_missingness <- function(data,
 #'
 #' @description
 #' Process POLIS data into analytic datasets needed for CDC
-#' @import cli sirfunctions dplyr readr lubridate stringr rio tidyr openxlsx stringi purrr pbapply lwgeom
+#' @import cli sirfunctions dplyr readr lubridate stringr tidyr stringi
 #' @param polis_data_folder str: location of the POLIS data folder, defaults to value stored from init_tidypolis
 #' @return Outputs intermediary core ready files
 preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
+
+  if (!requireNamespace("purrr", quietly = TRUE)) {
+    stop('Package "purrr" must be installed to use this function.',
+         .call = FALSE
+    )
+  }
+
+  if (!requireNamespace("tidyselect", quietly = TRUE)) {
+    stop('Package "tidyselect" must be installed to use this function.',
+         .call = FALSE
+    )
+  }
+
+  if (!requireNamespace("stats", quietly = TRUE)) {
+    stop('Package "stats" must be installed to use this function.',
+         .call = FALSE
+    )
+  }
 
   #Step 0 - create a CORE datafiles to combine folder and check for datasets before continuing with pre-p =========
   if(!tidypolis_io(io = "exists.dir", file_path = paste0(polis_data_folder, "/core_files_to_combine"))){
@@ -5120,52 +5157,26 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
 }
 
-#Began work on pop processing pipeline but not ready for V1
 
-#' #' Preprocess population data into flat files
-#' #'
-#' #' @description Process POLIS population data using CDC and other standards
-#' #' @import readr dplyr
-#' #' @param type str: "cdc" or "who" (default)
-#' #' @param pop_file tibble: WHO POLIS population file, defaults to tidypolis folder
-#' #' @return list with tibble for ctry, prov and dist
-#' process_pop <- function(type = "who", pop_file = readr::read_rds(file.path(Sys.getenv("POLIS_DATA_FOLDER"), "data", "pop.rds"))){
-#'
-#'   #subset to <= 15
-#'   pop_file <- pop_file |>
-#'     filter(AgeGroupName == "0 to 15 years")
-#'
-#'   #extract into country prov and dist
-#'
-#'   x <- lapply(unique(pop_file$Admin0Name), function(x){
-#'     pop_file |>
-#'       filter(is.na(Admin1Name) & is.na(Admin2Name)) |>
-#'       rename(year = Year, u15pop = Value, GUID = Admin0GUID, ctry = Admin0Name) |>
-#'       mutate(u15pop = as.integer(u15pop)) |>
-#'       arrange(year) |>
-#'       filter(ctry == x) |>
-#'       group_by(year) |>
-#'       filter(!is.na(u15pop)) |>
-#'       filter(UpdatedDate == max(UpdatedDate, na.rm = T)) |>
-#'       ungroup() |>
-#'       select(ctry, year, u15pop, GUID) |>
-#'       full_join(tibble(ctry = x, year = 2000:(lubridate::year(Sys.time()))), by = c("ctry", "year"))
-#'   }) |>
-#'     bind_rows()
-#'
-#' }
-#'
-
+#' Process WHO spatial data and output country, province and district level shape files and basic
+#' quality checks
 #' @description
 #' a function to process WHO spatial datasets
-#' @import dplyr sf lubridate stringr readr tibble utils
-#' @param gdb_folder str the folder location of spatial datasets, should end with .gdb, if on edav the gdb will need to be zipped,
-#' ensure that the gdb and the zipped file name are the same
+#' @import dplyr sf lubridate stringr readr tibble
+#' @param gdb_folder str the folder location of spatial datasets, should end with .gdb,
+#' if on edav the gdb will need to be zipped, ensure that the gdb and the zipped file name are the same
 #' @param output_folder str folder location to write outputs to
 #' @param edav boolean T or F, whether gdb is on EDAV or local
 process_spatial <- function(gdb_folder,
                             output_folder,
                             edav) {
+
+  if (!requireNamespace("utils", quietly = TRUE)) {
+    stop('Package "utils" must be installed to use this function.',
+         .call = FALSE
+    )
+  }
+
   if(edav) {
     output_folder <- stringr::str_replace(output_folder, paste0("GID/PEB/SIR/"), "")
   }
@@ -5467,3 +5478,41 @@ process_spatial <- function(gdb_folder,
   remove(df.list, df02)
 
 }
+
+
+
+#Began work on pop processing pipeline but not ready for V1
+
+#' Preprocess population data into flat files
+#'
+#'  Process POLIS population data using CDC and other standards
+#'  readr dplyr
+#' str: "cdc" or "who" (default)
+#'  tibble: WHO POLIS population file, defaults to tidypolis folder
+#'  list with tibble for ctry, prov and dist
+#' process_pop <- function(type = "who", pop_file = readr::read_rds(file.path(Sys.getenv("POLIS_DATA_FOLDER"), "data", "pop.rds"))){
+#'
+#'   subset to <= 15
+#'   pop_file <- pop_file |>
+#'     filter(AgeGroupName == "0 to 15 years")
+#'
+#'   #extract into country prov and dist
+#'
+#'   x <- lapply(unique(pop_file$Admin0Name), function(x){
+#'     pop_file |>
+#'       filter(is.na(Admin1Name) & is.na(Admin2Name)) |>
+#'       rename(year = Year, u15pop = Value, GUID = Admin0GUID, ctry = Admin0Name) |>
+#'       mutate(u15pop = as.integer(u15pop)) |>
+#'       arrange(year) |>
+#'       filter(ctry == x) |>
+#'       group_by(year) |>
+#'       filter(!is.na(u15pop)) |>
+#'       filter(UpdatedDate == max(UpdatedDate, na.rm = T)) |>
+#'       ungroup() |>
+#'       select(ctry, year, u15pop, GUID) |>
+#'       full_join(tibble(ctry = x, year = 2000:(lubridate::year(Sys.time()))), by = c("ctry", "year"))
+#'   }) |>
+#'     bind_rows()
+#'
+#' }
+#'

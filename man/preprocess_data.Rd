@@ -15,3 +15,9 @@ Analytic rds files
 \description{
 Create standard analytic datasets from raw POLIS data
 }
+\examples{
+\dontrun{
+preprocess_data(type = "cdc") #must run init_tidypolis to specify POLIS data location first
+}
+#' @export
+}
