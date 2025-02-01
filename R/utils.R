@@ -3423,11 +3423,11 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
           (need60day == 1 & timeto60day < 60 | timeto60day > 90 | is.na(timeto60day) == T) ~ 0
         ),
 
-      adm0guid = paste("{", stringr::str_to_upper(admin0guid), "}", sep = ""),
+      adm0guid = paste("{", stringr::str_to_upper(Admin0GUID), "}", sep = ""),
       adm0guid = ifelse(adm0guid == "{}" | adm0guid == "{NA}", NA, adm0guid),
-      adm1guid = paste("{", stringr::str_to_upper(admin1guid), "}", sep = ""),
+      adm1guid = paste("{", stringr::str_to_upper(Admin1GUID), "}", sep = ""),
       adm1guid = ifelse(adm1guid == "{}" | adm1guid == "{NA}", NA, adm1guid),
-      adm2guid = paste("{", stringr::str_to_upper(admin2guid), "}", sep = ""),
+      adm2guid = paste("{", stringr::str_to_upper(Admin2GUID), "}", sep = ""),
       adm2guid = ifelse(adm2guid == "{}" | adm2guid == "{NA}", NA, adm2guid),
     ) |>
 
