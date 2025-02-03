@@ -3443,8 +3443,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
          virus.cluster = `virus.cluster(s)`,
          emergence.group = `emergence.group(s)`
   ) |>
-    dplyr::filter(!is.na(epid)) |>
-    dplyr::select(-c(Admin2GUID, Admin1GUID, Admin0GUID))
+    dplyr::filter(!is.na(epid))
 
   rm("afp.linelist.fixed.04")
   gc()
