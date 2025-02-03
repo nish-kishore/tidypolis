@@ -3424,7 +3424,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
         )) |>
     dplyr::rename(adm0guid = Admin0GUID,
                   adm1guid = Admin1GUID,
-                  adm2guid = Admin2GUID)
+                  adm2guid = Admin2GUID) |>
 
     # need to decide range for 60 day reviews completed
 
