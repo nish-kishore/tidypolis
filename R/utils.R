@@ -1245,7 +1245,10 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
   #remove the duplicate cases from df04 and bind back the fixed dupes
   df05 <- df04 |>
     dplyr::filter(!epid %in% dupes.fixed$epid) |>
-    dplyr::bind_rows(dupes.fixed)
+    dplyr::bind_rows(dupes.fixed) |>
+    dplyr::mutate(Admin2GUID = paste0("{", stringr::str_to_upper(admin2guid), "}", sep = ""),
+                  Admin1GUID = paste0("{", stringr::str_to_upper(admin1guid), "}", sep = ""),
+                  Admin0GUID = paste0("{", stringr::str_to_upper(admin0guid), "}", sep = ""))
 
   #fix guids after de-duping
   fix.bad.guids <- df05 |>
