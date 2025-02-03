@@ -3514,18 +3514,18 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
       dplyr::filter(dplyr::between(yronset, startyr, endyr)) |>
       dplyr::mutate_all(as.character)
 
-    afp.linelist.02 <- afp.linelist.02 |>
+    afp.linelist.03 <- afp.linelist.02 |>
       dplyr::ungroup() |>
       dplyr::select(-c(setdiff(setdiff(colnames(afp.linelist.02), col.afp.raw.01), colnames(old))))
 
     # Step 11 write R datafiles for use in analyses
     #Compare the final file to last week's final file to identify any differences in var_names, var_classes, or categorical responses
-    new_table_metadata <- f.summarise.metadata(head(afp.linelist.02, 1000))
+    new_table_metadata <- f.summarise.metadata(head(afp.linelist.03, 1000))
     old_table_metadata <- f.summarise.metadata(head(old, 1000))
     afp_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata, "AFP")
 
     #compare obs
-    new <- afp.linelist.02 |>
+    new <- afp.linelist.03 |>
       dplyr::mutate(epid = stringr::str_squish(epid)) |>
       dplyr::mutate_all(as.character)
 
