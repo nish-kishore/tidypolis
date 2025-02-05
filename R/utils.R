@@ -5573,7 +5573,7 @@ add_gpei_cases <- function(azcontainer = suppressMessages(get_azure_storage_conn
   proxy.data.prov.final$x <- NULL
   proxy.data.prov.final$geometry <- NULL
 
-  rm(pt01, pt01_joined, pt02, pt03, pt04)
+  rm(pt01, pt01_joined, pt02, pt03, pt04, proxy.data.fill.prov, proxy.data.fill.prov.01, proxy.data.fill.prov.02)
 
   proxy.data.fill.ctry <- dplyr::left_join(proxy.data |> dplyr::filter(is.na(place.admin.1)),
                                            long.global.ctry |> dplyr::select(ADM0_NAME, GUID, active.year.01),
@@ -5581,7 +5581,7 @@ add_gpei_cases <- function(azcontainer = suppressMessages(get_azure_storage_conn
     dplyr::mutate(adm0guid = GUID) |>
     select(-GUID)
 
-
+  rm(long.global.ctry)
 
 
 
