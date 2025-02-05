@@ -5462,7 +5462,7 @@ process_spatial <- function(gdb_folder,
 #' @param proxy_data_loc str location of proxy_data on EDAV
 #'
 add_gpei_cases <- function(azcontainer = suppressMessages(get_azure_storage_connection()),
-                           proxy_data_loc = "/Data/proxy_test/polio_proxy_data.csv",
+                           proxy_data_loc = "/Data/proxy/polio_proxy_data.csv",
                            polis_pos_loc = "/Data/polis/positives_2001-01-01_2025-01-06.rds") {
 
   long.global.ctry <- sirfunctions::load_clean_ctry_sp(type = "long")
@@ -5679,7 +5679,7 @@ add_gpei_cases <- function(azcontainer = suppressMessages(get_azure_storage_conn
   positives.new <- current.polis.pos |>
     dplyr::bind_rows(proxy.data.final)
 
-  sirfunctions::edav_io(obj = positives.new, io = "write", file_loc = paste("/Data/proxy_test/",
+  sirfunctions::edav_io(obj = positives.new, io = "write", file_loc = paste("/Data/proxy/",
                                                                             paste("positives", min(positives.new$dateonset, na.rm = T),
                                                                                   max(positives.new$dateonset, na.rm = T),
                                                                                   sep = "_"), ".rds", sep = ""))
