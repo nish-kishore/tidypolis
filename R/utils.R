@@ -5458,9 +5458,11 @@ process_spatial <- function(gdb_folder,
 #' a function to add manually extracted GPEI cases to positives file and estimate points
 #' based on lowest level admin data
 #' @imports
+#' @param azcontainer Azure validated container object.
 #' @param proxy_data_loc str location of proxy_data on EDAV
 #'
-add_gpei_cases <- function(proxy_data_loc = "") {
+add_gpei_cases <- function(azcontainer = suppressMessages(get_azure_storage_connection()),
+                           proxy_data_loc = "") {
 
   long.global.ctry <- load_clean_ctry_sp(type = "long")
 
