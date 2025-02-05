@@ -5469,9 +5469,12 @@ add_gpei_cases <- function(azcontainer = suppressMessages(get_azure_storage_conn
 
   long.global.prov <- sirfunctions::load_clean_prov_sp(type = "long")
 
-  proxy.data <- sirfunctions::edav_io(io = "read", file_loc = proxy_data_loc)
-
   current.polis.pos <- sirfunctions::edav_io(io = "read", file_loc = polis_pos_loc)
+
+  proxy.data <- sirfunctions::edav_io(io = "read", file_loc = proxy_data_loc) |>
+    dplyr::filter(!epid %in% current.polis.pos$epid)
+
+
 
 
 
