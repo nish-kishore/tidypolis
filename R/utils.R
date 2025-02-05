@@ -5462,5 +5462,8 @@ process_spatial <- function(gdb_folder,
 #'
 add_gpei_cases <- function(proxy_data_loc = "") {
 
+  long.global.ctry <- load_clean_ctry_sp(type = "long")
+
+  long.global.prov <- load_clean_prov_sp(type = "long")
 
 }
