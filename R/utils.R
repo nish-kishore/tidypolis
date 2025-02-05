@@ -5467,9 +5467,11 @@ add_gpei_cases <- function(azcontainer = suppressMessages(get_azure_storage_conn
 
   long.global.ctry <- sirfunctions::load_clean_ctry_sp(type = "long")
   long.global.ctry$Shape <- NULL
+  global.ctry <- sirfunctions::load_clean_ctry_sp()
 
   long.global.prov <- sirfunctions::load_clean_prov_sp(type = "long")
   long.global.prov$SHAPE <- NULL
+  global.prov <- sirfunctions::load_clean_prov_sp()
 
   current.polis.pos <- sirfunctions::edav_io(io = "read", file_loc = polis_pos_loc)
 
@@ -5483,6 +5485,26 @@ add_gpei_cases <- function(azcontainer = suppressMessages(get_azure_storage_conn
                   adm1guid = GUID) |>
     dplyr::select(-c("ADM0_GUID", "GUID"))
 
+  rm(long.global.prov)
+
+  #feed only cases with empty coordinates into st_sample (vars = GUID, nperarm, id, SHAPE)
+  proxy.data.fill.prov.01 <- proxy.data.fill.prov |>
+    tibble::as_tibble() |>
+    dplyr::group_by(adm1guid) |>
+    dplyr::summarise(nperarm = dplyr::n()) |>
+    dplyr::arrange(adm1guid) |>
+    dplyr::mutate(id = dplyr::row_number()) |>
+    dplyr::ungroup() |>
+    dplyr::filter(adm1guid != "{NA}")
+
+  proxy.data.fill.prov.02 <- global.prov |>
+    dplyr::select(GUID) |>
+    dplyr::filter(GUID %in% proxy.data.fill.prov.01$adm1guid) |>
+    dplyr::left_join(proxy.data.fill.prov.01, by = c("GUID" = "adm1guid"))
+
+
+
+
   proxy.data.fill.ctry <- dplyr::left_join(proxy.data |> dplyr::filter(is.na(place.admin.1)),
                                            long.global.ctry |> dplyr::select(ADM0_NAME, GUID, active.year.01),
                                            by = c("place.admin.0" = "ADM0_NAME", "yronset" = "active.year.01")) |>
@@ -5493,4 +5515,75 @@ add_gpei_cases <- function(azcontainer = suppressMessages(get_azure_storage_conn
 
   rm(proxy.data, proxy.data.fill.ctry, proxy.data.fill.prov)
 
+
+
 }
+
+
+cli::cli_process_start("Placing random points for cases with bad coordinates")
+pt01 <- lapply(1:nrow(empty.coord.02), function(x){
+
+  tryCatch(
+    expr = {suppressMessages(sf::st_sample(empty.coord.02[x,], pull(empty.coord.02[x,], "nperarm"),
+                                           exact = T)) |> st_as_sf()},
+    error = function(e) {
+      guid = empty.coord.02[x, ]$GUID[1]
+      ctry_prov_dist_name = global.dist.01 |> filter(GUID == guid) |> select(ADM0_NAME, ADM1_NAME, ADM2_NAME)
+      cli::cli_alert_warning(paste0("Fixing errors for:\n",
+                                    "Country: ", ctry_prov_dist_name$ADM0_NAME,"\n",
+                                    "Province: ", ctry_prov_dist_name$ADM1_NAME, "\n",
+                                    "District: ", ctry_prov_dist_name$ADM2_NAME))
+
+      suppressWarnings(
+        {
+          sf_use_s2(F)
+          int <- empty.coord.02[x,] |> st_centroid(of_largest_polygon = T)
+          sf_use_s2(T)
+
+          st_buffer(int, dist = 3000) |>
+            st_sample(slice(empty.coord.02, x) |>
+                        pull(nperarm)) |>
+            st_as_sf()
+        }
+      )
+
+    }
+  )
+
+}) |>
+  bind_rows()
+
+pt01_joined <- dplyr::bind_cols(
+  pt01,
+  empty.coord.02 |>
+    tibble::as_tibble() |>
+    dplyr::select(GUID, nperarm) |>
+    tidyr::uncount(nperarm)
+) |>
+  dplyr::left_join(tibble::as_tibble(empty.coord.02) |>
+                     dplyr::select(-SHAPE),
+                   by = "GUID")
+
+pt02 <- pt01_joined |>
+  tibble::as_tibble() |>
+  dplyr::select(-nperarm, -id) |>
+  dplyr::group_by(GUID)|>
+  dplyr::arrange(GUID, .by_group = TRUE) |>
+  dplyr::mutate(id = dplyr::row_number()) |>
+  as.data.frame()
+
+pt03 <- empty.coord |>
+  dplyr::group_by(Admin2GUID) |>
+  dplyr::arrange(Admin2GUID, .by_group = TRUE) |>
+  dplyr::mutate(id = dplyr::row_number()) |>
+  dplyr::ungroup()
+
+pt04 <- dplyr::full_join(pt03, pt02, by = c("Admin2GUID" = "GUID", "id"))
+
+pt05 <- pt04 |>
+  dplyr::bind_cols(
+    tibble::as_tibble(pt04$x),
+    sf::st_coordinates(pt04$x) |>
+      tibble::as_tibble() |>
+      dplyr::rename("lon" = "X", "lat" = "Y")) |>
+  dplyr::select(-id)
