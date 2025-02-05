@@ -5458,8 +5458,9 @@ process_spatial <- function(gdb_folder,
 #' a function to add manually extracted GPEI cases to positives file and estimate points
 #' based on lowest level admin data
 #' @imports
+#' @param proxy_data_loc str location of proxy_data on EDAV
 #'
-#'
-add_gpei_cases <- function(x) {
+add_gpei_cases <- function(proxy_data_loc = "") {
+
 
 }
