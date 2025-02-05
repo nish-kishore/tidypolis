@@ -5457,18 +5457,21 @@ process_spatial <- function(gdb_folder,
 #' @description
 #' a function to add manually extracted GPEI cases to positives file and estimate points
 #' based on lowest level admin data
-#' @imports
+#' @imports sirfunctions
 #' @param azcontainer Azure validated container object.
 #' @param proxy_data_loc str location of proxy_data on EDAV
 #'
 add_gpei_cases <- function(azcontainer = suppressMessages(get_azure_storage_connection()),
-                           proxy_data_loc = "/Data/proxy_test/polio_proxy_data.csv") {
+                           proxy_data_loc = "/Data/proxy_test/polio_proxy_data.csv",
+                           polis_pos_loc = "/Data/polis/positives_2001-01-01_2025-01-06.rds") {
 
   long.global.ctry <- sirfunctions::load_clean_ctry_sp(type = "long")
 
   long.global.prov <- sirfunctions::load_clean_prov_sp(type = "long")
 
   proxy.data <- sirfunctions::edav_io(io = "read", file_loc = proxy_data_loc)
+
+  current.positives <- sirfunctions::edav_io(io = "read", file_loc = polis_pos_loc)
 
 
 
