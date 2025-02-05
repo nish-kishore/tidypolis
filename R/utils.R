@@ -5667,6 +5667,11 @@ add_gpei_cases <- function(azcontainer = suppressMessages(get_azure_storage_conn
   proxy.data.ctry.final$x <- NULL
   proxy.data.ctry.final$geometry <- NULL
 
-  rm()
+  proxy.data.final <- rbind(proxy.data.prov.final, proxy.data.ctry.final)
+
+  rm(proxy.data, proxy.data.fill.ctry, proxy.data.fill.ctry.01, proxy.data.fill.ctry.02,
+     pt01, pt01_joined, pt02, pt03, pt04, proxy.data.prov.final, proxy.data.ctry.final)
+
+
 
 }
