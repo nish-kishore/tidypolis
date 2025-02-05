@@ -5583,7 +5583,90 @@ add_gpei_cases <- function(azcontainer = suppressMessages(get_azure_storage_conn
 
   rm(long.global.ctry)
 
+  proxy.data.fill.ctry.01 <- proxy.data.fill.ctry |>
+    tibble::as_tibble() |>
+    dplyr::group_by(adm0guid) |>
+    dplyr::summarise(nperarm = dplyr::n()) |>
+    dplyr::arrange(adm0guid) |>
+    dplyr::mutate(id = dplyr::row_number()) |>
+    dplyr::ungroup() |>
+    dplyr::filter(adm0guid != "{NA}")
 
+  proxy.data.fill.ctry.02 <- global.ctry |>
+    dplyr::select(GUID) |>
+    dplyr::filter(GUID %in% proxy.data.fill.ctry.01$adm0guid) |>
+    dplyr::left_join(proxy.data.fill.ctry.01, by = c("GUID" = "adm0guid"))
 
+  pt01 <- lapply(1:nrow(proxy.data.fill.ctry.02), function(x){
+
+    tryCatch(
+      expr = {suppressMessages(sf::st_sample(proxy.data.fill.ctry.02[x,], pull(proxy.data.fill.ctry.02[x,], "nperarm"),
+                                             exact = T)) |> st_as_sf()},
+      error = function(e) {
+        guid = proxy.data.fill.ctry.02[x, ]$GUID[1]
+        ctry_prov_dist_name = global.ctry |> filter(GUID == adm0guid) |> select(ADM0_NAME)
+        cli::cli_alert_warning(paste0("Fixing errors for:\n",
+                                      "Country: ", ctry_prov_dist_name$ADM0_NAME,"\n"))
+
+        suppressWarnings(
+          {
+            sf_use_s2(F)
+            int <- proxy.data.fill.ctry.02[x,] |> st_centroid(of_largest_polygon = T)
+            sf_use_s2(T)
+
+            st_buffer(int, dist = 3000) |>
+              st_sample(slice(proxy.data.fill.ctry.02, x) |>
+                          pull(nperarm)) |>
+              st_as_sf()
+          }
+        )
+
+      }
+    )
+
+  }) |>
+    bind_rows()
+
+  pt01_joined <- dplyr::bind_cols(
+    pt01,
+    proxy.data.fill.ctry.02 |>
+      tibble::as_tibble() |>
+      dplyr::select(GUID, nperarm) |>
+      tidyr::uncount(nperarm)
+  ) |>
+    dplyr::left_join(tibble::as_tibble(proxy.data.fill.ctry.02) |>
+                       dplyr::select(-Shape),
+                     by = "GUID")
+
+  pt02 <- pt01_joined |>
+    tibble::as_tibble() |>
+    dplyr::select(-nperarm, -id) |>
+    dplyr::group_by(GUID)|>
+    dplyr::arrange(GUID, .by_group = TRUE) |>
+    dplyr::mutate(id = dplyr::row_number()) |>
+    as.data.frame()
+
+  pt03 <- proxy.data.fill.ctry |>
+    dplyr::group_by(adm0guid) |>
+    dplyr::arrange(adm0guid, .by_group = TRUE) |>
+    dplyr::mutate(id = dplyr::row_number()) |>
+    dplyr::ungroup()
+
+  pt04 <- dplyr::full_join(pt03, pt02, by = c("adm0guid" = "GUID", "id"))
+
+  proxy.data.ctry.final <- pt04 |>
+    dplyr::bind_cols(
+      tibble::as_tibble(pt04$x),
+      sf::st_coordinates(pt04$x) |>
+        tibble::as_tibble() |>
+        dplyr::rename("lon" = "X", "lat" = "Y")) |>
+    dplyr::mutate(longitude = lon,
+                  latitude = lat) |>
+    dplyr::select(-c("id", "lon", "lat"))
+
+  proxy.data.ctry.final$x <- NULL
+  proxy.data.ctry.final$geometry <- NULL
+
+  rm()
 
 }
