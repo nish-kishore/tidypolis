@@ -5452,3 +5452,14 @@ process_spatial <- function(gdb_folder,
   remove(df.list, df02)
 
 }
+
+
+#' @description
+#' a function to add manually extracted GPEI cases to positives file and estimate points
+#' based on lowest level admin data
+#' @imports
+#'
+#'
+add_gpei_cases <- function(x) {
+
+}
