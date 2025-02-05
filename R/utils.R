@@ -5502,6 +5502,41 @@ add_gpei_cases <- function(azcontainer = suppressMessages(get_azure_storage_conn
     dplyr::filter(GUID %in% proxy.data.fill.prov.01$adm1guid) |>
     dplyr::left_join(proxy.data.fill.prov.01, by = c("GUID" = "adm1guid"))
 
+  pt01 <- lapply(1:nrow(proxy.data.fill.prov.02), function(x){
+
+    tryCatch(
+      expr = {suppressMessages(sf::st_sample(proxy.data.fill.prov.02[x,], pull(proxy.data.fill.prov.02[x,], "nperarm"),
+                                             exact = T)) |> st_as_sf()},
+      error = function(e) {
+        guid = proxy.data.fill.prov.02[x, ]$GUID[1]
+        ctry_prov_dist_name = global.prov |> filter(GUID == adm1guid) |> select(ADM0_NAME, ADM1_NAME)
+        cli::cli_alert_warning(paste0("Fixing errors for:\n",
+                                      "Country: ", ctry_prov_dist_name$ADM0_NAME,"\n",
+                                      "Province: ", ctry_prov_dist_name$ADM1_NAME, "\n"))
+
+        suppressWarnings(
+          {
+            sf_use_s2(F)
+            int <- proxy.data.fill.prov.02[x,] |> st_centroid(of_largest_polygon = T)
+            sf_use_s2(T)
+
+            st_buffer(int, dist = 3000) |>
+              st_sample(slice(proxy.data.fill.prov.02, x) |>
+                          pull(nperarm)) |>
+              st_as_sf()
+          }
+        )
+
+      }
+    )
+
+  }) |>
+    bind_rows()
+
+
+
+
+
 
 
 
