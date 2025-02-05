@@ -5668,7 +5668,10 @@ add_gpei_cases <- function(azcontainer = suppressMessages(get_azure_storage_conn
   proxy.data.ctry.final$geometry <- NULL
 
   proxy.data.final <- rbind(proxy.data.prov.final, proxy.data.ctry.final) |>
-    dplyr::mutate(dateonset = as.Date(dateonset))
+    dplyr::mutate(dateonset = as.Date(dateonset, format = "%m/%d/%Y"),
+                  report_date = as.Date(report_date, format = "%m/%d/%Y"),
+                  latitude = as.character(latitude),
+                  longitude = as.character(longitude))
 
   rm(proxy.data, proxy.data.fill.ctry, proxy.data.fill.ctry.01, proxy.data.fill.ctry.02,
      pt01, pt01_joined, pt02, pt03, pt04, proxy.data.prov.final, proxy.data.ctry.final)
@@ -5676,6 +5679,8 @@ add_gpei_cases <- function(azcontainer = suppressMessages(get_azure_storage_conn
   positives.new <- current.polis.pos |>
     dplyr::bind_rows(proxy.data.final)
 
-  sirfunctions::edav_io(obj = , io = "write", file_loc = "/data/proxy_test/new_positives.rds")
-
+  sirfunctions::edav_io(obj = positives.new, io = "write", file_loc = paste("/Data/proxy_test/",
+                                                                            paste("positives", min(positives.new$dateonset, na.rm = T),
+                                                                                  max(positives.new$dateonset, na.rm = T),
+                                                                                  sep = "_"), ".rds", sep = ""))
 }
