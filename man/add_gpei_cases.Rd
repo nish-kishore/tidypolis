@@ -14,6 +14,8 @@ add_gpei_cases(
 \item{azcontainer}{Azure validated container object.}
 
 \item{proxy_data_loc}{str location of proxy_data on EDAV}
+
+\item{polis_pos_loc}{str location of latest positives dataset generated from POLIS API data}
 }
 \description{
 a function to add manually extracted GPEI cases to positives file and estimate points
