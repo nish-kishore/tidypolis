@@ -5464,10 +5464,11 @@ process_spatial <- function(gdb_folder,
 
 }
 
+#' add GPEI website reported cases
 #' @description
 #' a function to add manually extracted GPEI cases to positives file and estimate points
 #' based on lowest level admin data
-#' @imports sirfunctions dplyr tibble sf
+#' @import sirfunctions dplyr tibble sf
 #' @param azcontainer Azure validated container object.
 #' @param proxy_data_loc str location of proxy_data on EDAV
 #'
@@ -5694,7 +5695,6 @@ add_gpei_cases <- function(azcontainer = suppressMessages(get_azure_storage_conn
                                                                                   max(positives.new$dateonset, na.rm = T),
                                                                                   sep = "_"), ".rds", sep = ""))
 }
-=======
 
 #Began work on pop processing pipeline but not ready for V1
 
