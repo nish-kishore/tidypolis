@@ -5711,7 +5711,18 @@ if(exists("proxy.data.prov.final") & !exists("proxy.data.ctry.final")){
     dplyr::bind_rows(proxy.data.final)
 }
 
+if(!exists("proxy.data.prov.final") & exists("proxy.data.ctry.final")) {
+    proxy.data.final <- proxy.data.ctry.final |>
+      dplyr::mutate(dateonset = as.Date(dateonset, format = "%m/%d/%Y"),
+                    report_date = as.Date(report_date, format = "%m/%d/%Y"),
+                    latitude = as.character(latitude),
+                    longitude = as.character(longitude))
 
+    rm(proxy.data, proxy.data.ctry.final)
+
+    positives.new <- current.polis.pos |>
+      dplyr::bind_rows(proxy.data.final)
+  }
 
   sirfunctions::edav_io(obj = positives.new, io = "write", file_loc = paste("/Data/proxy/",
                                                                             paste("positives", min(positives.new$dateonset, na.rm = T),
