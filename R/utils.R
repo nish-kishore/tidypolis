@@ -5596,6 +5596,7 @@ if(nrow(proxy.data.fill.prov) >= 1) {
 
   rm(long.global.ctry)
 
+if(nrow(proxy.data.fill.ctry) >= 1) {
   proxy.data.fill.ctry.01 <- proxy.data.fill.ctry |>
     tibble::as_tibble() |>
     dplyr::group_by(adm0guid) |>
@@ -5679,6 +5680,8 @@ if(nrow(proxy.data.fill.prov) >= 1) {
 
   proxy.data.ctry.final$x <- NULL
   proxy.data.ctry.final$geometry <- NULL
+
+}
 
   proxy.data.final <- rbind(proxy.data.prov.final, proxy.data.ctry.final) |>
     dplyr::mutate(dateonset = as.Date(dateonset, format = "%m/%d/%Y"),
