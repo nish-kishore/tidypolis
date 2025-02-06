@@ -5471,7 +5471,7 @@ process_spatial <- function(gdb_folder,
 #' @import sirfunctions dplyr tibble sf
 #' @param azcontainer Azure validated container object.
 #' @param proxy_data_loc str location of proxy_data on EDAV
-#'
+#' @param polis_pos_loc str location of latest positives dataset generated from POLIS API data
 add_gpei_cases <- function(azcontainer = suppressMessages(get_azure_storage_connection()),
                            proxy_data_loc = "/Data/proxy/polio_proxy_data.csv",
                            polis_pos_loc = "/Data/polis/positives_2001-01-01_2025-01-06.rds") {

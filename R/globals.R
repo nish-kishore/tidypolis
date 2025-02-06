@@ -49,5 +49,5 @@ utils::globalVariables(c(
   'corrupted.rds', 'time.to.response', 'planned.campaigns', 'ipv.campaigns', 'yr.end',
   'stool1missing', 'stool2missing', 'Admin0GUID', 'cdc.max.round', 'cluster_method',
   'cdc.round.num', 'cdc.last.camp', 'STARTDATE', 'ENDDATE', 'yr.end', 'Shape', 'empty',
-  'no.of.shapes'
+  'no.of.shapes', 'report_date', "DosesOPVNumber"
 ))
