@@ -5464,7 +5464,237 @@ process_spatial <- function(gdb_folder,
 
 }
 
+#' @description
+#' a function to add manually extracted GPEI cases to positives file and estimate points
+#' based on lowest level admin data
+#' @imports sirfunctions dplyr tibble sf
+#' @param azcontainer Azure validated container object.
+#' @param proxy_data_loc str location of proxy_data on EDAV
+#'
+add_gpei_cases <- function(azcontainer = suppressMessages(get_azure_storage_connection()),
+                           proxy_data_loc = "/Data/proxy/polio_proxy_data.csv",
+                           polis_pos_loc = "/Data/polis/positives_2001-01-01_2025-01-06.rds") {
 
+  long.global.ctry <- sirfunctions::load_clean_ctry_sp(type = "long")
+  long.global.ctry$Shape <- NULL
+  global.ctry <- sirfunctions::load_clean_ctry_sp()
+
+  long.global.prov <- sirfunctions::load_clean_prov_sp(type = "long")
+  long.global.prov$SHAPE <- NULL
+  global.prov <- sirfunctions::load_clean_prov_sp()
+
+  current.polis.pos <- sirfunctions::edav_io(io = "read", file_loc = polis_pos_loc)
+
+  proxy.data <- sirfunctions::edav_io(io = "read", file_loc = proxy_data_loc) |>
+    dplyr::filter(!epid %in% current.polis.pos$epid)
+
+  proxy.data.fill.prov <- dplyr::left_join(proxy.data |> dplyr::filter(!is.na(place.admin.1)),
+                                           long.global.prov |> dplyr::select(ADM0_NAME, ADM1_NAME, ADM0_GUID, GUID, active.year.01),
+                                           by = c("place.admin.0" = "ADM0_NAME", "place.admin.1" = "ADM1_NAME", "yronset" = "active.year.01")) |>
+    dplyr::mutate(adm0guid = ADM0_GUID,
+                  adm1guid = GUID) |>
+    dplyr::select(-c("ADM0_GUID", "GUID"))
+
+  rm(long.global.prov)
+
+  #feed only cases with empty coordinates into st_sample (vars = GUID, nperarm, id, SHAPE)
+  proxy.data.fill.prov.01 <- proxy.data.fill.prov |>
+    tibble::as_tibble() |>
+    dplyr::group_by(adm1guid) |>
+    dplyr::summarise(nperarm = dplyr::n()) |>
+    dplyr::arrange(adm1guid) |>
+    dplyr::mutate(id = dplyr::row_number()) |>
+    dplyr::ungroup() |>
+    dplyr::filter(adm1guid != "{NA}")
+
+  proxy.data.fill.prov.02 <- global.prov |>
+    dplyr::select(GUID) |>
+    dplyr::filter(GUID %in% proxy.data.fill.prov.01$adm1guid) |>
+    dplyr::left_join(proxy.data.fill.prov.01, by = c("GUID" = "adm1guid"))
+
+  pt01 <- lapply(1:nrow(proxy.data.fill.prov.02), function(x){
+
+    tryCatch(
+      expr = {suppressMessages(sf::st_sample(proxy.data.fill.prov.02[x,], pull(proxy.data.fill.prov.02[x,], "nperarm"),
+                                             exact = T)) |> st_as_sf()},
+      error = function(e) {
+        guid = proxy.data.fill.prov.02[x, ]$GUID[1]
+        ctry_prov_dist_name = global.prov |> filter(GUID == adm1guid) |> select(ADM0_NAME, ADM1_NAME)
+        cli::cli_alert_warning(paste0("Fixing errors for:\n",
+                                      "Country: ", ctry_prov_dist_name$ADM0_NAME,"\n",
+                                      "Province: ", ctry_prov_dist_name$ADM1_NAME, "\n"))
+
+        suppressWarnings(
+          {
+            sf_use_s2(F)
+            int <- proxy.data.fill.prov.02[x,] |> st_centroid(of_largest_polygon = T)
+            sf_use_s2(T)
+
+            st_buffer(int, dist = 3000) |>
+              st_sample(slice(proxy.data.fill.prov.02, x) |>
+                          pull(nperarm)) |>
+              st_as_sf()
+          }
+        )
+
+      }
+    )
+
+  }) |>
+    bind_rows()
+
+  pt01_joined <- dplyr::bind_cols(
+    pt01,
+    proxy.data.fill.prov.02 |>
+      tibble::as_tibble() |>
+      dplyr::select(GUID, nperarm) |>
+      tidyr::uncount(nperarm)
+  ) |>
+    dplyr::left_join(tibble::as_tibble(proxy.data.fill.prov.02) |>
+                       dplyr::select(-SHAPE),
+                     by = "GUID")
+
+  pt02 <- pt01_joined |>
+    tibble::as_tibble() |>
+    dplyr::select(-nperarm, -id) |>
+    dplyr::group_by(GUID)|>
+    dplyr::arrange(GUID, .by_group = TRUE) |>
+    dplyr::mutate(id = dplyr::row_number()) |>
+    as.data.frame()
+
+  pt03 <- proxy.data.fill.prov |>
+    dplyr::group_by(adm1guid) |>
+    dplyr::arrange(adm1guid, .by_group = TRUE) |>
+    dplyr::mutate(id = dplyr::row_number()) |>
+    dplyr::ungroup()
+
+  pt04 <- dplyr::full_join(pt03, pt02, by = c("adm1guid" = "GUID", "id"))
+
+  proxy.data.prov.final <- pt04 |>
+    dplyr::bind_cols(
+      tibble::as_tibble(pt04$x),
+      sf::st_coordinates(pt04$x) |>
+        tibble::as_tibble() |>
+        dplyr::rename("lon" = "X", "lat" = "Y")) |>
+    dplyr::mutate(longitude = lon,
+                  latitude = lat) |>
+    dplyr::select(-c("id", "lon", "lat"))
+
+  proxy.data.prov.final$x <- NULL
+  proxy.data.prov.final$geometry <- NULL
+
+  rm(pt01, pt01_joined, pt02, pt03, pt04, proxy.data.fill.prov, proxy.data.fill.prov.01, proxy.data.fill.prov.02)
+
+  proxy.data.fill.ctry <- dplyr::left_join(proxy.data |> dplyr::filter(is.na(place.admin.1)),
+                                           long.global.ctry |> dplyr::select(ADM0_NAME, GUID, active.year.01),
+                                           by = c("place.admin.0" = "ADM0_NAME", "yronset" = "active.year.01")) |>
+    dplyr::mutate(adm0guid = GUID) |>
+    select(-GUID)
+
+  rm(long.global.ctry)
+
+  proxy.data.fill.ctry.01 <- proxy.data.fill.ctry |>
+    tibble::as_tibble() |>
+    dplyr::group_by(adm0guid) |>
+    dplyr::summarise(nperarm = dplyr::n()) |>
+    dplyr::arrange(adm0guid) |>
+    dplyr::mutate(id = dplyr::row_number()) |>
+    dplyr::ungroup() |>
+    dplyr::filter(adm0guid != "{NA}")
+
+  proxy.data.fill.ctry.02 <- global.ctry |>
+    dplyr::select(GUID) |>
+    dplyr::filter(GUID %in% proxy.data.fill.ctry.01$adm0guid) |>
+    dplyr::left_join(proxy.data.fill.ctry.01, by = c("GUID" = "adm0guid"))
+
+  pt01 <- lapply(1:nrow(proxy.data.fill.ctry.02), function(x){
+
+    tryCatch(
+      expr = {suppressMessages(sf::st_sample(proxy.data.fill.ctry.02[x,], pull(proxy.data.fill.ctry.02[x,], "nperarm"),
+                                             exact = T)) |> st_as_sf()},
+      error = function(e) {
+        guid = proxy.data.fill.ctry.02[x, ]$GUID[1]
+        ctry_prov_dist_name = global.ctry |> filter(GUID == adm0guid) |> select(ADM0_NAME)
+        cli::cli_alert_warning(paste0("Fixing errors for:\n",
+                                      "Country: ", ctry_prov_dist_name$ADM0_NAME,"\n"))
+
+        suppressWarnings(
+          {
+            sf_use_s2(F)
+            int <- proxy.data.fill.ctry.02[x,] |> st_centroid(of_largest_polygon = T)
+            sf_use_s2(T)
+
+            st_buffer(int, dist = 3000) |>
+              st_sample(slice(proxy.data.fill.ctry.02, x) |>
+                          pull(nperarm)) |>
+              st_as_sf()
+          }
+        )
+
+      }
+    )
+
+  }) |>
+    bind_rows()
+
+  pt01_joined <- dplyr::bind_cols(
+    pt01,
+    proxy.data.fill.ctry.02 |>
+      tibble::as_tibble() |>
+      dplyr::select(GUID, nperarm) |>
+      tidyr::uncount(nperarm)
+  ) |>
+    dplyr::left_join(tibble::as_tibble(proxy.data.fill.ctry.02) |>
+                       dplyr::select(-Shape),
+                     by = "GUID")
+
+  pt02 <- pt01_joined |>
+    tibble::as_tibble() |>
+    dplyr::select(-nperarm, -id) |>
+    dplyr::group_by(GUID)|>
+    dplyr::arrange(GUID, .by_group = TRUE) |>
+    dplyr::mutate(id = dplyr::row_number()) |>
+    as.data.frame()
+
+  pt03 <- proxy.data.fill.ctry |>
+    dplyr::group_by(adm0guid) |>
+    dplyr::arrange(adm0guid, .by_group = TRUE) |>
+    dplyr::mutate(id = dplyr::row_number()) |>
+    dplyr::ungroup()
+
+  pt04 <- dplyr::full_join(pt03, pt02, by = c("adm0guid" = "GUID", "id"))
+
+  proxy.data.ctry.final <- pt04 |>
+    dplyr::bind_cols(
+      tibble::as_tibble(pt04$x),
+      sf::st_coordinates(pt04$x) |>
+        tibble::as_tibble() |>
+        dplyr::rename("lon" = "X", "lat" = "Y")) |>
+    dplyr::mutate(longitude = lon,
+                  latitude = lat) |>
+    dplyr::select(-c("id", "lon", "lat"))
+
+  proxy.data.ctry.final$x <- NULL
+  proxy.data.ctry.final$geometry <- NULL
+
+  proxy.data.final <- rbind(proxy.data.prov.final, proxy.data.ctry.final) |>
+    dplyr::mutate(dateonset = as.Date(dateonset, format = "%m/%d/%Y"),
+                  report_date = as.Date(report_date, format = "%m/%d/%Y"),
+                  latitude = as.character(latitude),
+                  longitude = as.character(longitude))
+
+  rm(proxy.data, proxy.data.fill.ctry, proxy.data.fill.ctry.01, proxy.data.fill.ctry.02,
+     pt01, pt01_joined, pt02, pt03, pt04, proxy.data.prov.final, proxy.data.ctry.final)
+
+  positives.new <- current.polis.pos |>
+    dplyr::bind_rows(proxy.data.final)
+
+  sirfunctions::edav_io(obj = positives.new, io = "write", file_loc = paste("/Data/proxy/",
+                                                                            paste("positives", min(positives.new$dateonset, na.rm = T),
+                                                                                  max(positives.new$dateonset, na.rm = T),
+                                                                                  sep = "_"), ".rds", sep = ""))
+}
+=======
 
 #Began work on pop processing pipeline but not ready for V1
 
@@ -5501,3 +5731,4 @@ process_spatial <- function(gdb_folder,
 #'
 #' }
 #'
+
