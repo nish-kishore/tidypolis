@@ -5724,10 +5724,12 @@ if(!exists("proxy.data.prov.final") & exists("proxy.data.ctry.final")) {
       dplyr::bind_rows(proxy.data.final)
   }
 
+if(exists("positives.new")){
   sirfunctions::edav_io(obj = positives.new, io = "write", file_loc = paste("/Data/proxy/",
                                                                             paste("positives", min(positives.new$dateonset, na.rm = T),
                                                                                   max(positives.new$dateonset, na.rm = T),
                                                                                   sep = "_"), ".rds", sep = ""))
+  }
 }
 
 #Began work on pop processing pipeline but not ready for V1
