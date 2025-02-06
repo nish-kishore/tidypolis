@@ -5498,6 +5498,7 @@ add_gpei_cases <- function(azcontainer = suppressMessages(get_azure_storage_conn
 
   rm(long.global.prov)
 
+if(nrow(proxy.data.fill.prov) >= 1) {
   #feed only cases with empty coordinates into st_sample (vars = GUID, nperarm, id, SHAPE)
   proxy.data.fill.prov.01 <- proxy.data.fill.prov |>
     tibble::as_tibble() |>
@@ -5585,6 +5586,7 @@ add_gpei_cases <- function(azcontainer = suppressMessages(get_azure_storage_conn
   proxy.data.prov.final$geometry <- NULL
 
   rm(pt01, pt01_joined, pt02, pt03, pt04, proxy.data.fill.prov, proxy.data.fill.prov.01, proxy.data.fill.prov.02)
+}
 
   proxy.data.fill.ctry <- dplyr::left_join(proxy.data |> dplyr::filter(is.na(place.admin.1)),
                                            long.global.ctry |> dplyr::select(ADM0_NAME, GUID, active.year.01),
