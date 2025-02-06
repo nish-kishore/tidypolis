@@ -5681,19 +5681,22 @@ if(nrow(proxy.data.fill.ctry) >= 1) {
   proxy.data.ctry.final$x <- NULL
   proxy.data.ctry.final$geometry <- NULL
 
+  rm(proxy.data.fill.ctry, proxy.data.fill.ctry.01, proxy.data.fill.ctry.02,
+     pt01, pt01_joined, pt02, pt03, pt04)
 }
 
+if(exists("proxy.data.prov.final") & exists("proxy.data.ctry.final")) {
   proxy.data.final <- rbind(proxy.data.prov.final, proxy.data.ctry.final) |>
     dplyr::mutate(dateonset = as.Date(dateonset, format = "%m/%d/%Y"),
                   report_date = as.Date(report_date, format = "%m/%d/%Y"),
                   latitude = as.character(latitude),
                   longitude = as.character(longitude))
 
-  rm(proxy.data, proxy.data.fill.ctry, proxy.data.fill.ctry.01, proxy.data.fill.ctry.02,
-     pt01, pt01_joined, pt02, pt03, pt04, proxy.data.prov.final, proxy.data.ctry.final)
+  rm(proxy.data, proxy.data.prov.final, proxy.data.ctry.final)
 
   positives.new <- current.polis.pos |>
     dplyr::bind_rows(proxy.data.final)
+}
 
   sirfunctions::edav_io(obj = positives.new, io = "write", file_loc = paste("/Data/proxy/",
                                                                             paste("positives", min(positives.new$dateonset, na.rm = T),
