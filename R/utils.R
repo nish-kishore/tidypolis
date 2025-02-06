@@ -1100,8 +1100,13 @@ f.download.compare.01 <- function(old.download, new.download) {
 #' @param df.from.f.download.compare.01 tibble: output from f.download.compare.01
 #' @param old.download tibble
 #' @param new.download tibble
+#' @param type str name of the df that the comparison is being made on, for use in log
+#' "AFP", "SIA", "ES", "POS"
 #' @returns tibble of variables to compare
-f.download.compare.02 <- function(df.from.f.download.compare.01, old.download, new.download) {
+f.download.compare.02 <- function(df.from.f.download.compare.01,
+                                  old.download,
+                                  new.download,
+                                  type = NULL) {
 
   if (!requireNamespace("purrr", quietly = TRUE)) {
     stop('Package "purrr" must be installed to use this function.',
@@ -1134,30 +1139,24 @@ f.download.compare.02 <- function(df.from.f.download.compare.01, old.download, n
   # strip old and combined data by column. Do merge by those two columns
   # and make a list of dataframes. The size of list is equal to number of variables
   # with new distinct values
+  new.distinct.value.01 <- list()
 
-  new.distinct.value.01 <- purrr::map(x,
-                                      ~ dplyr::anti_join(
-                                        (
-                                          dplyr::bind_rows(old.download, new.download) |> dplyr::select(x) |> dplyr::distinct()
-                                        ),
-                                        (old.download |> dplyr::select(x) |> dplyr::distinct())
-                                      ) |> dplyr::mutate(id = dplyr::row_number()))
+  for(i in 1:length(x)) {
+    var.check <- dplyr::anti_join(
+      (dplyr::bind_rows(old.download, new.download) |> dplyr::select(x[i]) |> dplyr::distinct()),
+      (old.download |> dplyr::select(x[i]) |> dplyr::distinct()), by = x[i]
+    )
 
-  # Make a dataframe from list of dataframe
-  new.distinct.value.01.df <- purrr::reduce(new.distinct.value.01, full_join)
+    new.distinct.value.01[[i]] <- var.check
 
-  # Identify distinct values of new variable
-  new.distinct.var.01 <- dplyr::bind_rows(old.download, new.download) |>
-    dplyr::select(y) |>
-    dplyr::distinct() |>
-    dplyr::mutate(id = dplyr::row_number())
+  }
 
-  # final dataframe with all levels of new variable and new distinct values of existing
-  # variable
-  final.df.01 <- dplyr::full_join(new.distinct.value.01.df, new.distinct.var.01) |>
-    dplyr::select(-id)
-
-  return(final.df.01)
+  for (i in 1:length(new.distinct.value.01)) {
+    update_polis_log(.event = paste0("New values in ", type, " for ", x[i], ": ",
+                                     paste(unlist(new.distinct.value.01[i]),
+                                           collapse = ", ")),
+                     .event_type = "ALERT")
+  }
 }
 
 #' Sample points for missing lat/lon
@@ -2247,6 +2246,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   crosswalk <- get_crosswalk_data()
 
   cli::cli_process_start("Case")
+  api_case_sub1 <- api_case_sub1 |>
+    dplyr::rename(DosesTotal = DosesOPVNumber)
   api_case_sub2 <- rename_via_crosswalk(api_data = api_case_sub1,
                                         crosswalk = crosswalk,
                                         table_name = "Case")
@@ -2855,11 +2856,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
       cli::cli_alert_danger("There is either a new variable in the AFP data or new value of an existing variable.
        Please run f.download.compare.02 to see what it is. New values of variables are present in log file.")
 
-      afp.new.value <- f.download.compare.02(new.var.afp.01, afp.raw.old.comp, afp.raw.new.comp)
-
-      update_polis_log(.event = sapply(names(afp.new.value), function(x) paste0("New Values in: ", x, " - ", paste0(unique(dplyr::pull(afp.new.value, x)), collapse = ", "))) |>
-                         paste0(collapse = "; "),
-                       .event_type = "ALERT")
+      afp.new.value <- f.download.compare.02(new.var.afp.01, afp.raw.old.comp, afp.raw.new.comp, type = "AFP")
 
     } else {
       cli::cli_alert_info("New AFP download is comparable to old AFP download")
@@ -3830,11 +3827,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
       cli::cli_alert_danger("There is either a new variable in the SIA data or new value of an existing variable.
        Please run f.download.compare.02 to see what it is. Preprocessing can not continue until this is adressed.")
 
-      sia.new.value <- f.download.compare.02(new.var.sia.01, sia.01.old.compare, sia.01.new.compare)
-
-      update_polis_log(.event = sapply(names(sia.new.value), function(x) paste0("New values in: ", x, " - ", paste0(unique(dplyr::pull(sia.new.value, x)), collapse = ", "))) |>
-                         paste0(collapse = "; "),
-                       .event_type = "ALERT")
+      sia.new.value <- f.download.compare.02(new.var.sia.01, sia.01.old.compare, sia.01.new.compare, type = "SIA")
 
     } else {
 
@@ -4158,7 +4151,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     'sia.01.old.compare', 'sia.02', 'sia.03', 'sia.04', 'sia.05',
     'sia.06', 'sia.clean.01', 'sia.files.01', 'sia.files.02',
     'sia_metadata_comparison', 'sia.file.path',
-    'startyr', 'tofix', 'var.list.01', "sia.new", "sia.to.combine"
+    'startyr', 'tofix', 'var.list.01', "sia.new", "sia.to.combine",
+    "sia.clean.02", "sia.cluster.data", 'sia.new.value',
+    "sia.rounds", "sia.clusters"
   )
 
   cli::cli_process_done()
@@ -4198,7 +4193,10 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
       "date.shipped.to.ref.lab", "region.id", "region.official.name", "admin.0.officialname", "admin.1.id",
       "admin.1.officialname", "admin.2.id", "admin.2.officialname", "updated.date", "publish.date", "uploaded.date",
       "uploaded.by",  "reporting.year", "date.notification.to.hq", "date.received.in.lab", "created.date", "date.f1.ref.itd",
-      "date.f2.ref.itd", "date.f3.ref.itd","date.f4.ref.itd","date.f5.ref.itd", "date.f6.ref.itd"
+      "date.f2.ref.itd", "date.f3.ref.itd","date.f4.ref.itd","date.f5.ref.itd", "date.f6.ref.itd",
+      "date.final.culture.result", "date.final.results.reported", "date.final.combined.result",
+      "date.isol.sent.seq2", "date.isol.rec.seq2", "date.final.seq.result", "date.res.sent.out.vaccine2",
+      "date.res.sent.out.vdpv2", "nt.changes"
     )
 
 
@@ -4209,7 +4207,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     es.02.new <- es.01.new |>
       dplyr::select(-dplyr::all_of(var.list.01))
 
-    new.var.es.01 <- f.download.compare.01(es.02.new, es.02.old)
+    new.var.es.01 <- f.download.compare.01(old.download = es.02.old, new.download = es.02.new)
 
     new.df <- new.var.es.01 |>
       dplyr::filter(is.na(old.distinct.01) | diff.distinct.01 >= 1) |>
@@ -4220,12 +4218,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
           Please run f.download.compare.01 to see what it is. Preprocessing can not continue until this is adressed.")
 
 
-      es.new.value <- f.download.compare.02(new.var.es.01 |> filter(!(is.na(old.distinct.01)) & variable != "id"), es.02.old, es.02.new)
-
-
-      update_polis_log(.event = sapply(names(es.new.value), function(x) paste0("New Values in: ", x, " - ", paste0(unique(dplyr::pull(es.new.value, x)), collapse = ", "))) |>
-                         paste0(collapse = "; "),
-                       .event_type = "ALERT")
+      es.new.value <- f.download.compare.02(new.var.es.01 |>
+                                              dplyr::filter(!(is.na(old.distinct.01)) & variable != "id"), es.02.old, es.02.new, type = "ES")
 
     }else{
       cli::cli_alert_info("No variable change errors")
@@ -4553,7 +4547,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     'in_new_and_old_but_modified', 'in_new_not_old', 'in_old_not_new',
     'na.es.01', 'new', 'new.df', 'new.file', 'new.var.es.01', 'new_table_metadata', 'newsites',
     'old', 'old.es.file', 'old.file', 'old_table_metadata', 'savescipen',
-    'shape.name.01', 'truenewsites', 'var.list.01', 'sia.new.value'
+    'shape.name.01', 'truenewsites', 'var.list.01'
   )
   gc()
   cli::cli_process_done()
@@ -4604,7 +4598,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
       dplyr::filter(variable != "virus.type(s)" & variable != "vdpv.classification(s)" & variable != "nt.changes" & variable != "emergence.group(s)" &
                       variable != "virus.cluster(s)" & variable != "surveillance.type" &
                       !(variable %in% c("exact.longitude", "exact.latitude", "pons.latitude", "pons.longitude", "pons.environment",
-                                        "pons.seq.date", "pons.administration.type", "pons.spec.type", "location", "country.iso2"))) # list of variables we want evaluated in 2nd QC function
+                                        "pons.seq.date", "pons.administration.type", "pons.spec.type", "location", "country.iso2",
+                                        "nt.changes", "location"))) # list of variables we want evaluated in 2nd QC function
 
 
     var.list.01 <- as.character(var.names.01$variable)
@@ -4632,11 +4627,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
       # Step 4: Apply compare variables function
 
-      virus.new.value <- f.download.compare.02(new.var.virus.01, virus.raw.old.comp, virus.raw.new.comp)
-
-      update_polis_log(.event = sapply(names(virus.new.value), function(x) paste0("New Values in: ", x, " - ", paste0(unique(dplyr::pull(virus.new.value, x)), collapse = ", "))) |>
-                         paste0(collapse = "; "),
-                       .event_type = "ALERT")
+      virus.new.value <- f.download.compare.02(new.var.virus.01, virus.raw.old.comp, virus.raw.new.comp, type = "POS")
 
     } else {
       cli::cli_alert_info("New AFP download is comparable to old AFP download")
@@ -4800,7 +4791,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_start("Processing and cleaning AFP/non-AFP files")
   afp.files.01 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path = file.path(polis_data_folder, "Core_Ready_Files"), full_names = T)) |>
     dplyr::mutate(short_name = stringr::str_replace(name, paste0(polis_data_folder, "/Core_Ready_Files/"), "")) |>
-    dplyr::filter(grepl("^(afp_linelist_2001-01-01_2024).*(.rds)$", short_name)) |>
+    dplyr::filter(grepl("^(afp_linelist_2001-01-01_2025).*(.rds)$", short_name)) |>
     dplyr::pull(name)
   afp.01 <- lapply(afp.files.01, function(x) tidypolis_io(io = "read", file_path = x)) |>
     dplyr::bind_rows() |>
@@ -4810,7 +4801,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   non.afp.files.01 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path = file.path(polis_data_folder, "Core_Ready_Files"), full_names = T)) |>
     dplyr::mutate(short_name = stringr::str_replace(name, paste0(polis_data_folder, "/Core_Ready_Files/"), "")) |>
-    dplyr::filter(grepl("^(other_surveillance_type_linelist_2016_2024).*(.rds)$", short_name)) |>
+    dplyr::filter(grepl("^(other_surveillance_type_linelist_2016_2025).*(.rds)$", short_name)) |>
     dplyr::pull(name)
   non.afp.01 <- purrr::map_df(non.afp.files.01, ~ tidypolis_io(io = "read", file_path = .x)) |>
     dplyr::ungroup() |>
@@ -4996,9 +4987,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   if(length(old.file) > 0){
 
-    old.es <- tidypolis_io(io = "read", file_path = old.file)
+    old.pos <- tidypolis_io(io = "read", file_path = old.file)
 
-    old_table_metadata <- f.summarise.metadata(old.es)
+    old_table_metadata <- f.summarise.metadata(old.pos)
     positives_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata, "POS")
 
     new <- afp.es.virus.03 |>
@@ -5009,7 +5000,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
       dplyr::ungroup() |>
       dplyr::mutate_all(as.character)
 
-    old <- old.es |>
+    old <- old.pos |>
       dplyr::mutate(epid = stringr::str_squish(epid)) |>
       dplyr::group_by(epid)|>
       dplyr::slice(1) |>
@@ -5064,7 +5055,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     }
 
     # list of records in new but not in old.
-    in_new_not_old <- in_new_not_old |> select(place.admin.0, epid, dateonset, yronset, source, virustype)
+    in_new_not_old <- in_new_not_old |>
+      dplyr::select(place.admin.0, epid, dateonset, yronset, source, virustype)
 
     if(nrow(in_new_not_old) > 0 ){
       # Export records for which virus type has changed from last week to this week in the CSV file:
@@ -5093,16 +5085,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
                  file_path = paste0(polis_data_folder, "/Core_Ready_Files/virus_class_changed_date.csv"))
   }
 
-  log.in.new.and.old.mod <- ifelse(
-    is.list(in_new_and_old_but_modified),
-    NA,
-    length(unique(in_new_and_old_but_modified$epid))
-  )
-
-
   update_polis_log(.event = paste0("POS New Records: ", nrow(in_new_not_old), "; ",
                                    "POS Removed Records: ", nrow(in_old_not_new), "; ",
-                                   "POS Modified Records: ", log.in.new.and.old.mod, "; ",
+                                   "POS Modified Records: ", length(unique(in_new_and_old_but_modified)), "; ",
                                    "POS Class Changed Records: ", length(unique(class.updated$epid))),
                    .event_type = "INFO")
 
