@@ -2,10 +2,16 @@
 #'
 #' @description Initialize API Key and local data cache for tidypolis. Inspired by the
 #' tidycensus process for managing their API secrets.
-#' @import cli yaml tibble dplyr readr lubridate
+#' @import cli yaml tibble dplyr readr lubridate sirfunctions
 #' @param polis_data_folder str: location of folder where to store all information
 #' @param edav boolean: should the system use EDAV as it's cache; default FALSE
 #' @returns Messages on process
+#' @examples
+#' \dontrun{
+#' init_tidypolis(polis_data_folder = "POLIS", edav = T) #create a polis data cache on CDC EDAV
+#' init_tidypolis("C:/Users/"user_name"/Desktop/polis", edav = F)
+#' #create a polis data cache on your local desktop
+#' }
 #' @export
 init_tidypolis <- function(
     polis_data_folder,
@@ -215,7 +221,11 @@ init_tidypolis <- function(
 #' deleted rows are reflected in the local system.
 #' @param type choose to download population data ("pop") or all other data. Default's to "all"
 #' @import dplyr
-#' @export
+#' @examples
+#' \dontrun{
+#' get_polis_data() #must be run after using init_tidypolis and providing a valid API key
+#' }
+#' #' @export
 get_polis_data <- function(type = "all"){
 
   if(type == "all"){
@@ -297,7 +307,11 @@ freeze_polis_data <- function(){
 #' @param type str: specify the type of preprocessing to complete
 #' @import cli
 #' @returns Analytic rds files
-#' @export
+#' @examples
+#' \dontrun{
+#' preprocess_data(type = "cdc") #must run init_tidypolis to specify POLIS data location first
+#' }
+#' #' @export
 preprocess_data <- function(type){
 
   types <- c("cdc")

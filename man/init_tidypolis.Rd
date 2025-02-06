@@ -18,3 +18,10 @@ Messages on process
 Initialize API Key and local data cache for tidypolis. Inspired by the
 tidycensus process for managing their API secrets.
 }
+\examples{
+\dontrun{
+init_tidypolis(polis_data_folder = "POLIS", edav = T) #create a polis data cache on CDC EDAV
+init_tidypolis("C:/Users/"user_name"/Desktop/polis", edav = F)
+#create a polis data cache on your local desktop
+}
+}

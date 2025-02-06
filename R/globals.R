@@ -46,5 +46,8 @@ utils::globalVariables(c(
   'full_name', 'measurement', 'short_name', 'time', 'vaccine_source', 'vdpvclassificationchangedate',
   'vdpvclassificationcode', 'vdpvclassificationcode', 'case.date', 'last.updated.date', 'sia.code', 'specimen.date',
   'stool1tostool2', 'sub.activity.initial.planned.date', 'sub.activity.last.updated.date',
-  'corrupted.rds'
+  'corrupted.rds', 'time.to.response', 'planned.campaigns', 'ipv.campaigns', 'yr.end',
+  'stool1missing', 'stool2missing', 'Admin0GUID', 'cdc.max.round', 'cluster_method',
+  'cdc.round.num', 'cdc.last.camp', 'STARTDATE', 'ENDDATE', 'yr.end', 'Shape', 'empty',
+  'no.of.shapes'
 ))
