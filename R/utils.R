@@ -5464,13 +5464,14 @@ process_spatial <- function(gdb_folder,
 
 }
 
+#' add GPEI website reported cases
 #' @description
 #' a function to add manually extracted GPEI cases to positives file and estimate points
 #' based on lowest level admin data
-#' @imports sirfunctions dplyr tibble sf
+#' @import sirfunctions dplyr tibble sf
 #' @param azcontainer Azure validated container object.
 #' @param proxy_data_loc str location of proxy_data on EDAV
-#'
+#' @param polis_pos_loc str location of latest positives dataset generated from POLIS API data
 add_gpei_cases <- function(azcontainer = suppressMessages(get_azure_storage_connection()),
                            proxy_data_loc = "/Data/proxy/polio_proxy_data.csv",
                            polis_pos_loc = "/Data/polis/positives_2001-01-01_2025-01-06.rds") {
@@ -5497,6 +5498,7 @@ add_gpei_cases <- function(azcontainer = suppressMessages(get_azure_storage_conn
 
   rm(long.global.prov)
 
+if(nrow(proxy.data.fill.prov) >= 1) {
   #feed only cases with empty coordinates into st_sample (vars = GUID, nperarm, id, SHAPE)
   proxy.data.fill.prov.01 <- proxy.data.fill.prov |>
     tibble::as_tibble() |>
@@ -5584,6 +5586,7 @@ add_gpei_cases <- function(azcontainer = suppressMessages(get_azure_storage_conn
   proxy.data.prov.final$geometry <- NULL
 
   rm(pt01, pt01_joined, pt02, pt03, pt04, proxy.data.fill.prov, proxy.data.fill.prov.01, proxy.data.fill.prov.02)
+}
 
   proxy.data.fill.ctry <- dplyr::left_join(proxy.data |> dplyr::filter(is.na(place.admin.1)),
                                            long.global.ctry |> dplyr::select(ADM0_NAME, GUID, active.year.01),
@@ -5593,6 +5596,7 @@ add_gpei_cases <- function(azcontainer = suppressMessages(get_azure_storage_conn
 
   rm(long.global.ctry)
 
+if(nrow(proxy.data.fill.ctry) >= 1) {
   proxy.data.fill.ctry.01 <- proxy.data.fill.ctry |>
     tibble::as_tibble() |>
     dplyr::group_by(adm0guid) |>
@@ -5677,24 +5681,56 @@ add_gpei_cases <- function(azcontainer = suppressMessages(get_azure_storage_conn
   proxy.data.ctry.final$x <- NULL
   proxy.data.ctry.final$geometry <- NULL
 
+  rm(proxy.data.fill.ctry, proxy.data.fill.ctry.01, proxy.data.fill.ctry.02,
+     pt01, pt01_joined, pt02, pt03, pt04)
+}
+
+if(exists("proxy.data.prov.final") & exists("proxy.data.ctry.final")) {
   proxy.data.final <- rbind(proxy.data.prov.final, proxy.data.ctry.final) |>
     dplyr::mutate(dateonset = as.Date(dateonset, format = "%m/%d/%Y"),
                   report_date = as.Date(report_date, format = "%m/%d/%Y"),
                   latitude = as.character(latitude),
                   longitude = as.character(longitude))
 
-  rm(proxy.data, proxy.data.fill.ctry, proxy.data.fill.ctry.01, proxy.data.fill.ctry.02,
-     pt01, pt01_joined, pt02, pt03, pt04, proxy.data.prov.final, proxy.data.ctry.final)
+  rm(proxy.data, proxy.data.prov.final, proxy.data.ctry.final)
 
   positives.new <- current.polis.pos |>
     dplyr::bind_rows(proxy.data.final)
+}
 
+if(exists("proxy.data.prov.final") & !exists("proxy.data.ctry.final")){
+  proxy.data.final <- proxy.data.prov.final |>
+    dplyr::mutate(dateonset = as.Date(dateonset, format = "%m/%d/%Y"),
+                  report_date = as.Date(report_date, format = "%m/%d/%Y"),
+                  latitude = as.character(latitude),
+                  longitude = as.character(longitude))
+
+  rm(proxy.data, proxy.data.prov.final)
+
+  positives.new <- current.polis.pos |>
+    dplyr::bind_rows(proxy.data.final)
+}
+
+if(!exists("proxy.data.prov.final") & exists("proxy.data.ctry.final")) {
+    proxy.data.final <- proxy.data.ctry.final |>
+      dplyr::mutate(dateonset = as.Date(dateonset, format = "%m/%d/%Y"),
+                    report_date = as.Date(report_date, format = "%m/%d/%Y"),
+                    latitude = as.character(latitude),
+                    longitude = as.character(longitude))
+
+    rm(proxy.data, proxy.data.ctry.final)
+
+    positives.new <- current.polis.pos |>
+      dplyr::bind_rows(proxy.data.final)
+  }
+
+if(exists("positives.new")){
   sirfunctions::edav_io(obj = positives.new, io = "write", file_loc = paste("/Data/proxy/",
                                                                             paste("positives", min(positives.new$dateonset, na.rm = T),
                                                                                   max(positives.new$dateonset, na.rm = T),
                                                                                   sep = "_"), ".rds", sep = ""))
+  }
 }
-=======
 
 #Began work on pop processing pipeline but not ready for V1
 
