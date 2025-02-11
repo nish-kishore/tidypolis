@@ -1376,7 +1376,10 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
       sf::st_coordinates(pt04$x) |>
         tibble::as_tibble() |>
         dplyr::rename("lon" = "X", "lat" = "Y")) |>
-    dplyr::select(-id)
+    dplyr::select(-id) |>
+    dplyr::mutate(geo.corrected = ifelse(paste0("{", stringr::str_to_upper(admin2guid), "}", sep = "") != Admin2GUID, 1, 0),
+                  geo.corrected = ifelse(paste0("{", stringr::str_to_upper(admin1guid), "}", sep = "") != Admin1GUID, 1, geo.corrected),
+                  geo.corrected = ifelse(paste0("{", stringr::str_to_upper(admin0guid), "}", sep = "") != Admin0GUID, 1, geo.corrected))
 
   pt05$x <- NULL
   pt05$geometry <- NULL
