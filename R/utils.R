@@ -1377,9 +1377,14 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
         tibble::as_tibble() |>
         dplyr::rename("lon" = "X", "lat" = "Y")) |>
     dplyr::select(-id) |>
+    dplyr::left_join(global.dist.01 |> dplyr::select(ADM0_NAME, ADM1_NAME, ADM2_NAME, ADM0_GUID, ADM1_GUID, GUID),
+                     by = c("Admin0GUID" = "ADM0_GUID", "Admin1GUID" = "ADM1_GUID", "Admin2GUID" = "GUID")) |>
     dplyr::mutate(geo.corrected = ifelse(paste0("{", stringr::str_to_upper(admin2guid), "}", sep = "") != Admin2GUID, 1, 0),
                   geo.corrected = ifelse(paste0("{", stringr::str_to_upper(admin1guid), "}", sep = "") != Admin1GUID, 1, geo.corrected),
-                  geo.corrected = ifelse(paste0("{", stringr::str_to_upper(admin0guid), "}", sep = "") != Admin0GUID, 1, geo.corrected))
+                  geo.corrected = ifelse(paste0("{", stringr::str_to_upper(admin0guid), "}", sep = "") != Admin0GUID, 1, geo.corrected),
+                  place.admin.0 = ifelse(place.admin.0 != ADM0_NAME, ADM0_NAME, place.admin.0),
+                  place.admin.1 = ifelse(place.admin.1 != ADM1_NAME, ADM1_NAME, place.admin.1),
+                  place.admin.2 = ifelse(place.admin.2 != ADM2_NAME, ADM2_NAME, place.admin.2))
 
   pt05$x <- NULL
   pt05$geometry <- NULL
