@@ -1284,11 +1284,12 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
   df07$geometry <- NULL
 
   global.dist.02$SHAPE <- NULL
-  df08 <- dplyr::left_join(df07, global.dist.02 |> dplyr::select(GUID, ADM1_GUID, ADM1_NAME, ADM2_NAME), by = c("Admin2GUID" = "GUID", "ADM1_GUID")) |>
-    dplyr::mutate(place.admin.1 = ifelse(place.admin.1 != ADM1_NAME, ADM1_NAME, place.admin.1),
+  df08 <- dplyr::left_join(df07, global.dist.02 |> dplyr::select(GUID, ADM1_GUID, ADM0_NAME, ADM1_NAME, ADM2_NAME), by = c("Admin2GUID" = "GUID", "ADM1_GUID")) |>
+    dplyr::mutate(place.admin.0 = ifelse(place.admin.0 != ADM0_NAME, ADM0_NAME, place.admin.0),
+                  place.admin.1 = ifelse(place.admin.1 != ADM1_NAME, ADM1_NAME, place.admin.1),
                   place.admin.2 = ifelse(place.admin.2 != ADM2_NAME, ADM2_NAME, place.admin.2),
                   geo.corrected = ifelse(is.na(geo.corrected), 0, geo.corrected)) |>
-    dplyr::select(-c("ADM1_NAME", "ADM2_NAME"))
+    dplyr::select(-c("ADM0_NAME", "ADM1_NAME", "ADM2_NAME"))
 
   #feed only cases with empty coordinates into st_sample (vars = GUID, nperarm, id, SHAPE)
   empty.coord.01 <- empty.coord |>
