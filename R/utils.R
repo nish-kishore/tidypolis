@@ -5273,16 +5273,20 @@ process_spatial <- function(gdb_folder,
 
   #identify potential duplicates
   dupe.guid.ctry <- global.ctry.01 |>
-    dplyr::group_by(GUID) |>
+    dplyr::group_by(GUID, Shape_Length, Shape_Area, CENTER_LON, CENTER_LAT, yr.st, yr.end) |>
     dplyr::mutate(n = n()) |>
     dplyr::ungroup() |>
     dplyr::filter(n > 1)
 
   dupe.name.ctry <- global.ctry.01 |>
-    dplyr::group_by(ADM0_NAME, Shape_Length, Shape_Area) |>
+    dplyr::group_by(ADM0_NAME, Shape_Length, Shape_Area, CENTER_LON, CENTER_LAT, yr.st, yr.end) |>
     dplyr::mutate(n = n()) |>
     dplyr::ungroup() |>
     dplyr::filter(n > 1)
+
+  if(nrow(dupe.guid.ctry) > 1 | nrow(dupe.name.ctry) > 1) {
+    cli::cli_alert_warning("There is a country shape with an exact duplicate, please manually run shape preprocessing to evaluate this shape")
+  }
 
   if(nrow(dupe.guid.ctry) > 1) {
     if(edav) {
@@ -5292,6 +5296,18 @@ process_spatial <- function(gdb_folder,
     } else {
       tidypolis_io(io = "write", edav = F,
                    file_path = paste0(output_folder, "/duplicate_ctry_guid.csv"),
+                   obj = empty.ctry)
+    }
+ }
+
+  if(nrow(dupe.name.ctry) > 1) {
+    if(edav) {
+      tidypolis_io(io = "write", edav = T,
+                   file_path = paste0(output_folder, "/duplicate_ctry_name.csv"),
+                   obj = empty.ctry)
+    } else {
+      tidypolis_io(io = "write", edav = F,
+                   file_path = paste0(output_folder, "/duplicate_ctry_name.csv"),
                    obj = empty.ctry)
     }
   }
