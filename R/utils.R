@@ -5284,6 +5284,18 @@ process_spatial <- function(gdb_folder,
     dplyr::ungroup() |>
     dplyr::filter(n > 1)
 
+  if(nrow(dupe.guid.ctry) > 1) {
+    if(edav) {
+      tidypolis_io(io = "write", edav = T,
+                   file_path = paste0(output_folder, "/duplicate_ctry_guid.csv"),
+                   obj = empty.ctry)
+    } else {
+      tidypolis_io(io = "write", edav = F,
+                   file_path = paste0(output_folder, "/duplicate_ctry_guid.csv"),
+                   obj = empty.ctry)
+    }
+  }
+
   #ensure CRS of ctry file is 4326
   global.ctry.01 <- sf::st_set_crs(global.ctry.01, 4326)
 
