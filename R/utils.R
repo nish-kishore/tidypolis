@@ -5285,7 +5285,7 @@ process_spatial <- function(gdb_folder,
     dplyr::filter(n > 1)
 
   if(nrow(dupe.guid.ctry) > 1 | nrow(dupe.name.ctry) > 1) {
-    cli::cli_alert_warning("There is a country shape with an exact duplicate, please manually run shape preprocessing to evaluate this shape")
+    cli::cli_alert_warning("There is a country shape with an exact duplicate, please manually run shape preprocessing to inspect")
   }
 
   if(nrow(dupe.guid.ctry) > 1) {
@@ -5386,7 +5386,7 @@ process_spatial <- function(gdb_folder,
     dplyr::filter(n > 1)
 
   if(nrow(dupe.guid.prov) > 1 | nrow(dupe.name.prov) > 1) {
-    cli::cli_alert_warning("There is a duplicated province that is exactly the same, please run shape preprocessing manually to identify")
+    cli::cli_alert_warning("There is a duplicated province that is exactly the same, please run shape preprocessing manually to inspect")
   }
 
   if(nrow(dupe.guid.prov) > 1) {
@@ -5473,6 +5473,19 @@ process_spatial <- function(gdb_folder,
     dplyr::mutate(n = n()) |>
     dplyr::ungroup() |>
     dplyr::filter(n > 1)
+
+  dupe.name.dist <- global.dist.01 |>
+    dplyr::group_by(ADM0_NAME, ADM1_NAME, ADM2_NAME, yr.st, yr.end) |>
+    dplyr::mutate(n = n()) |>
+    dplyr::ungroup() |>
+    dplyr::filter(n > 1) |>
+    dplyr::arrange(ADM0_NAME, ADM1_NAME, ADM2_NAME, yr.st)
+
+  if(nrow(dupe.guid.dist) > 1 | nrow(dupe.name.dist) > 1) {
+    cli::cli_alert_warning("There are duplicates in district shapes, please run shape processing manually to inspect")
+  }
+
+
 
   #ensure district CRS is 4326
   global.dist.01 <- sf::st_set_crs(global.dist.01, 4326)
