@@ -5485,7 +5485,29 @@ process_spatial <- function(gdb_folder,
     cli::cli_alert_warning("There are duplicates in district shapes, please run shape processing manually to inspect")
   }
 
+  if(nrow(dupe.guid.dist) > 1) {
+    if(edav) {
+      tidypolis_io(io = "write", edav = T,
+                   file_path = paste0(output_folder, "/duplicate_dist_guid.csv"),
+                   obj = dupe.guid.dist)
+    } else {
+      tidypolis_io(io = "write", edav = F,
+                   file_path = paste0(output_folder, "/duplicate_dist_guid.csv"),
+                   obj = dupe.guid.dist)
+    }
+  }
 
+  if(nrow(dupe.name.dist) > 1) {
+    if(edav) {
+      tidypolis_io(io = "write", edav = T,
+                   file_path = paste0(output_folder, "/duplicate_dist_name.csv"),
+                   obj = dupe.name.dist)
+    } else {
+      tidypolis_io(io = "write", edav = F,
+                   file_path = paste0(output_folder, "/duplicate_dist_name.csv"),
+                   obj = dupe.name.dist)
+    }
+  }
 
   #ensure district CRS is 4326
   global.dist.01 <- sf::st_set_crs(global.dist.01, 4326)
