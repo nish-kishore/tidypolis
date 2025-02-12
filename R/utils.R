@@ -5408,6 +5408,9 @@ process_spatial <- function(gdb_folder,
   }
 
   rm(check.dist.valid, row.num.dist, invalid.dist.shapes, empty.dist)
+
+  #ensure district CRS is 4326
+  global.dist.01 <- sf::st_set_crs(global.dist.01, 4326)
   # save global province geodatabase in RDS file:
   if(edav) {
     tidypolis_io(io = "write", edav = T,
