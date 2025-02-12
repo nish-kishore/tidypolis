@@ -5270,6 +5270,10 @@ process_spatial <- function(gdb_folder,
   }
 
   rm(invalid.ctry.shapes, check.ctry.valid, row.num.ctry, empty.ctry)
+
+  #ensure CRS of ctry file is 4326
+  global.ctry.01 <- sf::st_set_crs(global.ctry.01, 4326)
+
   # save global country geodatabase in RDS file:
   if(edav) {
     tidypolis_io(io = "write", edav = T,
