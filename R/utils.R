@@ -5374,7 +5374,7 @@ process_spatial <- function(gdb_folder,
 
   #duplicate checking in provinces
   dupe.guid.prov <- global.prov.01 |>
-    dplyr::group_by(GUID, ADM0_GUID) |>
+    dplyr::group_by(GUID) |>
     dplyr::mutate(n = n()) |>
     dplyr::ungroup() |>
     dplyr::filter(n > 1)
