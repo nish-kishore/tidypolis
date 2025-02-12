@@ -5292,11 +5292,11 @@ process_spatial <- function(gdb_folder,
     if(edav) {
       tidypolis_io(io = "write", edav = T,
                    file_path = paste0(output_folder, "/duplicate_ctry_guid.csv"),
-                   obj = empty.ctry)
+                   obj = dupe.guid.ctry)
     } else {
       tidypolis_io(io = "write", edav = F,
                    file_path = paste0(output_folder, "/duplicate_ctry_guid.csv"),
-                   obj = empty.ctry)
+                   obj = dupe.guid.ctry)
     }
  }
 
@@ -5304,11 +5304,11 @@ process_spatial <- function(gdb_folder,
     if(edav) {
       tidypolis_io(io = "write", edav = T,
                    file_path = paste0(output_folder, "/duplicate_ctry_name.csv"),
-                   obj = empty.ctry)
+                   obj = dupe.name.ctry)
     } else {
       tidypolis_io(io = "write", edav = F,
                    file_path = paste0(output_folder, "/duplicate_ctry_name.csv"),
-                   obj = empty.ctry)
+                   obj = dupe.name.ctry)
     }
   }
 
@@ -5329,7 +5329,6 @@ process_spatial <- function(gdb_folder,
   }
 
   sf::st_geometry(global.ctry.01) <- NULL
-
 
   # Province shapes overlapping in Lower Juba in Somalia.
   global.prov.01 <- global.prov.01 |>
@@ -5387,9 +5386,32 @@ process_spatial <- function(gdb_folder,
     dplyr::filter(n > 1)
 
   if(nrow(dupe.guid.prov) > 1 | nrow(dupe.name.prov) > 1) {
-    cli::cli_alert_warning("There is a duplicated province that is exactly the same, please run shape preprocessing manually")
+    cli::cli_alert_warning("There is a duplicated province that is exactly the same, please run shape preprocessing manually to identify")
   }
 
+  if(nrow(dupe.guid.prov) > 1) {
+    if(edav) {
+      tidypolis_io(io = "write", edav = T,
+                   file_path = paste0(output_folder, "/duplicate_prov_guid.csv"),
+                   obj = dupe.guid.prov)
+    } else {
+      tidypolis_io(io = "write", edav = F,
+                   file_path = paste0(output_folder, "/duplicate_prov_guid.csv"),
+                   obj = dupe.guid.prov)
+    }
+  }
+
+  if(nrow(dupe.name.prov) > 1) {
+    if(edav) {
+      tidypolis_io(io = "write", edav = T,
+                   file_path = paste0(output_folder, "/duplicate_prov_name.csv"),
+                   obj = dupe.name.prov)
+    } else {
+      tidypolis_io(io = "write", edav = F,
+                   file_path = paste0(output_folder, "/duplicate_prov_name.csv"),
+                   obj = dupe.name.prov)
+    }
+  }
 
   #ensure CRS is 4326
   global.prov.01 <- sf::st_set_crs(global.prov.01, 4326)
