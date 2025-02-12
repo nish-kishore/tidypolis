@@ -5271,6 +5271,19 @@ process_spatial <- function(gdb_folder,
 
   rm(invalid.ctry.shapes, check.ctry.valid, row.num.ctry, empty.ctry)
 
+  #identify potential duplicates
+  dupe.guid.ctry <- global.ctry.01 |>
+    dplyr::group_by(GUID) |>
+    dplyr::mutate(n = n()) |>
+    dplyr::ungroup() |>
+    dplyr::filter(n > 1)
+
+  dupe.name.ctry <- global.ctry.01 |>
+    dplyr::group_by(ADM0_NAME, Shape_Length, Shape_Area) |>
+    dplyr::mutate(n = n()) |>
+    dplyr::ungroup() |>
+    dplyr::filter(n > 1)
+
   #ensure CRS of ctry file is 4326
   global.ctry.01 <- sf::st_set_crs(global.ctry.01, 4326)
 
