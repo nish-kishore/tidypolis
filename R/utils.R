@@ -5147,7 +5147,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 #' quality checks
 #' @description
 #' a function to process WHO spatial datasets
-#' @import dplyr sf lubridate stringr readr tibble
+#' @import dplyr sf lubridate stringr readr tibble cli
 #' @param gdb_folder str the folder location of spatial datasets, should end with .gdb,
 #' if on edav the gdb will need to be zipped, ensure that the gdb and the zipped file name are the same
 #' @param output_folder str folder location to write outputs to
@@ -5386,6 +5386,9 @@ process_spatial <- function(gdb_folder,
     dplyr::ungroup() |>
     dplyr::filter(n > 1)
 
+  if(nrow(dupe.guid.prov) > 1 | nrow(dupe.name.prov) > 1) {
+    cli::cli_alert_warning("There is a duplicated province that is exactly the same, please run shape preprocessing manually")
+  }
 
 
   #ensure CRS is 4326
