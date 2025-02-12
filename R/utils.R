@@ -5413,6 +5413,8 @@ process_spatial <- function(gdb_folder,
     }
   }
 
+  rm(dupe.guid.prov, dupe.name.prov)
+
   #ensure CRS is 4326
   global.prov.01 <- sf::st_set_crs(global.prov.01, 4326)
   # save global province geodatabase in RDS file:
