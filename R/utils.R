@@ -5490,6 +5490,7 @@ process_spatial <- function(gdb_folder,
   }
 
   if(nrow(dupe.guid.dist) > 1) {
+    dupe.guid.dist$SHAPE <- NULL
     if(edav) {
       tidypolis_io(io = "write", edav = T,
                    file_path = paste0(output_folder, "/duplicate_dist_guid.csv"),
@@ -5502,6 +5503,7 @@ process_spatial <- function(gdb_folder,
   }
 
   if(nrow(dupe.name.dist) > 1) {
+    dupe.name.dist$SHAPE <- NULL
     if(edav) {
       tidypolis_io(io = "write", edav = T,
                    file_path = paste0(output_folder, "/duplicate_dist_name.csv"),
