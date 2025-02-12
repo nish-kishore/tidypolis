@@ -5357,6 +5357,21 @@ process_spatial <- function(gdb_folder,
 
   rm(check.prov.valid, row.num.prov, invalid.prov.shapes, empty.prov)
 
+  #duplicate checking in provinces
+  dupe.guid.prov <- global.prov.01 |>
+    dplyr::group_by(GUID, ADM0_GUID, SHAPE_Length, SHAPE_Area, CENTER_LON, CENTER_LAT, yr.st, yr.end) |>
+    dplyr::mutate(n = n()) |>
+    dplyr::ungroup() |>
+    dplyr::filter(n > 1)
+
+  dupe.name.prov <- global.prov.01 |>
+    dplyr::group_by(ADM0_NAME, ADM1_NAME, SHAPE_Length, SHAPE_Area, CENTER_LON, CENTER_LAT, yr.st, yr.end) |>
+    dplyr::mutate(n = n()) |>
+    dplyr::ungroup() |>
+    dplyr::filter(n > 1)
+
+
+
   #ensure CRS is 4326
   global.prov.01 <- sf::st_set_crs(global.prov.01, 4326)
   # save global province geodatabase in RDS file:
