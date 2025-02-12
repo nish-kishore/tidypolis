@@ -5289,6 +5289,7 @@ process_spatial <- function(gdb_folder,
   }
 
   if(nrow(dupe.guid.ctry) > 1) {
+    dupe.guid.ctry$Shape <- NULL
     if(edav) {
       tidypolis_io(io = "write", edav = T,
                    file_path = paste0(output_folder, "/duplicate_ctry_guid.csv"),
@@ -5301,6 +5302,7 @@ process_spatial <- function(gdb_folder,
  }
 
   if(nrow(dupe.name.ctry) > 1) {
+    dupe.name.ctry$Shape <- NULL
     if(edav) {
       tidypolis_io(io = "write", edav = T,
                    file_path = paste0(output_folder, "/duplicate_ctry_name.csv"),
