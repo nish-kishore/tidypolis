@@ -5273,13 +5273,13 @@ process_spatial <- function(gdb_folder,
 
   #identify potential duplicates
   dupe.guid.ctry <- global.ctry.01 |>
-    dplyr::group_by(GUID, Shape_Length, Shape_Area, CENTER_LON, CENTER_LAT, yr.st, yr.end) |>
+    dplyr::group_by(GUID) |>
     dplyr::mutate(n = n()) |>
     dplyr::ungroup() |>
     dplyr::filter(n > 1)
 
   dupe.name.ctry <- global.ctry.01 |>
-    dplyr::group_by(ADM0_NAME, Shape_Length, Shape_Area, CENTER_LON, CENTER_LAT, yr.st, yr.end) |>
+    dplyr::group_by(ADM0_NAME, yr.st, yr.end) |>
     dplyr::mutate(n = n()) |>
     dplyr::ungroup() |>
     dplyr::filter(n > 1)
@@ -5374,13 +5374,13 @@ process_spatial <- function(gdb_folder,
 
   #duplicate checking in provinces
   dupe.guid.prov <- global.prov.01 |>
-    dplyr::group_by(GUID, ADM0_GUID, SHAPE_Length, SHAPE_Area, CENTER_LON, CENTER_LAT, yr.st, yr.end) |>
+    dplyr::group_by(GUID, ADM0_GUID) |>
     dplyr::mutate(n = n()) |>
     dplyr::ungroup() |>
     dplyr::filter(n > 1)
 
   dupe.name.prov <- global.prov.01 |>
-    dplyr::group_by(ADM0_NAME, ADM1_NAME, SHAPE_Length, SHAPE_Area, CENTER_LON, CENTER_LAT, yr.st, yr.end) |>
+    dplyr::group_by(ADM0_NAME, ADM1_NAME, yr.st, yr.end) |>
     dplyr::mutate(n = n()) |>
     dplyr::ungroup() |>
     dplyr::filter(n > 1)
@@ -5466,6 +5466,13 @@ process_spatial <- function(gdb_folder,
   }
 
   rm(check.dist.valid, row.num.dist, invalid.dist.shapes, empty.dist)
+
+  #evaluate district duplicates
+  dupe.guid.dist <- global.dist.01 |>
+    dplyr::group_by(GUID) |>
+    dplyr::mutate(n = n()) |>
+    dplyr::ungroup() |>
+    dplyr::filter(n > 1)
 
   #ensure district CRS is 4326
   global.dist.01 <- sf::st_set_crs(global.dist.01, 4326)
