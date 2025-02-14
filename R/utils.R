@@ -3154,12 +3154,26 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   cli::cli_process_start("Checking GUIDs")
 
+  #reformat POLIS GUID to match shapefiles
   afp.linelist.01 <- afp.raw.01 |>
     dplyr::mutate(
       Admin2GUID = paste0("{", toupper(admin2guid), "}"),
       Admin1GUID = paste0("{", toupper(admin1guid), "}"),
       Admin0GUID = paste0("{", toupper(admin0guid), "}")
     )
+
+  #match country shapes and names first
+  shapes <- long.global.dist.01 |>
+    tibble::as_tibble() |>
+    dplyr::select(ADM0_GUID, active.year.01) |>
+    dplyr::distinct()
+
+  shapenames <- long.global.dist.01 |>
+    tibble::as_tibble() |>
+    dplyr::filter(!(ADM0_NAME=="SUDAN" & yr.st == 2000 & active.year.01==2011)) |>
+    dplyr::select(ADM0_NAME, ADM0_GUID, active.year.01) |>
+    dplyr::distinct()
+
 
   shapes <- long.global.dist.01 |>
     tibble::as_tibble() |>
