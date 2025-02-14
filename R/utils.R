@@ -3185,8 +3185,14 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   afp.linelist.fixed <- afp.linelist.fixed |>
     dplyr::mutate(wrongAdmin0GUID = ifelse(is.na(match) & !(is.na(admin0guid)), "yes", "no"))
 
+  # matching by name and fixing incorrect Admin1 guids which can be matched by name
+  afp.linelist.fixed <- afp.linelist.fixed |>
+    dplyr::left_join(shapenames, by = c("place.admin.0" = "ADM0_NAME", "yronset" = "active.year.01"),
+                     relationship = "many-to-many")
+  afp.linelist.fixed <- afp.linelist.fixed |>
+    dplyr::mutate(Admin0GUID = ifelse(wrongAdmin0GUID == "yes" & !is.na(match01), GUID, Admin0GUID))
 
-
+  rm(long.global.ctry.01)
 
   shapes <- long.global.dist.01 |>
     tibble::as_tibble() |>
