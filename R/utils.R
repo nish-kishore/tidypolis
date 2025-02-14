@@ -3163,16 +3163,29 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     )
 
   #match country shapes and names first
-  shapes <- long.global.dist.01 |>
+  long.global.ctry.01 <- load_clean_ctry_sp(type = "long")
+
+  shapes <- long.global.ctry.01 |>
     tibble::as_tibble() |>
-    dplyr::select(ADM0_GUID, active.year.01) |>
+    dplyr::select(GUID, active.year.01) |>
     dplyr::distinct()
 
-  shapenames <- long.global.dist.01 |>
+  shapenames <- long.global.ctry.01 |>
     tibble::as_tibble() |>
     dplyr::filter(!(ADM0_NAME=="SUDAN" & yr.st == 2000 & active.year.01==2011)) |>
-    dplyr::select(ADM0_NAME, ADM0_GUID, active.year.01) |>
+    dplyr::select(ADM0_NAME, GUID, active.year.01) |>
     dplyr::distinct()
+
+  # add dummy variable which will appear as missing if no match in area is found
+  shapes$match <- 1
+  shapenames$match01 <- 1
+
+  # matching by guid and marking unmatched countries
+  afp.linelist.fixed <- dplyr::left_join(afp.linelist.01, shapes, by = c("Admin0GUID" = "GUID", "yronset" = "active.year.01"))
+  afp.linelist.fixed <- afp.linelist.fixed |>
+    dplyr::mutate(wrongAdmin0GUID = ifelse(is.na(match) & !(is.na(admin0guid)), "yes", "no"))
+
+
 
 
   shapes <- long.global.dist.01 |>
@@ -3191,7 +3204,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   shapenames$match01 <- 1
 
   # matching by guid and marking unmatched provinces
-
   afp.linelist.fixed <- dplyr::left_join(afp.linelist.01, shapes, by = c("Admin0GUID" = "ADM0_GUID", "Admin1GUID" = "ADM1_GUID", "yronset" = "active.year.01"))
   afp.linelist.fixed <- afp.linelist.fixed |>
     dplyr::mutate(wrongAdmin1GUID = ifelse(is.na(match) & !(is.na(admin1guid)), "yes", "no"))
