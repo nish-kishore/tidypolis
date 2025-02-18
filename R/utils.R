@@ -3170,9 +3170,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   tidypolis_io(obj = dup.epid, io = "write", file_path = paste(Sys.getenv("POLIS_DATA_CACHE"), "/Core_Ready_Files/", paste("duplicate_AFP_epids_Polis",
                                                                                                                            min(dup.epid$yronset, na.rm = T),
                                                                                                                            max(dup.epid$yronset, na.rm = T),
-                                                                                                                           sep = "_"), ".csv", sep = "")
-  )
-
+                                                                                                                           sep = "_"), ".csv", sep = ""))
+  rm(dup.epid)
   # remove duplicates in afp linelist
   afp.raw.01 <- afp.raw.01[!duplicated(afp.raw.01$epid), ]
 
@@ -3281,7 +3280,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     dplyr::filter(wrongAdmin2GUID == "yes") |>
     dplyr::left_join(shapenames, by = c("place.admin.0" = "ADM0_NAME", "place.admin.1" = "ADM1_NAME", "place.admin.2" = "ADM2_NAME", "yronset" = "active.year.01"),
                      relationship = "many-to-many")
-  afp.linelist.fixed.02 <- afp.linelist.fixed.02 |>
+  afp.linelist.fixed.final <- afp.linelist.fixed.02 |>
     dplyr::filter(!epid %in% afp.linelist.fixed.03$epid) |>
     dplyr::bind_rows(afp.linelist.fixed.03) |>
     dplyr::mutate(Admin2GUID = ifelse(wrongAdmin2GUID == "yes" & !is.na(match01), GUID, Admin2GUID))
