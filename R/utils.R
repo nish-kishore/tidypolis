@@ -5147,7 +5147,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 #' quality checks
 #' @description
 #' a function to process WHO spatial datasets
-#' @import dplyr sf lubridate stringr readr tibble
+#' @import dplyr sf lubridate stringr readr tibble cli
 #' @param gdb_folder str the folder location of spatial datasets, should end with .gdb,
 #' if on edav the gdb will need to be zipped, ensure that the gdb and the zipped file name are the same
 #' @param output_folder str folder location to write outputs to
@@ -5270,6 +5270,55 @@ process_spatial <- function(gdb_folder,
   }
 
   rm(invalid.ctry.shapes, check.ctry.valid, row.num.ctry, empty.ctry)
+
+  #identify potential duplicates
+  dupe.guid.ctry <- global.ctry.01 |>
+    dplyr::group_by(GUID) |>
+    dplyr::mutate(n = n()) |>
+    dplyr::ungroup() |>
+    dplyr::filter(n > 1)
+
+  dupe.name.ctry <- global.ctry.01 |>
+    dplyr::group_by(ADM0_NAME, yr.st, yr.end) |>
+    dplyr::mutate(n = n()) |>
+    dplyr::ungroup() |>
+    dplyr::filter(n > 1)
+
+  if(nrow(dupe.guid.ctry) > 1 | nrow(dupe.name.ctry) > 1) {
+    cli::cli_alert_warning("There is a country shape with an exact duplicate, please manually run shape preprocessing to inspect")
+  }
+
+  if(nrow(dupe.guid.ctry) > 1) {
+    dupe.guid.ctry$Shape <- NULL
+    if(edav) {
+      tidypolis_io(io = "write", edav = T,
+                   file_path = paste0(output_folder, "/duplicate_ctry_guid.csv"),
+                   obj = dupe.guid.ctry)
+    } else {
+      tidypolis_io(io = "write", edav = F,
+                   file_path = paste0(output_folder, "/duplicate_ctry_guid.csv"),
+                   obj = dupe.guid.ctry)
+    }
+ }
+
+  if(nrow(dupe.name.ctry) > 1) {
+    dupe.name.ctry$Shape <- NULL
+    if(edav) {
+      tidypolis_io(io = "write", edav = T,
+                   file_path = paste0(output_folder, "/duplicate_ctry_name.csv"),
+                   obj = dupe.name.ctry)
+    } else {
+      tidypolis_io(io = "write", edav = F,
+                   file_path = paste0(output_folder, "/duplicate_ctry_name.csv"),
+                   obj = dupe.name.ctry)
+    }
+  }
+
+  rm(dupe.guid.ctry, dupe.name.ctry)
+
+  #ensure CRS of ctry file is 4326
+  global.ctry.01 <- sf::st_set_crs(global.ctry.01, 4326)
+
   # save global country geodatabase in RDS file:
   if(edav) {
     tidypolis_io(io = "write", edav = T,
@@ -5282,7 +5331,6 @@ process_spatial <- function(gdb_folder,
   }
 
   sf::st_geometry(global.ctry.01) <- NULL
-
 
   # Province shapes overlapping in Lower Juba in Somalia.
   global.prov.01 <- global.prov.01 |>
@@ -5325,6 +5373,54 @@ process_spatial <- function(gdb_folder,
   }
 
   rm(check.prov.valid, row.num.prov, invalid.prov.shapes, empty.prov)
+
+  #duplicate checking in provinces
+  dupe.guid.prov <- global.prov.01 |>
+    dplyr::group_by(GUID) |>
+    dplyr::mutate(n = n()) |>
+    dplyr::ungroup() |>
+    dplyr::filter(n > 1)
+
+  dupe.name.prov <- global.prov.01 |>
+    dplyr::group_by(ADM0_NAME, ADM1_NAME, yr.st, yr.end) |>
+    dplyr::mutate(n = n()) |>
+    dplyr::ungroup() |>
+    dplyr::filter(n > 1)
+
+  if(nrow(dupe.guid.prov) > 1 | nrow(dupe.name.prov) > 1) {
+    cli::cli_alert_warning("There is a duplicated province that is exactly the same, please run shape preprocessing manually to inspect")
+  }
+
+  if(nrow(dupe.guid.prov) > 1) {
+    dupe.guid.prov$SHAPE <- NULL
+    if(edav) {
+      tidypolis_io(io = "write", edav = T,
+                   file_path = paste0(output_folder, "/duplicate_prov_guid.csv"),
+                   obj = dupe.guid.prov)
+    } else {
+      tidypolis_io(io = "write", edav = F,
+                   file_path = paste0(output_folder, "/duplicate_prov_guid.csv"),
+                   obj = dupe.guid.prov)
+    }
+  }
+
+  if(nrow(dupe.name.prov) > 1) {
+    dupe.name.prov$SHAPE <- NULL
+    if(edav) {
+      tidypolis_io(io = "write", edav = T,
+                   file_path = paste0(output_folder, "/duplicate_prov_name.csv"),
+                   obj = dupe.name.prov)
+    } else {
+      tidypolis_io(io = "write", edav = F,
+                   file_path = paste0(output_folder, "/duplicate_prov_name.csv"),
+                   obj = dupe.name.prov)
+    }
+  }
+
+  rm(dupe.guid.prov, dupe.name.prov)
+
+  #ensure CRS is 4326
+  global.prov.01 <- sf::st_set_crs(global.prov.01, 4326)
   # save global province geodatabase in RDS file:
   if(edav) {
     tidypolis_io(io = "write", edav = T,
@@ -5374,6 +5470,53 @@ process_spatial <- function(gdb_folder,
   }
 
   rm(check.dist.valid, row.num.dist, invalid.dist.shapes, empty.dist)
+
+  #evaluate district duplicates
+  dupe.guid.dist <- global.dist.01 |>
+    dplyr::group_by(GUID) |>
+    dplyr::mutate(n = n()) |>
+    dplyr::ungroup() |>
+    dplyr::filter(n > 1)
+
+  dupe.name.dist <- global.dist.01 |>
+    dplyr::group_by(ADM0_NAME, ADM1_NAME, ADM2_NAME, yr.st, yr.end) |>
+    dplyr::mutate(n = n()) |>
+    dplyr::ungroup() |>
+    dplyr::filter(n > 1) |>
+    dplyr::arrange(ADM0_NAME, ADM1_NAME, ADM2_NAME, yr.st)
+
+  if(nrow(dupe.guid.dist) > 1 | nrow(dupe.name.dist) > 1) {
+    cli::cli_alert_warning("There are duplicates in district shapes, please run shape processing manually to inspect")
+  }
+
+  if(nrow(dupe.guid.dist) > 1) {
+    dupe.guid.dist$SHAPE <- NULL
+    if(edav) {
+      tidypolis_io(io = "write", edav = T,
+                   file_path = paste0(output_folder, "/duplicate_dist_guid.csv"),
+                   obj = dupe.guid.dist)
+    } else {
+      tidypolis_io(io = "write", edav = F,
+                   file_path = paste0(output_folder, "/duplicate_dist_guid.csv"),
+                   obj = dupe.guid.dist)
+    }
+  }
+
+  if(nrow(dupe.name.dist) > 1) {
+    dupe.name.dist$SHAPE <- NULL
+    if(edav) {
+      tidypolis_io(io = "write", edav = T,
+                   file_path = paste0(output_folder, "/duplicate_dist_name.csv"),
+                   obj = dupe.name.dist)
+    } else {
+      tidypolis_io(io = "write", edav = F,
+                   file_path = paste0(output_folder, "/duplicate_dist_name.csv"),
+                   obj = dupe.name.dist)
+    }
+  }
+
+  #ensure district CRS is 4326
+  global.dist.01 <- sf::st_set_crs(global.dist.01, 4326)
   # save global province geodatabase in RDS file:
   if(edav) {
     tidypolis_io(io = "write", edav = T,
