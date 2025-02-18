@@ -3286,7 +3286,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     dplyr::mutate(Admin2GUID = ifelse(wrongAdmin2GUID == "yes" & !is.na(match01), GUID, Admin2GUID))
 
 
-  afp.linelist.fixed.02 <- afp.linelist.fixed.02 |>
+  afp.linelist.fixed.final <- afp.linelist.fixed.final |>
     dplyr::select(-match, -match01, -GUID)
 
   # Now afp.linelist.fixed.02 is identical to afp.linelist.01 but with incorrect guids fixed at
@@ -3294,7 +3294,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   # the province level of district level guid was incorrect.
 
   #var names created from guid checking
-  guid.check.vars <- c("Admin0GUID", "Admin1GUID", "Admin2GUID", "wrongAdmin1GUID", "wrongAdmin2GUID")
+  guid.check.vars <- c("Admin0GUID", "Admin1GUID", "Admin2GUID", "wrongAdmin0GUID", "wrongAdmin1GUID", "wrongAdmin2GUID")
 
   # some info about number of errors
   #table(afp.linelist.fixed.02$wrongAdmin1GUID)
