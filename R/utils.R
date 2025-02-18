@@ -3289,6 +3289,18 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   afp.linelist.fixed.final <- afp.linelist.fixed.final |>
     dplyr::select(-match, -match01, -GUID)
 
+  final.dupe.check <- afp.linelist.fixed.final |>
+    dplyr::group_by(epid) |>
+    dplyr::mutate(n = n()) |>
+    dplyr::ungroup() |>
+    dplyr::filter(n > 1)
+
+  if(nrow(final.dupe.check) > 1) {
+    cli::cli_alert_warning("A duplicate has been introduced in GUID checks, stop and run pre-processing manually to identify issue")
+    stop()
+  } else {
+    rm(final.dupe.check)
+  }
   # Now afp.linelist.fixed.02 is identical to afp.linelist.01 but with incorrect guids fixed at
   # the district and province level. There are also two new columns added to indicate wether
   # the province level of district level guid was incorrect.
@@ -3336,7 +3348,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
                   polis.longitude = y) |>
     dplyr::distinct()
 
-  rm("afp.linelist.fixed.02")
+  rm("afp.linelist.fixed.02", "afp.linelist.fixed.03")
   gc()
 
   global.dist.01 <- sirfunctions::load_clean_dist_sp()
