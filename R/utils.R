@@ -3309,12 +3309,12 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
       wrongCtryGUID = sum(wrongAdmin0GUID == "yes"),
       wrongProvGUID = sum(wrongAdmin1GUID == "yes"),
       wrongdistGUID = sum(wrongAdmin2GUID == "yes"),
-      wrongAllGUID = sum(wrongAdmin0GUID == "yes" & wrongAdmin1GUID == "yes" & wrongAdmin2GUID == "yes")
+      wrongAllGUID = sum(wrongAdmin0GUID == "yes" & wrongAdmin1GUID == "yes" & wrongAdmin2GUID == "yes"),
       wrongbothGUID = sum(wrongAdmin1GUID == "yes" & wrongAdmin2GUID == "yes")
     )
 
 
-  issuesbyCtry <- afp.linelist.fixed.02 |>
+  issuesbyCtry <- afp.linelist.fixed.final |>
     dplyr::filter(is.na(place.admin.1) | is.na(place.admin.2) | wrongAdmin1GUID == "yes" | wrongAdmin2GUID == "yes") |>
     dplyr::group_by(place.admin.0) |>
     dplyr::summarise(
@@ -3331,9 +3331,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   cli::cli_process_start("Fixing missing GPS locations (this may take a while)")
 
-  afp.linelist.fixed.03 <- afp.linelist.fixed.02 |>
+  afp.linelist.fixed.final <- afp.linelist.fixed.final |>
     dplyr::rename(polis.latitude = x,
-           polis.longitude = y) |>
+                  polis.longitude = y) |>
     dplyr::distinct()
 
   rm("afp.linelist.fixed.02")
