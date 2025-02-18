@@ -3192,17 +3192,22 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   afp.linelist.fixed <- afp.linelist.fixed |>
     dplyr::mutate(Admin0GUID = ifelse(wrongAdmin0GUID == "yes" & !is.na(match01), GUID, Admin0GUID))
 
+  afp.linelist.fixed <- afp.linelist.fixed |>
+    dplyr::select(-match, -match01, -GUID)
   rm(long.global.ctry.01)
 
-  shapes <- long.global.dist.01 |>
+  #match province GUIDs and names for correction
+  long.global.prov.01 <- load_clean_prov_sp(type = "long")
+
+  shapes <- long.global.prov.01 |>
     tibble::as_tibble() |>
-    dplyr::select(ADM0_GUID, ADM1_GUID, active.year.01) |>
+    dplyr::select(ADM0_GUID, GUID, active.year.01) |>
     dplyr::distinct()
 
-  shapenames <- long.global.dist.01 |>
+  shapenames <- long.global.prov.01 |>
     tibble::as_tibble() |>
     dplyr::filter(!(ADM0_NAME=="SUDAN" & yr.st == 2000 & active.year.01==2011)) |>
-    dplyr::select(ADM0_NAME, ADM1_NAME, ADM1_GUID, active.year.01) |>
+    dplyr::select(ADM0_NAME, ADM1_NAME, GUID, active.year.01) |>
     dplyr::distinct()
 
   # add dummy variable which will appear as missing if no match in area is found
@@ -3210,20 +3215,23 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   shapenames$match01 <- 1
 
   # matching by guid and marking unmatched provinces
-  afp.linelist.fixed <- dplyr::left_join(afp.linelist.01, shapes, by = c("Admin0GUID" = "ADM0_GUID", "Admin1GUID" = "ADM1_GUID", "yronset" = "active.year.01"))
+  afp.linelist.fixed <- dplyr::left_join(afp.linelist.01, shapes, by = c("Admin0GUID" = "ADM0_GUID", "Admin1GUID" = "GUID", "yronset" = "active.year.01"))
   afp.linelist.fixed <- afp.linelist.fixed |>
     dplyr::mutate(wrongAdmin1GUID = ifelse(is.na(match) & !(is.na(admin1guid)), "yes", "no"))
 
   # matching by name and fixing incorrect Admin1 guids which can be matched by name
-
-  afp.linelist.fixed <- afp.linelist.fixed |> dplyr::left_join(shapenames, by = c("place.admin.0" = "ADM0_NAME", "place.admin.1" = "ADM1_NAME", "yronset" = "active.year.01"),
-                                                               relationship = "many-to-many")
   afp.linelist.fixed <- afp.linelist.fixed |>
-    dplyr::mutate(Admin1GUID = ifelse(wrongAdmin1GUID == "yes" & !is.na(match01), ADM1_GUID, Admin1GUID))
+    dplyr::left_join(shapenames, by = c("place.admin.0" = "ADM0_NAME", "place.admin.1" = "ADM1_NAME", "yronset" = "active.year.01"),
+                     relationship = "many-to-many")
+  afp.linelist.fixed <- afp.linelist.fixed |>
+    dplyr::mutate(Admin1GUID = ifelse(wrongAdmin1GUID == "yes" & !is.na(match01), GUID, Admin1GUID))
 
+  afp.linelist.fixed <- afp.linelist.fixed |>
+    dplyr::select(-match, -match01, -GUID)
 
-  afp.linelist.fixed <- afp.linelist.fixed |> dplyr::select(-match, -match01)
+  rm(long.global.prov.01)
 
+  #identifying incorrect district guids
   shapes <- long.global.dist.01 |>
     tibble::as_tibble() |>
     dplyr::select(ADM0_GUID, ADM1_GUID, GUID, active.year.01) |>
@@ -3239,23 +3247,21 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   shapes$match <- 1
   shapenames$match01 <- 1
 
-
   # matching by guid and marking districts which could not be matched
   afp.linelist.fixed.02 <- dplyr::left_join(afp.linelist.fixed, shapes, by = c("Admin0GUID" = "ADM0_GUID", "Admin1GUID" = "ADM1_GUID", "Admin2GUID" = "GUID", "yronset" = "active.year.01"))
   afp.linelist.fixed.02 <- afp.linelist.fixed.02 |>
     dplyr::mutate(wrongAdmin2GUID = ifelse(is.na(match) & !(is.na(admin2guid)), "yes", "no"))
 
-
-
   # matching by name and fixing incorrect Admin2 guids which can be matched by name
-
-  afp.linelist.fixed.02 <- afp.linelist.fixed.02 |> dplyr::left_join(shapenames, by = c("place.admin.0" = "ADM0_NAME", "place.admin.1" = "ADM1_NAME", "place.admin.2" = "ADM2_NAME", "yronset" = "active.year.01"),
-                                                                     relationship = "many-to-many")
+  afp.linelist.fixed.02 <- afp.linelist.fixed.02 |>
+    dplyr::left_join(shapenames, by = c("place.admin.0" = "ADM0_NAME", "place.admin.1" = "ADM1_NAME", "place.admin.2" = "ADM2_NAME", "yronset" = "active.year.01"),
+                     relationship = "many-to-many")
   afp.linelist.fixed.02 <- afp.linelist.fixed.02 |>
     dplyr::mutate(Admin2GUID = ifelse(wrongAdmin2GUID == "yes" & !is.na(match01), GUID, Admin2GUID))
 
 
-  afp.linelist.fixed.02 <- afp.linelist.fixed.02 |> dplyr::select(-match, -match01, -ADM1_GUID, -GUID)
+  afp.linelist.fixed.02 <- afp.linelist.fixed.02 |>
+    dplyr::select(-match, -match01, -ADM1_GUID, -GUID)
 
   # Now afp.linelist.fixed.02 is identical to afp.linelist.01 but with incorrect guids fixed at
   # the district and province level. There are also two new columns added to indicate wether
