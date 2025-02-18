@@ -3300,13 +3300,16 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   #table(afp.linelist.fixed.02$wrongAdmin1GUID)
   #table(afp.linelist.fixed.02$wrongAdmin2GUID)
 
-  issuesbyyear <- afp.linelist.fixed.02 |>
+  issuesbyyear <- afp.linelist.fixed.final |>
     dplyr::group_by(yronset) |>
     summarise(
+      numNAcountry = sum(is.na(place.admin.0)),
       numNAprovince = sum(is.na(place.admin.1)),
       numNAdist = sum(is.na(place.admin.2)),
+      wrongCtryGUID = sum(wrongAdmin0GUID == "yes"),
       wrongProvGUID = sum(wrongAdmin1GUID == "yes"),
       wrongdistGUID = sum(wrongAdmin2GUID == "yes"),
+      wrongAllGUID = sum(wrongAdmin0GUID == "yes" & wrongAdmin1GUID == "yes" & wrongAdmin2GUID == "yes")
       wrongbothGUID = sum(wrongAdmin1GUID == "yes" & wrongAdmin2GUID == "yes")
     )
 
