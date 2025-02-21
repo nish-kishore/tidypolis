@@ -1405,6 +1405,13 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
                     (is.na(place.admin.1) & !is.na(admin1guid)) |
                     (is.na(place.admin.2) & !is.na(admin2guid)))
 
+  if(nrow(final.guid.check) > 0 | nrow(final.names.check) > 0) {
+    cli::cli_alert_warning("A GUID or name has been misclassified, please run pre.stsample manually to identify")
+    stop()
+  } else {
+    rm(final.names.check, final.guid.check)
+  }
+
   return(df08)
 }
 
