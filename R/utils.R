@@ -1284,12 +1284,6 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
   df07$geometry <- NULL
 
   global.dist.02$SHAPE <- NULL
-  df08 <- dplyr::left_join(df07, global.dist.02 |> dplyr::select(GUID, ADM1_GUID, ADM0_NAME, ADM1_NAME, ADM2_NAME), by = c("Admin2GUID" = "GUID", "ADM1_GUID")) |>
-    dplyr::mutate(place.admin.0 = ifelse(place.admin.0 != ADM0_NAME, ADM0_NAME, place.admin.0),
-                  place.admin.1 = ifelse(place.admin.1 != ADM1_NAME, ADM1_NAME, place.admin.1),
-                  place.admin.2 = ifelse(place.admin.2 != ADM2_NAME, ADM2_NAME, place.admin.2),
-                  geo.corrected = ifelse(is.na(geo.corrected), 0, geo.corrected)) |>
-    dplyr::select(-c("ADM0_NAME", "ADM1_NAME", "ADM2_NAME"))
 
   #feed only cases with empty coordinates into st_sample (vars = GUID, nperarm, id, SHAPE)
   empty.coord.01 <- empty.coord |>
@@ -1376,7 +1370,13 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
       sf::st_coordinates(pt04$x) |>
         tibble::as_tibble() |>
         dplyr::rename("lon" = "X", "lat" = "Y")) |>
-    dplyr::select(-id) |>
+    dplyr::select(-id)
+
+  pt05$x <- NULL
+  pt05$geometry <- NULL
+
+  #bind back placed point cases with df06 and finished
+  df08 <- dplyr::bind_rows(df07, pt05) |>
     dplyr::left_join(global.dist.01 |> dplyr::select(ADM0_NAME, ADM1_NAME, ADM2_NAME, ADM0_GUID, ADM1_GUID, GUID),
                      by = c("Admin0GUID" = "ADM0_GUID", "Admin1GUID" = "ADM1_GUID", "Admin2GUID" = "GUID")) |>
     dplyr::mutate(geo.corrected = ifelse(paste0("{", stringr::str_to_upper(admin2guid), "}", sep = "") != Admin2GUID, 1, 0),
@@ -1386,11 +1386,6 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
                   place.admin.1 = ifelse(place.admin.1 != ADM1_NAME & !is.na(ADM1_NAME), ADM1_NAME, place.admin.1),
                   place.admin.2 = ifelse(place.admin.2 != ADM2_NAME & !is.na(ADM2_NAME), ADM2_NAME, place.admin.2))
 
-  pt05$x <- NULL
-  pt05$geometry <- NULL
-
-  #bind back placed point cases with df06 and finished
-  df09 <- dplyr::bind_rows(df08, pt05) |>
     dplyr::select(-c("wrongAdmin1GUID", "wrongAdmin2GUID", "ADM1_GUID", "ADM0_GUID")) |>
     dplyr::mutate(geo.corrected = ifelse(is.na(geo.corrected), 0, geo.corrected))
 
