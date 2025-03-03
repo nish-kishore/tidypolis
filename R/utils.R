@@ -1286,6 +1286,7 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
   global.dist.02$SHAPE <- NULL
 
   #feed only cases with empty coordinates into st_sample (vars = GUID, nperarm, id, SHAPE)
+  if(nrow(empty.coord) > 0) {
   empty.coord.01 <- empty.coord |>
     tibble::as_tibble() |>
     dplyr::group_by(Admin2GUID) |>
@@ -1375,8 +1376,14 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
   pt05$x <- NULL
   pt05$geometry <- NULL
 
+  df08 <- dplyr::bind_rows(df07, pt05)
+
+  } else {
+    df08 <- df07
+  }
+
   #bind back placed point cases with df06 and finished
-  df08 <- dplyr::bind_rows(df07, pt05) |>
+  df09 <- df08 |>
     dplyr::left_join(global.dist.01 |> dplyr::select(ADM0_NAME, ADM1_NAME, ADM2_NAME, ADM0_GUID, ADM1_GUID, GUID),
                      by = c("Admin0GUID" = "ADM0_GUID", "Admin1GUID" = "ADM1_GUID", "Admin2GUID" = "GUID")) |>
     dplyr::mutate(geo.corrected = ifelse(paste0("{", stringr::str_to_upper(admin2guid), "}", sep = "") != Admin2GUID, 1, 0),
@@ -1389,9 +1396,9 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
                      "ADM1_NAME", "ADM2_NAME")) |>
     dplyr::mutate(geo.corrected = ifelse(is.na(geo.corrected), 0, geo.corrected))
 
-  df08$SHAPE <- NULL
+  df09$SHAPE <- NULL
 
-  final.guid.check <- df08 |>
+  final.guid.check <- df09 |>
     dplyr::filter((paste0("{", stringr::str_to_upper(admin2guid), "}", sep = "") != Admin2GUID |
                      paste0("{", stringr::str_to_upper(admin1guid), "}", sep = "") != Admin1GUID |
                      paste0("{", stringr::str_to_upper(admin0guid), "}", sep = "") != Admin0GUID) &
@@ -1399,7 +1406,7 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
     dplyr::select(epid, yronset, place.admin.0, place.admin.1, place.admin.2, admin0guid, admin1guid, admin2guid, Admin0GUID, Admin1GUID, Admin2GUID, geo.corrected)
 
 
-  final.names.check <- df08 |>
+  final.names.check <- df09 |>
     dplyr::select(epid, yronset, place.admin.0, place.admin.1, place.admin.2, admin0guid, admin1guid, admin2guid, Admin0GUID, Admin1GUID, Admin2GUID, geo.corrected) |>
     dplyr::filter((is.na(place.admin.0) & !is.na(admin0guid)) |
                     (is.na(place.admin.1) & !is.na(admin1guid)) |
@@ -1412,7 +1419,7 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
     rm(final.names.check, final.guid.check)
   }
 
-  return(df08)
+  return(df09)
 }
 
 
