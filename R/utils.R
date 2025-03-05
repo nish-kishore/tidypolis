@@ -2080,6 +2080,17 @@ check_missingness <- function(data,
   return(missing_by_group)
 }
 
+#' function to add outbreak notification date from GPEI weekly analysis to positives dataset
+#' @description
+#' append outbreak notification dates to positives dataset
+#' @import dplyr
+#' @param data df dataset to append date to
+#' @param file_loc str file location of latest GPEI weekly analysis
+add_outbreak_date <- function(data,
+                              file_loc) {
+
+}
+
 #### Pre-processing ####
 
 
