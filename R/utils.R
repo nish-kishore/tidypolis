@@ -2086,7 +2086,7 @@ check_missingness <- function(data,
 #' @import dplyr stringr lubridate
 #' @param data df dataset to append date to
 #' @param file_loc str file location of latest GPEI weekly analysis
-add_outbreak_date <- function(data,
+add_outbreak_date <- function(pos.data,
                               file_loc = "Data/gpei_emergence_summary") {
 
   file.list <- tidypolis_io(io = "list", file_path = file_loc, azcontainer = suppressMessages(sirfunctions::get_azure_storage_connection())) |>
@@ -2104,9 +2104,14 @@ add_outbreak_date <- function(data,
 
   outbreak.data <- tidypolis_io(io = "read",
                                 file_path = paste0(file_loc, "/", latest.file)) |>
-    dplyr::filter(!is.na(status) & status != "No filters applied")
+    dplyr::filter(!is.na(status) & status != "No filters applied") |>
+    dplyr::mutate(serotype = case_when(`Sero Type` == "cVDPV1" ~ "cVDPV 1",
+                                       `Sero Type` == "cVDPV2" ~ "cVDPV 2",
+                                       `Sero Type` == "cVDPV3" ~ "cVDPV 3",
+                                       `Sero Type` == "WILD1" ~ "WILD 1")) |>
+    dplyr::select(-`Sero Type`)
 
-
+  pos.data.01 <- dplyr::left_join(pos.data, outbreak.data, by = c("place.admin.0" = "Country", "measurement" = "serotype", "emergencegroup" = "Emergence Group"))
 
 }
 
