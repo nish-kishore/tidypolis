@@ -2087,7 +2087,9 @@ check_missingness <- function(data,
 #' @param data df dataset to append date to
 #' @param file_loc str file location of latest GPEI weekly analysis
 add_outbreak_date <- function(data,
-                              file_loc = "GID/PEB/SIR/Data/gpei_emergence_summary/") {
+                              file_loc = "Data/gpei_emergence_summary") {
+
+  file.list <- tidypolis_io(io = "list", file_path = file_loc, azcontainer = suppressMessages(sirfunctions::get_azure_storage_connection()))
 
 }
 
