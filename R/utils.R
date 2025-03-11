@@ -2083,7 +2083,7 @@ check_missingness <- function(data,
 #' function to add outbreak notification date from GPEI weekly analysis to positives dataset
 #' @description
 #' append outbreak notification dates to positives dataset
-#' @import dplyr stringr
+#' @import dplyr stringr lubridate
 #' @param data df dataset to append date to
 #' @param file_loc str file location of latest GPEI weekly analysis
 add_outbreak_date <- function(data,
@@ -2094,8 +2094,11 @@ add_outbreak_date <- function(data,
 
   names(file.list) <- c("names")
 
-  file.list <- file.list |>
-    dplyr::mutate(date = stringr::str_sub(names, -14, -5))
+  latest.file <- file.list |>
+    dplyr::mutate(date = stringr::str_sub(names, -14, -5),
+                  date = stringr::str_replace_all(date, "_", "-"),
+                  date = lubridate::as_date(date, "%m-%d-%Y", tz = NULL)) |>
+    dplyr::filter(date == max(date))
 
 }
 
