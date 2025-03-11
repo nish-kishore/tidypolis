@@ -2100,6 +2100,14 @@ add_outbreak_date <- function(data,
                   date = lubridate::as_date(date, "%m-%d-%Y", tz = NULL)) |>
     dplyr::filter(date == max(date))
 
+  latest.file <- latest.file$names
+
+  outbreak.data <- tidypolis_io(io = "read",
+                                file_path = paste0(file_loc, "/", latest.file)) |>
+    dplyr::filter(!is.na(status) & status != "No filters applied")
+
+
+
 }
 
 #### Pre-processing ####
