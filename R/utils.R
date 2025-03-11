@@ -3850,7 +3850,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_start("Clearing memory")
 
   rm('afp.clean.01', 'afp.clean.light', 'afp.files.01', 'afp.files.02',
-     'afp.linelist.01', 'afp.linelist.02', 'afp.linelist.latlong',
+     'afp.linelist.01', 'afp.linelist.02', 'afp.linelist.03', 'afp.linelist.latlong',
      'afp.missing.01', 'afp.missing.02', 'afp_metadata_comparison',
      'col.afp.raw.01', 'dup.epid', 'issuesbyCtry', 'issuesbyyear',
      'endyr', 'global.dist.01', 'in_new_and_old_but_modified',
@@ -4668,7 +4668,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     'in_new_and_old_but_modified', 'in_new_not_old', 'in_old_not_new',
     'na.es.01', 'new', 'new.df', 'new.file', 'new.var.es.01', 'new_table_metadata', 'newsites',
     'old', 'old.es.file', 'old.file', 'old_table_metadata', 'savescipen',
-    'shape.name.01', 'truenewsites', 'var.list.01'
+    'shape.name.01', 'truenewsites', 'var.list.01', 'old.es', 'es_names',
+    'es.new.value'
   )
   gc()
   cli::cli_process_done()
