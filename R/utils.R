@@ -2083,13 +2083,19 @@ check_missingness <- function(data,
 #' function to add outbreak notification date from GPEI weekly analysis to positives dataset
 #' @description
 #' append outbreak notification dates to positives dataset
-#' @import dplyr
+#' @import dplyr stringr
 #' @param data df dataset to append date to
 #' @param file_loc str file location of latest GPEI weekly analysis
 add_outbreak_date <- function(data,
                               file_loc = "Data/gpei_emergence_summary") {
 
-  file.list <- tidypolis_io(io = "list", file_path = file_loc, azcontainer = suppressMessages(sirfunctions::get_azure_storage_connection()))
+  file.list <- tidypolis_io(io = "list", file_path = file_loc, azcontainer = suppressMessages(sirfunctions::get_azure_storage_connection())) |>
+    dplyr::tibble()
+
+  names(file.list) <- c("names")
+
+  file.list <- file.list |>
+    dplyr::mutate(date = stringr::str_sub(names, -14, -5))
 
 }
 
