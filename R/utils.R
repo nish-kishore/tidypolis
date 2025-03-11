@@ -2097,7 +2097,7 @@ add_outbreak_date <- function(pos.data,
   latest.file <- file.list |>
     dplyr::mutate(date = stringr::str_sub(names, -14, -5),
                   date = stringr::str_replace_all(date, "_", "-"),
-                  date = lubridate::as_date(date, "%m-%d-%Y", tz = NULL)) |>
+                  date = lubridate::as_date(date, format = "%m-%d-%Y")) |>
     dplyr::filter(date == max(date))
 
   latest.file <- latest.file$names
@@ -2108,8 +2108,18 @@ add_outbreak_date <- function(pos.data,
     dplyr::mutate(serotype = case_when(`Sero Type` == "cVDPV1" ~ "cVDPV 1",
                                        `Sero Type` == "cVDPV2" ~ "cVDPV 2",
                                        `Sero Type` == "cVDPV3" ~ "cVDPV 3",
-                                       `Sero Type` == "WILD1" ~ "WILD 1")) |>
-    dplyr::select(-`Sero Type`)
+                                       `Sero Type` == "WILD1" ~ "WILD 1"),
+                  firstonset = lubridate::as_date(`First Onset`, format = "%d/%m/%Y"),
+                  lastonset = lubridate::as_date(`Last Onset`, format = "%d/%m/%Y"),
+                  firstcollection.es = lubridate::as_date(`First Collection ES`, format = "%d/%m/%Y"),
+                  lastcollection.es = lubridate::as_date(`Last Collection ES`, format = "%d/%m/%Y"),
+                  firstcollection.hum = lubridate::as_date(`First Collection Human`, format = "%d/%m/%Y"),
+                  lastcollection.hum = lubridate::as_date(`Last Collection Human`, format = "%d/%m/%Y"),
+                  outbreak.notif.date = lubridate::as_date(`Outbreak Noti. Date`, format = "%d/%m/%Y"),
+                  firstvirus = lubridate::as_date(FirstVirus, format = "%d/%m/%Y"),
+                  mostrecent = lubridate::as_date(`Most Recent`, format = "%d/%m/%Y")) |>
+    dplyr::select(-c(`Sero Type`, `First Onset`, `Last Onset`, `First Collection ES`, `Last Collection ES`, `First Collection Human`,
+                     `Last Collection Human`, `Outbreak Noti. Date`, FirstVirus, `Most Recent`))
 
   pos.data.01 <- dplyr::left_join(pos.data, outbreak.data, by = c("place.admin.0" = "Country", "measurement" = "serotype", "emergencegroup" = "Emergence Group"))
 
