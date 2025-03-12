@@ -2126,7 +2126,13 @@ add_outbreak_date <- function(pos.data,
     dplyr::select(-c(`Sero Type`, `First Onset`, `Last Onset`, `First Collection ES`, `Last Collection ES`, `First Collection Human`,
                      `Last Collection Human`, `Outbreak Noti. Date`, FirstVirus, `Most Recent`))
 
-  pos.data.01 <- dplyr::left_join(pos.data, outbreak.data, by = c("place.admin.0" = "Country", "measurement" = "serotype", "emergencegroup" = "Emergence Group"))
+  pos.data.01 <- dplyr::left_join(pos.data, outbreak.data, by = c("place.admin.0" = "Country", "measurement" = "serotype", "emergencegroup"))
+
+  check <- pos.data.01 |>
+    select(epid, place.admin.0, dateonset, source, measurement, emergencegroup, ntchanges,
+           outbreak.notif.date, nt.changes.range, total.afp.cases, firstonset, lastonset,
+           total.es, firstcollection.es, lastcollection.es, other.human.source, firstcollection.hum,
+           lastcollection.hum)
 
 }
 
