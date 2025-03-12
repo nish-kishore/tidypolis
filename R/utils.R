@@ -2118,6 +2118,11 @@ add_outbreak_date <- function(pos.data,
                   outbreak.notif.date = lubridate::as_date(`Outbreak Noti. Date`, format = "%d/%m/%Y"),
                   firstvirus = lubridate::as_date(FirstVirus, format = "%d/%m/%Y"),
                   mostrecent = lubridate::as_date(`Most Recent`, format = "%d/%m/%Y")) |>
+    dplyr::rename(emergencegroup = `Emergence Group`,
+                  nt.changes.range = `NT Change Range`,
+                  total.afp.cases = `Total AFP cases`,
+                  total.es = `Total ES ENV`,
+                  other.human.source = `Other  Human Source`) |>
     dplyr::select(-c(`Sero Type`, `First Onset`, `Last Onset`, `First Collection ES`, `Last Collection ES`, `First Collection Human`,
                      `Last Collection Human`, `Outbreak Noti. Date`, FirstVirus, `Most Recent`))
 
