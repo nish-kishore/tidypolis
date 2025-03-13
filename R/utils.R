@@ -2105,10 +2105,19 @@ add_outbreak_date <- function(pos.data,
   outbreak.data <- tidypolis_io(io = "read",
                                 file_path = paste0(file_loc, "/", latest.file)) |>
     dplyr::filter(!is.na(status) & status != "No filters applied") |>
+    dplyr::rename(emergencegroup = `Emergence Group`,
+                  nt.changes.range = `NT Change Range`,
+                  total.afp.cases = `Total AFP cases`,
+                  total.es = `Total ES ENV`,
+                  other.human.source = `Other  Human Source`) |>
     dplyr::mutate(serotype = case_when(`Sero Type` == "cVDPV1" ~ "cVDPV 1",
                                        `Sero Type` == "cVDPV2" ~ "cVDPV 2",
                                        `Sero Type` == "cVDPV3" ~ "cVDPV 3",
                                        `Sero Type` == "WILD1" ~ "WILD 1"),
+                  nt.changes.range = stringr::str_replace(nt.changes.range, "-", ""),
+                  nt.changes.range = stringr::str_replace(nt.changes.range, "-", ","),
+                  min.nt.changes = stringr::str_extract(nt.changes.range, "^([^,]+)"),
+                  max.nt.changes = stringr::str_extract(nt.changes.range, "(?<=,).*"),
                   firstonset = lubridate::as_date(`First Onset`, format = "%d/%m/%Y"),
                   lastonset = lubridate::as_date(`Last Onset`, format = "%d/%m/%Y"),
                   firstcollection.es = lubridate::as_date(`First Collection ES`, format = "%d/%m/%Y"),
@@ -2118,11 +2127,6 @@ add_outbreak_date <- function(pos.data,
                   outbreak.notif.date = lubridate::as_date(`Outbreak Noti. Date`, format = "%d/%m/%Y"),
                   firstvirus = lubridate::as_date(FirstVirus, format = "%d/%m/%Y"),
                   mostrecent = lubridate::as_date(`Most Recent`, format = "%d/%m/%Y")) |>
-    dplyr::rename(emergencegroup = `Emergence Group`,
-                  nt.changes.range = `NT Change Range`,
-                  total.afp.cases = `Total AFP cases`,
-                  total.es = `Total ES ENV`,
-                  other.human.source = `Other  Human Source`) |>
     dplyr::select(-c(`Sero Type`, `First Onset`, `Last Onset`, `First Collection ES`, `Last Collection ES`, `First Collection Human`,
                      `Last Collection Human`, `Outbreak Noti. Date`, FirstVirus, `Most Recent`))
 
