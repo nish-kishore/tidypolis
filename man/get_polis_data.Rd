@@ -18,5 +18,4 @@ deleted rows are reflected in the local system.
 \dontrun{
 get_polis_data() #must be run after using init_tidypolis and providing a valid API key
 }
-#' @export
 }

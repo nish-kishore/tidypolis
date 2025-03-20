@@ -225,7 +225,7 @@ init_tidypolis <- function(
 #' \dontrun{
 #' get_polis_data() #must be run after using init_tidypolis and providing a valid API key
 #' }
-#' #' @export
+#' @export
 get_polis_data <- function(type = "all"){
 
   if(type == "all"){
@@ -311,7 +311,7 @@ freeze_polis_data <- function(){
 #' \dontrun{
 #' preprocess_data(type = "cdc") #must run init_tidypolis to specify POLIS data location first
 #' }
-#' #' @export
+#' @export
 preprocess_data <- function(type){
 
   types <- c("cdc")
