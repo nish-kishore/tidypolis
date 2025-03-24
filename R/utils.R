@@ -559,10 +559,16 @@ test_polis_key <- function(key) {
 #' @param urls array of url strings
 #' @return tibble with all data
 call_urls <- function(urls) {
-  doFuture::registerDoFuture() ## tell foreach to use futures
-  future::plan(future::multisession) ## parallelize over a local PSOCK cluster
+  doFuture::registerDoFuture() ## tell foreach to use future
+
+  if (stringr::str_starts(Sys.getenv("SF_PARTNER"), "posit_workbench")) {
+    future::plan(future::multicore)
+  } else {
+    future::plan(future::multisession) ## parallelize over a local PSOCK cluster
+  }
+
   options(doFuture.rng.onMisuse = "ignore")
-  xs <- 1:length(urls)
+  xs <- seq_along(urls)
 
   progressr::handlers("cli")
 
