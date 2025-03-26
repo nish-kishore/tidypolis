@@ -1175,7 +1175,8 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
 
   #need to identify cases with no lat/lon
   empty.coord <- df01 |>
-    dplyr::filter(is.na(polis.latitude) | is.na(polis.longitude) | (polis.latitude == 0 & polis.longitude == 0))
+    dplyr::filter(is.na(polis.latitude) | is.na(polis.longitude) |
+                    (polis.latitude == 0 & polis.longitude == 0))
 
   tidypolis_io(io = "write", file_path = paste0(Sys.getenv("POLIS_DATA_CACHE"), "/Core_Ready_Files/afp_empty_coords.csv"),
                obj = empty.coord |>
@@ -1292,7 +1293,8 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
   global.dist.02$SHAPE <- NULL
 
   #feed only cases with empty coordinates into st_sample (vars = GUID, nperarm, id, SHAPE)
-  if(nrow(empty.coord) > 0) {
+  if (nrow(empty.coord |> dplyr::filter(Admin2GUID != "{NA}")) > 0) {
+  # remove NAs because can't be sampled
   empty.coord.01 <- empty.coord |>
     tibble::as_tibble() |>
     dplyr::group_by(Admin2GUID) |>
@@ -1311,7 +1313,8 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
   pt01 <- lapply(1:nrow(empty.coord.02), function(x){
 
     tryCatch(
-      expr = {suppressMessages(sf::st_sample(empty.coord.02[x,], dplyr::pull(empty.coord.02[x,], "nperarm"),
+      expr = {suppressMessages(sf::st_sample(empty.coord.02[x,],
+                                             dplyr::pull(empty.coord.02[x,], "nperarm"),
                                              exact = T)) |> sf::st_as_sf()},
       error = function(e) {
         guid = empty.coord.02[x, ]$GUID[1]
@@ -1358,7 +1361,7 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
   pt02 <- pt01_joined |>
     tibble::as_tibble() |>
     dplyr::select(-nperarm, -id) |>
-    dplyr::group_by(GUID)|>
+    dplyr::group_by(GUID) |>
     dplyr::arrange(GUID, .by_group = TRUE) |>
     dplyr::mutate(id = dplyr::row_number()) |>
     as.data.frame()
