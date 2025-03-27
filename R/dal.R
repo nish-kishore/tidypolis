@@ -196,11 +196,11 @@ upload_cdc_proc_to_edav <- function(
     "name" = tidypolis_io(io = "list", file_path = core_ready_folder)
     )
 
-  files <- c("afp_linelist_2001-01-01_2024",
-             "afp_linelist_2019-01-01_2024",
-             "es_2001-01-08_2024",
-             "other_surveillance_type_linelist",
-             "positives_2001-01-01_2024",
+  files <- c("afp_linelist_2001-01-01_",
+             "afp_linelist_2019-01-01_",
+             "es_2001-01-08_",
+             "other_surveillance_type_linelist_2016_",
+             "positives_2001-01-01_",
              "sia_2000")
 
   out.table <- lapply(files, function(y) x |> dplyr::filter(stringr::str_starts(name, pattern = y))) |>
