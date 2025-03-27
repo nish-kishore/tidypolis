@@ -1184,7 +1184,8 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
     dplyr::filter(!epid %in% empty.coord$epid) |>
     dplyr::mutate(lon = polis.longitude,
                   lat = polis.latitude) |>
-    sf::st_as_sf(coords = c(x = "lon" , y = "lat"), crs = sf::st_crs(global.dist.01))
+    sf::st_as_sf(coords = c(x = "lon" , y = "lat"),
+                 crs = sf::st_crs(global.dist.01))
 
   global.dist.02 <- sf::st_make_valid(global.dist.01)
 
@@ -1280,9 +1281,15 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
     tibble::as_tibble(df06),
     sf::st_coordinates(df06) |>
       tibble::as_tibble() |>
-      dplyr::rename("lon" = "X", "lat" = "Y")) |>
-    dplyr::bind_rows(dropped.obs) |>
-    dplyr::select(-c("GUID", "yr.st", "yr.end"))
+      dplyr::rename("lon" = "X", "lat" = "Y")) %>%
+    {
+      if (nrow(dropped.obs) != 0) {
+        dplyr::bind_rows(., dropped.obs)
+      } else {
+        .
+      }
+    } |>
+    dplyr::select(-dplyr::all_of(c("GUID", "yr.st", "yr.end")))
 
   df07$geometry <- NULL
 
@@ -1417,7 +1424,7 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
                     (is.na(place.admin.1) & !is.na(admin1guid)) |
                     (is.na(place.admin.2) & !is.na(admin2guid)))
 
-  if(nrow(final.guid.check) > 0 | nrow(final.names.check) > 0) {
+  if (nrow(final.guid.check) > 0 | nrow(final.names.check) > 0) {
     cli::cli_alert_warning("A GUID or name has been misclassified, please run pre.stsample manually to identify")
     stop()
   } else {
