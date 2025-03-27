@@ -1188,7 +1188,7 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
     dplyr::filter(!epid %in% empty.coord$epid) |>
     dplyr::mutate(lon = polis.longitude,
                   lat = polis.latitude) |>
-    sf::st_as_sf(coords = c(x = "lon" , y = "lat"), crs = 4326)
+    sf::st_as_sf(coords = c(x = "lon" , y = "lat"), crs = sf::st_crs(global.dist.01))
 
   global.dist.02 <- sf::st_make_valid(global.dist.01)
 
