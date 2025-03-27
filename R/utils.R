@@ -1178,10 +1178,6 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
     dplyr::filter(is.na(polis.latitude) | is.na(polis.longitude) |
                     (polis.latitude == 0 & polis.longitude == 0))
 
-  tidypolis_io(io = "write", file_path = paste0(Sys.getenv("POLIS_DATA_CACHE"), "/Core_Ready_Files/afp_empty_coords.csv"),
-               obj = empty.coord |>
-                 dplyr::select(polis.case.id, epid, date.onset, place.admin.0, polis.latitude, polis.longitude))
-
   cli::cli_process_start("Spatially joining AFP cases to global districts")
   #create sf object from lat lon and make global.dist valid
   df01.sf <- df01 |>
@@ -3399,6 +3395,16 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   rm("afp.raw.01")
   gc()
   # Function to create lat & long for AFP cases
+  # Need to identify cases with no lat/lon
+  empty.coord.check <- df01 |>
+    dplyr::filter(is.na(polis.latitude) | is.na(polis.longitude) |
+                    (polis.latitude == 0 & polis.longitude == 0))
+
+  tidypolis_io(io = "write", file_path = paste0(Sys.getenv("POLIS_DATA_CACHE"), "/Core_Ready_Files/afp_empty_coords.csv"),
+               obj = empty.coord.check |>
+                 dplyr::select(polis.case.id, epid, date.onset, place.admin.0, polis.latitude, polis.longitude))
+  rm(empty.coord.check)
+
   afp.linelist.fixed.04 <- f.pre.stsample.01(afp.linelist.fixed.final, global.dist.01)
   rm("afp.linelist.fixed.final")
 
