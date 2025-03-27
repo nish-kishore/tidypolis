@@ -173,9 +173,9 @@ tidypolis_io <- function(
 #' @description
 #' Manages read/write/list/create/delete functions for tidypolis
 #' @import sirfunctions dplyr AzureStor readr cli stringr
-#' @param core_ready_folder str: Local folder with CDC processed files
-#' @param azcontainer Azure Token Container Object
-#' @param output_folder Location to write out Core Files
+#' @param core_ready_folder `str` Local folder with CDC processed files.
+#' @param azcontainer Azure Token Container Object.
+#' @param output_folder Location to write out Core Files.
 #' @returns NULL
 upload_cdc_proc_to_edav <- function(
     core_ready_folder = file.path(Sys.getenv("POLIS_DATA_CACHE"), "Core_Ready_Files"),
@@ -183,9 +183,9 @@ upload_cdc_proc_to_edav <- function(
     output_folder = "Data/polis"){
 
   #check to see if folders exist
-  if(tidypolis_io(io = "exists.dir", file_path = core_ready_folder)){
+  if (tidypolis_io(io = "exists.dir", file_path = core_ready_folder)) {
     cli::cli_alert_info("Core File Identified")
-  }else{
+  } else {
     cli::cli_abort("No core file identified, please make sure to initialize tidypolis and run CDC preprocessing")
   }
 
@@ -194,7 +194,8 @@ upload_cdc_proc_to_edav <- function(
   x <- dplyr::tibble(
     "full_name" = tidypolis_io(io = "list", file_path = core_ready_folder, full_names = T),
     "name" = tidypolis_io(io = "list", file_path = core_ready_folder)
-    )
+    ) |>
+    dplyr::filter(stringr::str_ends(name, ".rds"))
 
   files <- c("afp_linelist_2001-01-01_",
              "afp_linelist_2019-01-01_",
@@ -208,13 +209,50 @@ upload_cdc_proc_to_edav <- function(
     dplyr::mutate(source = full_name,
                   dest = paste0(output_folder, "/",name))
 
+  # Archive previous versions in the core polis data folder
+  cli::cli_process_start("Archiving previous data in the polis folder")
+  if (!tidypolis_io(io = "exists.dir", file_path = file.path(output_folder, "archive"))) {
+    tidypolis_io(io = "create", file_path = file.path(output_folder, "archive"))
+    }
 
-  #move all files to core polis data folder
+  # Move previous files to archive in polis data folder
+  previous_files <- dplyr::tibble(
+    "file_path" = tidypolis_io(io = "list",
+                               file_path = file.path(output_folder),
+                               full_names = TRUE),
+    "file_name" = tidypolis_io(io = "list",
+                               file_path = file.path(output_folder))) |>
+    dplyr::filter(stringr::str_ends(file_name, ".rds"))
+
+  # Explicitly create since Sys.Date() could potentially vary when ran overnight
+  archive_folder_name <- Sys.Date()
+
+  tidypolis_io(io = "create",
+               file_path = file.path(output_folder,"archive", archive_folder_name))
+
+  lapply(1:nrow(previous_files), \(i) {
+    local <- tidypolis_io(io = "read", file_path = previous_files$file_path[i])
+    tidypolis_io(obj = local, io = "write",
+                 file_path = file.path(output_folder, "archive", archive_folder_name,
+                                       previous_files$file_name[i]))
+    })
+  cli::cli_process_done()
+
+  cli::cli_process_start("Adding updated data to polis data folder")
+
+  # Delete previous files
+  lapply(1:nrow(previous_files), \(i) {
+    tidypolis_io(io = "delete", file_path = previous_files$file_path[i])
+    })
+
+  # Move all files to core polis data folder
   lapply(1:nrow(out.table), function(i){
-
     local <- tidypolis_io(io = "read", file_path = dplyr::pull(out.table[i,], source))
     tidypolis_io(obj = local, io = "write", file_path = dplyr::pull(out.table[i,], dest))
+    })
 
-  })
+  cli::cli_process_done()
+
+  return(NULL)
 
 }
