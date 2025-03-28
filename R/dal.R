@@ -11,160 +11,186 @@
 #' @param edav boolean defaults to FALSE
 #' @param azcontainer AZ container object returned by
 #' @param full_names boolean: If you want to include the full reference path in the response, default FALSE
-#' @returns conditional on `io`
+#' @param edav_default_dir `str` If `edav = TRUE`, specify the default directory used for `sirfunctions::edav_io()`.
+#' By default, this is `"GID/PEB/SIR"`.
+#'
+#' @returns Conditional on `io`. If `io` is "read", then it will return a tibble. If `io` is `"list"`, it will return a
+#' list of file names. Otherwise, the function will return `NULL`. `exists.dir` and `exists.file` will return a `bool`.
+#' @keywords internal
 tidypolis_io <- function(
     obj = NULL,
     io,
     file_path,
     edav = as.logical(Sys.getenv("POLIS_EDAV_FLAG")),
     azcontainer = suppressMessages(sirfunctions::get_azure_storage_connection()),
-    full_names = F
-                         ){
-
+    full_names = F,
+    edav_default_dir = "GID/PEB/SIR") {
   opts <- c("read", "write", "delete", "list", "exists.dir", "exists.file", "create")
 
-  if(!io %in% opts){
+  if (!io %in% opts) {
     stop("io: must be 'read', 'write', 'delete', 'create', 'exists.dir', 'exists.file' or 'list'")
   }
 
-  if(io == "write" & is.null(obj)){
+  if (io == "write" & is.null(obj)) {
     stop("Need to supply an object to be written")
   }
 
-  if(io == "list"){
+  if (io == "list") {
+    if (edav) {
+      out <- sirfunctions::edav_io(
+        io = "list",
+        default_dir = edav_default_dir,
+        file_loc = file_path, azcontainer = azcontainer
+      )
 
-    if(edav){
-      out <- sirfunctions::edav_io(io = "list", file_loc = file_path, azcontainer = azcontainer)
-
-      if(full_names){
+      if (full_names) {
         return(
           out |>
             dplyr::mutate(name = stringr::str_replace(name, paste0("GID/PEB/SIR/"), "")) |>
-            dplyr::pull(name))
-      }else{
+            dplyr::pull(name)
+        )
+      } else {
         return(
           out |>
-            dplyr::mutate(name = stringr::str_replace(name, paste0("GID/PEB/SIR/",file_path,"/"), "")) |>
+            dplyr::mutate(name = stringr::str_replace(name, paste0("GID/PEB/SIR/", file_path, "/"), "")) |>
             dplyr::pull(name)
         )
       }
-
-    }else{
+    } else {
       return(list.files(file_path, full.names = full_names))
     }
-
   }
 
-  if(io == "exists.dir"){
-
-    if(edav){
-      return(sirfunctions::edav_io(io = "exists.dir", file_loc = file_path, azcontainer = azcontainer))
-    }else{
+  if (io == "exists.dir") {
+    if (edav) {
+      return(sirfunctions::edav_io(
+        io = "exists.dir",
+        default_dir = edav_default_dir,
+        file_loc = file_path, azcontainer = azcontainer
+      ))
+    } else {
       return(dir.exists(file_path))
     }
-
-
   }
 
-  if(io == "exists.file"){
-
-    if(edav){
-      return(sirfunctions::edav_io(io = "exists.file", file_loc = file_path, azcontainer = azcontainer))
-    }else{
+  if (io == "exists.file") {
+    if (edav) {
+      return(sirfunctions::edav_io(
+        io = "exists.file",
+        default_dir = edav_default_dir,
+        file_loc = file_path, azcontainer = azcontainer
+      ))
+    } else {
       return(file.exists(file_path))
     }
-
-
   }
 
-  if(io == "read"){
-    if(edav){
+  if (io == "read") {
+    if (edav) {
       corrupted.rds <- NULL
       tryCatch(
         {
-          return(sirfunctions::edav_io(io = "read", file_loc = file_path, azcontainer = azcontainer))
+          return(sirfunctions::edav_io(
+            io = "read",
+            default_dir = edav_default_dir,
+            file_loc = file_path, azcontainer = azcontainer
+          ))
           corrupted.rds <<- FALSE
-          },
-        error = function(e){
+        },
+        error = function(e) {
           cli::cli_alert_warning("RDS download from EDAV was corrupted, downloading directly...")
           corrupted.rds <<- TRUE
         }
       )
 
-      if(corrupted.rds){
+      if (corrupted.rds) {
         dest <- tempfile()
-        AzureStor::storage_download(container = azcontainer, paste0("GID/PEB/SIR/",file_path), dest)
+        AzureStor::storage_download(
+          container = azcontainer,
+          paste0(edav_default_dir, file_path),
+          dest
+        )
         x <- readRDS(dest)
         unlink(dest)
         return(x)
       }
-
-    }else{
-      if(!grepl(".rds|.rda|.csv",file_path)){
+    } else {
+      if (!grepl(".rds|.rda|.csv", file_path)) {
         stop("At the moment only 'rds' 'rda' and 'csv' are supported for reading.")
       }
 
-      if(grepl(".rds", file_path)){
+      if (grepl(".rds", file_path)) {
         return(readr::read_rds(file_path))
       }
 
-      if(grepl(".rda", file_path)){
+      if (grepl(".rda", file_path)) {
         return(load(file_path))
       }
 
-      if(grepl(".csv", file_path)){
+      if (grepl(".csv", file_path)) {
         return(readr::read_csv(file_path))
       }
-
     }
   }
 
-  if(io == "write"){
-
-    if(is.null(obj)){
+  if (io == "write") {
+    if (is.null(obj)) {
       stop("You need to include an object to be written.")
     }
 
-    if(edav){
-      sirfunctions::edav_io(io = "write", file_loc = file_path, obj = obj, azcontainer = azcontainer)
-    }else{
-
-      if(!grepl(".rds|.rda|.csv",file_path)){
+    if (edav) {
+      sirfunctions::edav_io(
+        io = "write",
+        default_dir = edav_default_dir,
+        file_loc = file_path, obj = obj,
+        azcontainer = azcontainer
+      )
+    } else {
+      if (!grepl(".rds|.rda|.csv", file_path)) {
         stop("At the moment only 'rds' 'rda' and 'csv' are supported for reading.")
       }
 
-      if(grepl(".rds", file_path)){
+      if (grepl(".rds", file_path)) {
         readr::write_rds(x = obj, file = file_path)
       }
 
-      if(grepl(".rda", file_path)){
+      if (grepl(".rda", file_path)) {
         save(list = obj, file = file_path)
       }
 
-      if(grepl(".csv", file_path)){
+      if (grepl(".csv", file_path)) {
         readr::write_csv(x = obj, file = file_path)
       }
-
-
     }
   }
 
-  if(io == "delete"){
-    if(edav){
-      sirfunctions::edav_io(io = "delete", file_loc = file_path, force_delete = T, azcontainer = azcontainer)
-    }else{
+  if (io == "delete") {
+    if (edav) {
+      sirfunctions::edav_io(
+        io = "delete",
+        default_dir = edav_default_dir,
+        file_loc = file_path,
+        force_delete = T,
+        azcontainer = azcontainer
+      )
+    } else {
       file.remove(file_path)
     }
   }
 
-  if(io == "create"){
-    if(edav){
-      sirfunctions::edav_io(io = "create", file_loc = file_path)
-    }else{
+  if (io == "create") {
+    if (edav) {
+      sirfunctions::edav_io(
+        io = "create",
+        default_dir = edav_default_dir,
+        file_loc = file_path
+      )
+    } else {
       dir.create(file_path)
     }
   }
 
+  return(NULL)
 }
 
 
