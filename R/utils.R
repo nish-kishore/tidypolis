@@ -1191,25 +1191,25 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
 
   #identify bad shape rows after make_valid
   check.dist.2 <- tibble::as_tibble(sf::st_is_valid(global.dist.02))
-  row.num.2 <- which(check.dist.2$value == FALSE)
+
   #removing all bad shapes post make valid
-  valid.shapes <- global.dist.02 |>
-    dplyr::slice(-row.num.2) |>
+  valid.shapes <- global.dist.02[check.dist.2$value, ] |>
     dplyr::select(GUID, ADM1_GUID, ADM0_GUID, yr.st, yr.end, SHAPE)
 
   cli::cli_process_start("Evaluating invalid district shapes")
   #invalid shapes for which we'll turn off s2
-  invalid.shapes <- global.dist.02 |>
-    dplyr::slice(row.num.2) |>
+  invalid.shapes <- global.dist.02[!check.dist.2$value, ] |>
     dplyr::select(GUID, ADM1_GUID, ADM0_GUID, yr.st, yr.end, SHAPE)
 
   #do 2 seperate st_joins the first, df02, is for valid shapes and those attached cases
-  df02 <- sf::st_join(df01.sf |> dplyr::filter(!Admin2GUID %in% invalid.shapes$GUID), valid.shapes, left = T) |>
+  df02 <- sf::st_join(df01.sf |>
+                        dplyr::filter(!Admin2GUID %in% invalid.shapes$GUID), valid.shapes, left = T) |>
     dplyr::filter(yronset >= yr.st & yronset <= yr.end)
 
   #second st_join is for invalid shapes and those attached cases, turning off s2
   sf::sf_use_s2(F)
-  df03 <- sf::st_join(df01.sf |> dplyr::filter(!Admin2GUID %in% valid.shapes$GUID), invalid.shapes, left = T) |>
+  df03 <- sf::st_join(df01.sf |>
+                        dplyr::filter(!Admin2GUID %in% valid.shapes$GUID), invalid.shapes, left = T) |>
     dplyr::filter(yronset >= yr.st & yronset <= yr.end)
   sf::sf_use_s2(T)
 
