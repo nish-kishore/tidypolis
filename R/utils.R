@@ -1284,8 +1284,16 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
   #bring df05 and dropped observations back together, create lat/lon var from sf object previously created
   df07 <- dplyr::bind_cols(
     tibble::as_tibble(df06),
-    sf::st_coordinates(df06) |>
-      tibble::as_tibble() |>
+    sf::st_coordinates(df06) %>%
+      {if (nrow(df06) == 0) {
+        # if df06 is empty, as_tibble won't work and we need to create it manually
+        dplyr::tibble(X = as.double(NA),
+                      Y = as.double(NA)) |>
+          dplyr::filter(!is.na(X))
+        } else {
+        dplyr::as_tibble(.)
+          }
+        } |>
       dplyr::rename("lon" = "X", "lat" = "Y")) %>%
     {
       if (nrow(dropped.obs) != 0) {
