@@ -9,6 +9,9 @@ test_that("Testing f.pre.st.sample()", {
                                                  file_loc = file_path)
   # Load district shape file
   global.dist.01 <- sirfunctions::load_clean_dist_sp()
+  global.dist.01 <- global.dist.01 |>
+    dplyr::filter(ADM0_GUID %in% unique(afp.linelist.fixes.04$orig$Admin0GUID))
+
   cli::cli_process_done()
 
   cli::cli_process_start("Testing missing coordinate imputation")
