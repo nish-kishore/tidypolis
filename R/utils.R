@@ -1260,7 +1260,12 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
     dplyr::mutate(Admin2GUID = ifelse(Admin2GUID != GUID, GUID, Admin2GUID),
                   Admin1GUID = ifelse(Admin1GUID != ADM1_GUID, ADM1_GUID, Admin1GUID),
                   Admin0GUID = ifelse(Admin0GUID != ADM0_GUID, ADM0_GUID, Admin0GUID),
-                  geo.corrected = 1)
+                  geo.corrected = 1) |>
+    # if fix.bad.guids is empty, then the GUID cols become logical but the
+    # join in df06 requires them to be of char type.
+    dplyr::mutate(Admin2GUID = as.character(Admin2GUID),
+                  Admin1GUID = as.character(Admin1GUID),
+                  Admin0GUID = as.character(Admin0GUID))
 
   #bind back cases with fixed guids
   df06 <- df05 |>
