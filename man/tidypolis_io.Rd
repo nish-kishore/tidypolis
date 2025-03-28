@@ -10,25 +10,31 @@ tidypolis_io(
   file_path,
   edav = as.logical(Sys.getenv("POLIS_EDAV_FLAG")),
   azcontainer = suppressMessages(sirfunctions::get_azure_storage_connection()),
-  full_names = F
+  full_names = F,
+  edav_default_dir = "GID/PEB/SIR"
 )
 }
 \arguments{
-\item{obj}{str: object to be loaded into EDAV}
+\item{obj}{`str` Object to be loaded into EDAV.}
 
-\item{io}{str: read/write/list/exists/create/delete}
+\item{io}{`str` read/write/list/exists/create/delete}
 
-\item{file_path}{str: absolute path of file}
+\item{file_path}{`str` Absolute path of file.}
 
-\item{edav}{boolean defaults to FALSE}
+\item{edav}{`bool` Whether to interact with EDAV files. Defaults to `FALSE`.}
 
-\item{azcontainer}{AZ container object returned by}
+\item{azcontainer}{`Azure container` An Azure container object.}
 
-\item{full_names}{boolean: If you want to include the full reference path in the response, default FALSE}
+\item{full_names}{`bool` If you want to include the full reference path in the response, default `FALSE`.}
+
+\item{edav_default_dir}{`str` If `edav = TRUE`, specify the default directory used for `sirfunctions::edav_io()`.
+By default, this is `"GID/PEB/SIR"`.}
 }
 \value{
-conditional on `io`
+Conditional on `io`. If `io` is "read", then it will return a tibble. If `io` is `"list"`, it will return a
+list of file names. Otherwise, the function will return `NULL`. `exists.dir` and `exists.file` will return a `bool`.
 }
 \description{
 Manages read/write/list/create/delete functions for tidypolis
 }
+\keyword{internal}
