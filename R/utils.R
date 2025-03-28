@@ -1175,11 +1175,8 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
 
   #need to identify cases with no lat/lon
   empty.coord <- df01 |>
-    dplyr::filter(is.na(polis.latitude) | is.na(polis.longitude) | (polis.latitude == 0 & polis.longitude == 0))
-
-  tidypolis_io(io = "write", file_path = paste0(Sys.getenv("POLIS_DATA_CACHE"), "/Core_Ready_Files/afp_empty_coords.csv"),
-               obj = empty.coord |>
-                 dplyr::select(polis.case.id, epid, date.onset, place.admin.0, polis.latitude, polis.longitude))
+    dplyr::filter(is.na(polis.latitude) | is.na(polis.longitude) |
+                    (polis.latitude == 0 & polis.longitude == 0))
 
   cli::cli_process_start("Spatially joining AFP cases to global districts")
   #create sf object from lat lon and make global.dist valid
@@ -1187,31 +1184,32 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
     dplyr::filter(!epid %in% empty.coord$epid) |>
     dplyr::mutate(lon = polis.longitude,
                   lat = polis.latitude) |>
-    sf::st_as_sf(coords = c(x = "lon" , y = "lat"), crs = 4326)
+    sf::st_as_sf(coords = c(x = "lon" , y = "lat"),
+                 crs = sf::st_crs(global.dist.01))
 
   global.dist.02 <- sf::st_make_valid(global.dist.01)
 
   #identify bad shape rows after make_valid
   check.dist.2 <- tibble::as_tibble(sf::st_is_valid(global.dist.02))
-  row.num.2 <- which(check.dist.2$value == FALSE)
+
   #removing all bad shapes post make valid
-  valid.shapes <- global.dist.02 |>
-    dplyr::slice(-row.num.2) |>
+  valid.shapes <- global.dist.02[check.dist.2$value, ] |>
     dplyr::select(GUID, ADM1_GUID, ADM0_GUID, yr.st, yr.end, SHAPE)
 
   cli::cli_process_start("Evaluating invalid district shapes")
   #invalid shapes for which we'll turn off s2
-  invalid.shapes <- global.dist.02 |>
-    dplyr::slice(row.num.2) |>
+  invalid.shapes <- global.dist.02[!check.dist.2$value, ] |>
     dplyr::select(GUID, ADM1_GUID, ADM0_GUID, yr.st, yr.end, SHAPE)
 
   #do 2 seperate st_joins the first, df02, is for valid shapes and those attached cases
-  df02 <- sf::st_join(df01.sf |> dplyr::filter(!Admin2GUID %in% invalid.shapes$GUID), valid.shapes, left = T) |>
+  df02 <- sf::st_join(df01.sf |>
+                        dplyr::filter(!Admin2GUID %in% invalid.shapes$GUID), valid.shapes, left = T) |>
     dplyr::filter(yronset >= yr.st & yronset <= yr.end)
 
   #second st_join is for invalid shapes and those attached cases, turning off s2
   sf::sf_use_s2(F)
-  df03 <- sf::st_join(df01.sf |> dplyr::filter(!Admin2GUID %in% valid.shapes$GUID), invalid.shapes, left = T) |>
+  df03 <- sf::st_join(df01.sf |>
+                        dplyr::filter(!Admin2GUID %in% valid.shapes$GUID), invalid.shapes, left = T) |>
     dplyr::filter(yronset >= yr.st & yronset <= yr.end)
   sf::sf_use_s2(T)
 
@@ -1262,7 +1260,12 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
     dplyr::mutate(Admin2GUID = ifelse(Admin2GUID != GUID, GUID, Admin2GUID),
                   Admin1GUID = ifelse(Admin1GUID != ADM1_GUID, ADM1_GUID, Admin1GUID),
                   Admin0GUID = ifelse(Admin0GUID != ADM0_GUID, ADM0_GUID, Admin0GUID),
-                  geo.corrected = 1)
+                  geo.corrected = 1) |>
+    # if fix.bad.guids is empty, then the GUID cols become logical but the
+    # join in df06 requires them to be of char type.
+    dplyr::mutate(Admin2GUID = as.character(Admin2GUID),
+                  Admin1GUID = as.character(Admin1GUID),
+                  Admin0GUID = as.character(Admin0GUID))
 
   #bind back cases with fixed guids
   df06 <- df05 |>
@@ -1281,18 +1284,33 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
   #bring df05 and dropped observations back together, create lat/lon var from sf object previously created
   df07 <- dplyr::bind_cols(
     tibble::as_tibble(df06),
-    sf::st_coordinates(df06) |>
-      tibble::as_tibble() |>
-      dplyr::rename("lon" = "X", "lat" = "Y")) |>
-    dplyr::bind_rows(dropped.obs) |>
-    dplyr::select(-c("GUID", "yr.st", "yr.end"))
+    sf::st_coordinates(df06) %>%
+      {if (nrow(df06) == 0) {
+        # if df06 is empty, as_tibble won't work and we need to create it manually
+        dplyr::tibble(X = as.double(NA),
+                      Y = as.double(NA)) |>
+          dplyr::filter(!is.na(X))
+        } else {
+        dplyr::as_tibble(.)
+          }
+        } |>
+      dplyr::rename("lon" = "X", "lat" = "Y")) %>%
+    {
+      if (nrow(dropped.obs) != 0) {
+        dplyr::bind_rows(., dropped.obs)
+      } else {
+        .
+      }
+    } |>
+    dplyr::select(-dplyr::all_of(c("GUID", "yr.st", "yr.end")))
 
   df07$geometry <- NULL
 
   global.dist.02$SHAPE <- NULL
 
   #feed only cases with empty coordinates into st_sample (vars = GUID, nperarm, id, SHAPE)
-  if(nrow(empty.coord) > 0) {
+  if (nrow(empty.coord |> dplyr::filter(Admin2GUID != "{NA}")) > 0) {
+  # remove NAs because can't be sampled
   empty.coord.01 <- empty.coord |>
     tibble::as_tibble() |>
     dplyr::group_by(Admin2GUID) |>
@@ -1311,7 +1329,8 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
   pt01 <- lapply(1:nrow(empty.coord.02), function(x){
 
     tryCatch(
-      expr = {suppressMessages(sf::st_sample(empty.coord.02[x,], dplyr::pull(empty.coord.02[x,], "nperarm"),
+      expr = {suppressMessages(sf::st_sample(empty.coord.02[x,],
+                                             dplyr::pull(empty.coord.02[x,], "nperarm"),
                                              exact = T)) |> sf::st_as_sf()},
       error = function(e) {
         guid = empty.coord.02[x, ]$GUID[1]
@@ -1358,7 +1377,7 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
   pt02 <- pt01_joined |>
     tibble::as_tibble() |>
     dplyr::select(-nperarm, -id) |>
-    dplyr::group_by(GUID)|>
+    dplyr::group_by(GUID) |>
     dplyr::arrange(GUID, .by_group = TRUE) |>
     dplyr::mutate(id = dplyr::row_number()) |>
     as.data.frame()
@@ -1418,7 +1437,7 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
                     (is.na(place.admin.1) & !is.na(admin1guid)) |
                     (is.na(place.admin.2) & !is.na(admin2guid)))
 
-  if(nrow(final.guid.check) > 0 | nrow(final.names.check) > 0) {
+  if (nrow(final.guid.check) > 0 | nrow(final.names.check) > 0) {
     cli::cli_alert_warning("A GUID or name has been misclassified, please run pre.stsample manually to identify")
     stop()
   } else {
@@ -3402,6 +3421,16 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   rm("afp.raw.01")
   gc()
   # Function to create lat & long for AFP cases
+  # Need to identify cases with no lat/lon
+  empty.coord.check <- df01 |>
+    dplyr::filter(is.na(polis.latitude) | is.na(polis.longitude) |
+                    (polis.latitude == 0 & polis.longitude == 0))
+
+  tidypolis_io(io = "write", file_path = paste0(Sys.getenv("POLIS_DATA_CACHE"), "/Core_Ready_Files/afp_empty_coords.csv"),
+               obj = empty.coord.check |>
+                 dplyr::select(polis.case.id, epid, date.onset, place.admin.0, polis.latitude, polis.longitude))
+  rm(empty.coord.check)
+
   afp.linelist.fixed.04 <- f.pre.stsample.01(afp.linelist.fixed.final, global.dist.01)
   rm("afp.linelist.fixed.final")
 

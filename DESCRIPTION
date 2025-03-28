@@ -32,9 +32,12 @@ Imports:
   skimr,
   cluster, 
   tidyr,
-  stringi
+  stringi,
+  readxl
 Suggests:
-  purrr,
-  tidyselect,
-  stats, 
-  utils
+    purrr,
+    tidyselect,
+    stats,
+    utils,
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
