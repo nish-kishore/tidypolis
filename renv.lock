@@ -4046,7 +4046,8 @@
         "httr",
         "jsonlite",
         "purrr",
-        "withr"
+        "withr",
+        "yaml"
       ],
       "Suggests": [
         "blastula",
@@ -4077,14 +4078,15 @@
       "Encoding": "UTF-8",
       "Roxygen": "list(markdown = TRUE)",
       "RoxygenNote": "7.3.2",
-      "Author": "Nishant Kishore [aut, cre] (<https://orcid.org/0000-0003-0408-2747>), Mervin Keith Cuadera [aut] (<https://orcid.org/0000-0003-4898-2659>), Nicholas Heaghney [aut], Elizabeth Krow-Lucal [aut], Smita Chavan [aut]",
-      "Maintainer": "Nishant Kishore <ynm2@cdc.gov>",
       "RemoteType": "github",
-      "RemoteUsername": "nish-kishore",
+      "RemoteHost": "api.github.com",
       "RemoteRepo": "sirfunctions",
-      "RemoteRef": "HEAD",
-      "RemoteSha": "989751d0703907d2369c422f2e1f97f0b9a1706d",
-      "RemoteHost": "api.github.com"
+      "RemoteUsername": "nish-kishore",
+      "RemoteRef": "dev",
+      "RemoteSha": "e47d361aea8ea32f4cdaa20d9c3966345e645906",
+      "NeedsCompilation": "no",
+      "Author": "Nishant Kishore [aut, cre] (<https://orcid.org/0000-0003-0408-2747>), Mervin Keith Cuadera [aut] (<https://orcid.org/0000-0003-4898-2659>), Nicholas Heaghney [aut], Elizabeth Krow-Lucal [aut], Smita Chavan [aut]",
+      "Maintainer": "Nishant Kishore <ynm2@cdc.gov>"
     },
     "skimr": {
       "Package": "skimr",

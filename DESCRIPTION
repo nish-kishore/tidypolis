@@ -32,7 +32,8 @@ Imports:
   skimr,
   cluster, 
   tidyr,
-  stringi
+  stringi,
+  readxl
 Suggests:
     purrr,
     tidyselect,
