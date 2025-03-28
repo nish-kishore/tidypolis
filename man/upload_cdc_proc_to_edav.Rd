@@ -11,12 +11,17 @@ upload_cdc_proc_to_edav(
 )
 }
 \arguments{
-\item{core_ready_folder}{str: Local folder with CDC processed files}
+\item{core_ready_folder}{`str` Local folder with CDC processed files.}
 
-\item{azcontainer}{Azure Token Container Object}
+\item{azcontainer}{`Azure container` Azure Token Container Object.}
 
-\item{output_folder}{Location to write out Core Files}
+\item{output_folder}{`str` Location to write out Core Files.}
+}
+\value{
+`NULL`.
 }
 \description{
-Manages read/write/list/create/delete functions for tidypolis
+The function will perform an archiving operation of the previous preprocessed
+files in the data folder used when recreating `raw.data` with updated dataset.
+It will also copy the newly preprocessed files to the data folder.
 }

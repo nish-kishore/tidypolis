@@ -4,13 +4,14 @@
 #'
 #' @description
 #' Manages read/write/list/create/delete functions for tidypolis
+#'
 #' @import sirfunctions dplyr AzureStor readr stringr cli
-#' @param obj str: object to be loaded into EDAV
-#' @param io str: read/write/list/exists/create/delete
-#' @param file_path str: absolute path of file
-#' @param edav boolean defaults to FALSE
-#' @param azcontainer AZ container object returned by
-#' @param full_names boolean: If you want to include the full reference path in the response, default FALSE
+#' @param obj `str` Object to be loaded into EDAV.
+#' @param io `str` read/write/list/exists/create/delete
+#' @param file_path `str` Absolute path of file.
+#' @param edav `bool` Whether to interact with EDAV files. Defaults to `FALSE`.
+#' @param azcontainer `Azure container` An Azure container object.
+#' @param full_names `bool` If you want to include the full reference path in the response, default `FALSE`.
 #' @param edav_default_dir `str` If `edav = TRUE`, specify the default directory used for `sirfunctions::edav_io()`.
 #' By default, this is `"GID/PEB/SIR"`.
 #'
@@ -197,12 +198,16 @@ tidypolis_io <- function(
 #' Transfer preprocessed files to active EDAV download
 #'
 #' @description
-#' Manages read/write/list/create/delete functions for tidypolis
+#' The function will perform an archiving operation of the previous preprocessed
+#' files in the data folder used when recreating `raw.data` with updated dataset.
+#' It will also copy the newly preprocessed files to the data folder.
+#'
 #' @import sirfunctions dplyr AzureStor readr cli stringr
 #' @param core_ready_folder `str` Local folder with CDC processed files.
-#' @param azcontainer Azure Token Container Object.
-#' @param output_folder Location to write out Core Files.
-#' @returns NULL
+#' @param azcontainer `Azure container` Azure Token Container Object.
+#' @param output_folder `str` Location to write out Core Files.
+#' @returns `NULL`.
+#' @export
 upload_cdc_proc_to_edav <- function(
     core_ready_folder = file.path(Sys.getenv("POLIS_DATA_CACHE"), "Core_Ready_Files"),
     azcontainer = sirfunctions::get_azure_storage_connection(),
