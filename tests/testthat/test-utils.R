@@ -18,7 +18,7 @@ test_that("Testing f.pre.st.sample()", {
   # Data where all records have lat/lon and Admin2GUIDs
   case_1 <- f.pre.stsample.01(afp.linelist.fixes.04$all_with_pts,
                               global.dist.01)
-  with_coords <- case_2 |>
+  with_coords <- case_1 |>
     dplyr::filter(!is.na(lat), !is.na(lon)) |>
     nrow()
 
