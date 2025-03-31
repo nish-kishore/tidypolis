@@ -3871,12 +3871,17 @@ process_spatial <- function(gdb_folder,
 
   }
 
+  #identify sf var in global.ctry
+  sf_columns_ctry <- sapply(global.ctry.01, function(col) inherits(col, "sfc"))
+
+  sf_var_ctry <- names(global.ctry.01)[sf_columns]
+
   #identifying bad shapes
   check.ctry.valid <- tibble::as_tibble(sf::st_is_valid(global.ctry.01))
   row.num.ctry <- which(check.ctry.valid$value == FALSE)
   invalid.ctry.shapes <- global.ctry.01 |>
     dplyr::slice(row.num.ctry) |>
-    dplyr::select(ADM0_NAME, GUID, yr.st, yr.end, Shape) |>
+    dplyr::select(ADM0_NAME, GUID, yr.st, yr.end, paste(sf_var_ctry)) |>
     dplyr::arrange(ADM0_NAME)
 
   sf::st_geometry(invalid.ctry.shapes) <- NULL
