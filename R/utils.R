@@ -3874,7 +3874,7 @@ process_spatial <- function(gdb_folder,
   #identify sf var in global.ctry
   sf_columns_ctry <- sapply(global.ctry.01, function(col) inherits(col, "sfc"))
 
-  sf_var_ctry <- names(global.ctry.01)[sf_columns]
+  sf_var_ctry <- names(global.ctry.01)[sf_columns_ctry]
 
   #identifying bad shapes
   check.ctry.valid <- tibble::as_tibble(sf::st_is_valid(global.ctry.01))
