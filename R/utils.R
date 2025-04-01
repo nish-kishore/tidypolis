@@ -949,12 +949,19 @@ create_cred_file <- function(polis_data_folder) {
 
 #' Rename variables via crosswalk
 #'
-#' @description Rename variables in tibble using crosswalk data
+#' @description Rename variables in tibble using crosswalk data. The crosswalk
+#' file is created by the PEB SIR Team at CDC. Please request the crosswalk
+#' data before running pre-processing.
+#'
 #' @import dplyr
-#' @param api_data tibble: data pulled from api
-#' @param crosswalk tibble: crosswalk file loaded through rio
-#' @param table_name str: name of table to be crosswalked
-#' @returns tibble: renamed table
+#' @param api_data `tibble` Data pulled from the POLIS API.
+#' @param crosswalk `tibble` Crosswalk file. The crosswalk file can be imported
+#' as a tibble by using [get_crosswalk_data()].
+#' @param table_name `str` Name of table to be crosswalked. The following values
+#' are valid: `"Case", "EnvSample", "SubActivity", "Virus", "Activity"`.
+#' @returns `tibble` Renamed `api_data` using the crosswalk file.
+#'
+#' @keywords internal
 rename_via_crosswalk <- function(api_data,
                                  crosswalk,
                                  table_name) {
@@ -966,7 +973,7 @@ rename_via_crosswalk <- function(api_data,
     web_name <- crosswalk_sub1$Web_Name[i]
     if (!is.na(web_name) & web_name != "") {
       api_data <- api_data |>
-        dplyr::rename({{web_name}}:={{api_name}})
+        dplyr::rename({{web_name}} := {{api_name}})
 
     }
   }
