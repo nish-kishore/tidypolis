@@ -43,15 +43,39 @@ init_tidypolis <- function(
   # check if the data folder exists
   if (tidypolis_io(io = "exists.dir", file_path = data_folder)) {
     cli::cli_alert_success("Data folder found!")
-    required_folders <- c("coverage", "pop", "spatial", "polis")
+    required_folders <- c("coverage", "pop", "spatial", "polis", "misc", "orpg")
     # Check if all the required folders are in the data folder
     dirs <- tidypolis_io(io = "list", file_path = data_folder)
 
     check_folder <- setdiff(required_folders, dirs)
 
     if (length(check_folder) > 0) {
-      cli::cli_abort(paste0("Following required folders not found: ",
+      cli::cli_alert(paste0("Following required folders not found: ",
                             paste0(check_folder, collapse = ", ")))
+
+      for (folder in check_folder) {
+        switch(folder,
+               "coverage" = cli::cli_alert(paste0("Download the coverage data at: ",
+                                                  "https://www.healthdata.org/research-analysis/health-risks-issues/vaccine-coverage-data",
+                                                  "\nGo to the National Vaccine Coverage folder and download both vacc_mcv1.csv and vacc_dpt1.csv",
+                                                  " and place them in a folder called 'coverage' in ", data_folder)
+                                           ),
+               "pop" = cli::cli_alert("Please request the pop files from the CDC PEB SIR team."),
+               "spatial" = cli::cli_alert(paste0("Please ensure that the output of process_spatial() is: ",
+                                                 file.path(data_folder, "spatial"),
+                                                 "\n Request the geodatabase from WHO.")),
+               "misc" = cli::cli_alert(paste0("Request from the SIR team the environmental site cache file ",
+                                              "called env_sites.rds ",
+                                              "and place it in ",
+                                              file.path(data_folder, "misc"))),
+               "polis" = cli::cli_alert(paste0("Please create a folder called 'polis' in ",
+                                               data_folder)),
+               "orpg" = cli::cli_alert(paste0("Please request the file 'npov_emg.table.rds' from the SIR Team",
+                                              " and add it to: ", file.path(data_folder, "orpg")))
+               )
+      }
+    } else {
+      cli::cli_alert_success("Required data folders present")
     }
 
   } else {
