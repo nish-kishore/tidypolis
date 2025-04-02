@@ -4114,6 +4114,7 @@ process_spatial <- function(gdb_folder,
     dplyr::filter(empty == TRUE)
 
   if(nrow(empty.dist) > 0) {
+    sf::st_geometry(empty.dist) <- NULL
     if(edav) {
       tidypolis_io(io = "write", edav = T,
                    file_path = paste0(output_folder, "/empty_dist_shapes.csv"),
@@ -4146,7 +4147,7 @@ process_spatial <- function(gdb_folder,
   }
 
   if(nrow(dupe.guid.dist) > 1) {
-    dupe.guid.dist$Shape <- NULL
+    sf::st_geometry(dupe.guid.dist) <- NULL
     if(edav) {
       tidypolis_io(io = "write", edav = T,
                    file_path = paste0(output_folder, "/duplicate_dist_guid.csv"),
@@ -4159,7 +4160,7 @@ process_spatial <- function(gdb_folder,
   }
 
   if(nrow(dupe.name.dist) > 1) {
-    dupe.name.dist$Shape <- NULL
+    sf::st_geometry(dupe.name.dist) <- NULL
     if(edav) {
       tidypolis_io(io = "write", edav = T,
                    file_path = paste0(output_folder, "/duplicate_dist_name.csv"),
@@ -4170,6 +4171,8 @@ process_spatial <- function(gdb_folder,
                    obj = dupe.name.dist)
     }
   }
+
+  rm(dupe.guid.dist, dupe.name.dist, sf_columns_dist, sf_var_dist)
 
   #ensure district CRS is 4326
   global.dist.01 <- sf::st_set_crs(global.dist.01, 4326)
