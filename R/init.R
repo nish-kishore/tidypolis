@@ -1,20 +1,26 @@
 #' A function to intitialize a POLIS data folder
 #'
-#' @description Initialize API Key and local data cache for tidypolis. Inspired by the
+#' @description
+#' Initialize API Key and local data cache for tidypolis. Inspired by the
 #' tidycensus process for managing their API secrets.
+#' @details
+#' The function internally creates several global variables that sets up paths
+#' and flags that other functions in tidypolis depends on.
+#'
 #' @import cli yaml tibble dplyr readr lubridate sirfunctions
-#' @param polis_data_folder str: location of folder where to store all information
-#' @param edav boolean: should the system use EDAV as it's cache; default FALSE
+#' @param polis_folder `str` Location of folder where to store all information.
+#' @param edav `bool` Should the system use EDAV as it's cache; default `FALSE`.
 #' @returns Messages on process
 #' @examples
 #' \dontrun{
-#' init_tidypolis(polis_data_folder = "POLIS", edav = T) #create a polis data cache on CDC EDAV
-#' init_tidypolis("C:/Users/"user_name"/Desktop/polis", edav = F)
+#' init_tidypolis(polis_folder = "POLIS", data_folder = "Data", edav = T) #create a polis data cache on CDC EDAV
+#' init_tidypolis("C:/Users/user_name/Desktop/polis", "C:/Users/user_name/Desktop/data", edav = F)
 #' #create a polis data cache on your local desktop
 #' }
 #' @export
 init_tidypolis <- function(
-    polis_data_folder,
+    polis_folder = "POLIS",
+    data_folder = "Data",
     edav = F
     ){
 
@@ -34,43 +40,62 @@ init_tidypolis <- function(
     Sys.setenv(POLIS_EDAV_FLAG = F)
   }
 
-  #check if folder exists, if not create it after asking for validation
-  if(tidypolis_io(io = "exists.dir", file_path = polis_data_folder)){
+  # check if the data folder exists
+  if (tidypolis_io(io = "exists.dir", file_path = data_folder)) {
+    cli::cli_alert_success("Data folder found!")
+    required_folders <- c("coverage", "pop", "spatial", "polis")
+    # Check if all the required folders are in the data folder
+    dirs <- tidypolis_io(io = "list", file_path = data_folder)
+
+    check_folder <- setdiff(required_folders, dirs)
+
+    if (length(check_folder) > 0) {
+      cli::cli_abort(paste0("Following required folders not found: ",
+                            paste0(check_folder, collapse = ", ")))
+    }
+
+  } else {
+    cli::cli_abort("Data folder not found.")
+  }
+
+
+  #check if polis folder exists, if not create it after asking for validation
+  if(tidypolis_io(io = "exists.dir", file_path = polis_folder)){
     cli::cli_alert_success("POLIS data folder found!")
   }else{
     val <- request_input(
-      request = paste0("Confirm creation of POLIS data folder at '",polis_data_folder),
+      request = paste0("Confirm creation of POLIS data folder at '",polis_folder),
       vals = c("Y", "N")
     )
 
 
     if(val == "Y"){
-      tidypolis_io(io = "create", file_path = polis_data_folder)
-      cli::cli_alert_success(paste0("- POLIS data folder created at'", polis_data_folder, "'"))
+      tidypolis_io(io = "create", file_path = polis_folder)
+      cli::cli_alert_success(paste0("- POLIS data folder created at'", polis_folder, "'"))
     }else{
       stop(paste0("Please run function again with updated folder location"))
     }
   }
-  Sys.setenv(POLIS_DATA_FOLDER = polis_data_folder)
+  Sys.setenv(POLIS_DATA_FOLDER = polis_folder)
   #check if sub-folders exist, if not create them
 
   cli::cli_alert_info("Checking POLIS data folder structure")
-  if("data" %in% tidypolis_io(io = "list", file_path = polis_data_folder)){
+  if("data" %in% tidypolis_io(io = "list", file_path = polis_folder)){
     cli::cli_alert_success("- Data folder identified")
   }else{
     cli::cli_alert_success("- Creating 'data' folder")
-    tidypolis_io(io = "create", file_path = paste0(polis_data_folder, "/data"))
+    tidypolis_io(io = "create", file_path = paste0(polis_folder, "/data"))
   }
-  Sys.setenv(POLIS_DATA_CACHE = paste0(polis_data_folder,"/data"))
+  Sys.setenv(POLIS_DATA_CACHE = paste0(polis_folder,"/data"))
 
   #check if key details exist, if not ask for them, test them and store them
   #if they exist, check the key
   #if key doesn't work ask for another one
   #check to see if a previous yaml version exists that needs to
   #be converted into an rds
-  yaml_cred_file <- file.path(polis_data_folder, "creds.yaml")
+  yaml_cred_file <- file.path(polis_folder, "creds.yaml")
   yaml_cred_file_exists <- tidypolis_io(io = "exists.file", file_path = yaml_cred_file)
-  cred_file <- file.path(polis_data_folder, "creds.rds")
+  cred_file <- file.path(polis_folder, "creds.rds")
   cred_file_exists <- tidypolis_io(io = "exists.file", file_path = cred_file)
 
   if(yaml_cred_file_exists & !cred_file_exists){
@@ -112,7 +137,7 @@ init_tidypolis <- function(
 
         list(
           "polis_api_key" = key,
-          "polis_data_folder" = polis_data_folder
+          "polis_data_folder" = polis_folder
         ) |>
           tidypolis_io(io = "write", file_path = cred_file)
 
@@ -134,7 +159,7 @@ init_tidypolis <- function(
 
   #check if cache exists, if not, create it
 
-  cache_file <- file.path(polis_data_folder, "cache.rds")
+  cache_file <- file.path(polis_folder, "cache.rds")
 
   if(tidypolis_io(io = "exists.file", file_path = cache_file)){
     cli::cli_alert_success("Previous cache located!")
@@ -180,7 +205,7 @@ init_tidypolis <- function(
 
   #check to see if log exists, if not use it
 
-  log_file <- file.path(polis_data_folder, "log.rds")
+  log_file <- file.path(polis_folder, "log.rds")
 
   if(tidypolis_io(io = "exists.file", file_path = log_file)){
     cli::cli_alert_success("Previous log located!")
