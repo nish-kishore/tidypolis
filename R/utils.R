@@ -4085,11 +4085,16 @@ process_spatial <- function(gdb_folder,
 
   sf::st_geometry(global.prov.01) <- NULL
 
+  #identify sf var in global.dist
+  sf_columns_dist <- sapply(global.dist.01, function(col) inherits(col, "sfc"))
+
+  sf_var_dist <- names(global.dist.01)[sf_columns_dist]
+
   check.dist.valid <- tibble::as_tibble(sf::st_is_valid(global.dist.01))
   row.num.dist <- which(check.dist.valid$value == FALSE)
   invalid.dist.shapes <- global.dist.01 |>
     dplyr::slice(row.num.dist) |>
-    dplyr::select(ADM0_NAME, ADM1_NAME, ADM2_NAME, GUID, yr.st, yr.end, Shape) |>
+    dplyr::select(ADM0_NAME, ADM1_NAME, ADM2_NAME, GUID, yr.st, yr.end, paste(sf_var_dist)) |>
     dplyr::arrange(ADM0_NAME)
 
   sf::st_geometry(invalid.dist.shapes) <- NULL
