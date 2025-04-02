@@ -3934,7 +3934,7 @@ process_spatial <- function(gdb_folder,
   }
 
   if(nrow(dupe.guid.ctry) > 1) {
-    dupe.guid.ctry$Shape <- NULL
+    sf::st_geometry(dupe.guid.ctry) <- NULL
     if(edav) {
       tidypolis_io(io = "write", edav = T,
                    file_path = paste0(output_folder, "/duplicate_ctry_guid.csv"),
@@ -3947,7 +3947,7 @@ process_spatial <- function(gdb_folder,
   }
 
   if(nrow(dupe.name.ctry) > 1) {
-    dupe.name.ctry$Shape <- NULL
+    sf::st_geometry(dupe.name.ctry) <- NULL
     if(edav) {
       tidypolis_io(io = "write", edav = T,
                    file_path = paste0(output_folder, "/duplicate_ctry_name.csv"),
@@ -3991,7 +3991,7 @@ process_spatial <- function(gdb_folder,
   row.num.prov <- which(check.prov.valid$value == FALSE)
   invalid.prov.shapes <- global.prov.01 |>
     dplyr::slice(row.num.prov) |>
-    dplyr::select(ADM0_NAME, ADM1_NAME, GUID, yr.st, yr.end, Shape) |>
+    dplyr::select(ADM0_NAME, ADM1_NAME, GUID, yr.st, yr.end, paste(sf_var_prov)) |>
     dplyr::arrange(ADM0_NAME)
 
   sf::st_geometry(invalid.prov.shapes) <- NULL
@@ -4011,6 +4011,7 @@ process_spatial <- function(gdb_folder,
     dplyr::filter(empty == TRUE)
 
   if(nrow(empty.prov) > 0) {
+    sf::st_geometry(empty.prov) <- NULL
     if(edav) {
       tidypolis_io(io = "write", edav = T,
                    file_path = paste0(output_folder, "/empty_prov_shapes.csv"),
@@ -4042,7 +4043,7 @@ process_spatial <- function(gdb_folder,
   }
 
   if(nrow(dupe.guid.prov) > 1) {
-    dupe.guid.prov$Shape <- NULL
+    sf::st_geometry(dupe.guid.prov) <- NULL
     if(edav) {
       tidypolis_io(io = "write", edav = T,
                    file_path = paste0(output_folder, "/duplicate_prov_guid.csv"),
@@ -4055,7 +4056,7 @@ process_spatial <- function(gdb_folder,
   }
 
   if(nrow(dupe.name.prov) > 1) {
-    dupe.name.prov$Shape <- NULL
+    sf::st_geometry(dupe.name.prov) <- NULL
     if(edav) {
       tidypolis_io(io = "write", edav = T,
                    file_path = paste0(output_folder, "/duplicate_prov_name.csv"),
@@ -4067,7 +4068,7 @@ process_spatial <- function(gdb_folder,
     }
   }
 
-  rm(dupe.guid.prov, dupe.name.prov)
+  rm(dupe.guid.prov, dupe.name.prov, sf_columns_prov, sf_var_prov)
 
   #ensure CRS is 4326
   global.prov.01 <- sf::st_set_crs(global.prov.01, 4326)
