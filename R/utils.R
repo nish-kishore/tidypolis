@@ -2210,25 +2210,34 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   #Step 1 - Basic cleaning and crosswalk ======
   cli::cli_h1("Step 1/5: Basic cleaning and crosswalk across datasets")
 
-  #update log for start of creation of CORE ready datasets
+  # update log for start of creation of CORE ready datasets
   update_polis_log(.event = "Beginning Preprocessing - Creation of CORE Ready Datasets", .event_type = "START")
 
   crosswalk_data <- get_crosswalk_data()
+
   cli::cli_h2("Case")
   api_case_data <- clean_case_table(file.path(polis_data_folder, "case.rds"), crosswalk_data)
+
   cli::cli_h2("Environmental Samples")
-  api_es_data <- clean_es_table(file.path(polis_data_folder, "environmental_sample.rds"),
-                                crosswalk_data)
+  api_es_data <- clean_es_table(
+    file.path(polis_data_folder, "environmental_sample.rds"),
+    crosswalk_data
+  )
+
   cli::cli_h2("Virus")
   api_virus_data <- clean_virus_table(file.path(polis_data_folder, "virus.rds"), crosswalk_data)
+
   cli::cli_h2("Activity")
-  api_activity_data <- clean_activity_table(file.path(polis_data_folder, "activity.rds"),
-                                            file.path(polis_data_folder, "sub_activity.rds"),
-                                            crosswalk_data)
+  api_activity_data <- clean_activity_table(
+    file.path(polis_data_folder, "activity.rds"),
+    file.path(polis_data_folder, "sub_activity.rds"),
+    crosswalk_data
+  )
 
   cli::cli_process_start("Loading long district shapefile")
   long.global.dist.01 <- sirfunctions::load_clean_dist_sp(type = "long")
   cli::cli_process_done()
+
   cli::cli_h2("Sub-activity")
   api_subactivity_data <- clean_subactivity_table(
     file.path(polis_data_folder, "sub_activity.rds"),
@@ -2237,10 +2246,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     long.global.dist.01
   )
 
-  #13. Export csv files that match the web download, and create archive and change log
+  # 13. Export csv files that match the web download, and create archive and change log
   cli::cli_h2("Creating change log and exporting data")
-
-  cli::cli_process_start("Checking on requisite file structure")
   ts <- Sys.time()
   timestamp <- paste0(
     lubridate::date(ts),
@@ -2252,38 +2259,30 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     round(lubridate::second(ts), 0)
   )
 
-  #create directory
+  # create directory
+  create_core_ready_dir(polis_data_folder, timestamp)
 
-  #files in directory
-  c(
-    file.path(polis_data_folder, "Core_Ready_Files"),
-    file.path(polis_data_folder, "Core_Ready_Files", "Archive"),
-    file.path(polis_data_folder, "Core_Ready_Files", "Archive", timestamp),
-    file.path(polis_data_folder, "Core_Ready_Files", "Change Log"),
-    file.path(polis_data_folder, "Core_Ready_Files", "Change Log", timestamp)
-  ) |>
-    sapply(function(x) {
-      if (!tidypolis_io(io = "exists.dir", file_path = x)) {
-        tidypolis_io(io = "create", file_path = x)
-      }
-    })
-
-  cli::cli_process_done()
-  #Get list of most recent files
-  files_in_core_ready <- tidypolis_io(io = "list",
-                                      file_path = file.path(polis_data_folder, "Core_Ready_Files"))
+  # Get list of most recent files
+  files_in_core_ready <- tidypolis_io(
+    io = "list",
+    file_path = file.path(polis_data_folder, "Core_Ready_Files")
+  )
   most_recent_files <- files_in_core_ready[grepl(".rds", files_in_core_ready)]
-  most_recent_file_patterns <- c("Activity_Data",
-                                 "EnvSamples",
-                                 "Human_Detailed",
-                                 "Viruses_Detailed")
-  most_recent_files <- most_recent_files[grepl(paste(most_recent_file_patterns, collapse = "|"),
-                                               most_recent_files)]
+  most_recent_file_patterns <- c(
+    "Activity_Data",
+    "EnvSamples",
+    "Human_Detailed",
+    "Viruses_Detailed"
+  )
+  most_recent_files <- most_recent_files[grepl(
+    paste(most_recent_file_patterns, collapse = "|"),
+    most_recent_files
+  )]
 
   if (length(most_recent_files) > 0) {
     for (i in 1:length(most_recent_files)) {
       cli::cli_process_start(paste0("Processing data for: ", most_recent_files[i]))
-      #compare current dataset to most recent and save summary to change_log
+      # compare current dataset to most recent and save summary to change_log
       old <- tidypolis_io(
         io = "read",
         file_path = file.path(
@@ -2310,7 +2309,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
         old <- old |>
           dplyr::mutate(Id = `Virus ID`)
-
       }
 
       if (grepl("Human_Detailed", most_recent_files[i])) {
@@ -2320,7 +2318,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
         old <- old |>
           dplyr::mutate(Id = `EPID`)
-
       }
 
       if (grepl("Activity", most_recent_files[i])) {
@@ -2330,7 +2327,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
         old <- old |>
           dplyr::mutate(Id = paste0(`SIA Sub-Activity Code`, "_", `Admin 2 Guid`))
-
       }
 
       potential_duplicates_new <- new |>
@@ -2347,11 +2343,11 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
       new <- new |>
         dplyr::filter(!(Id %in% potential_duplicates_new$Id) &
-                        !(Id %in% potential_duplicates_old$Id))
+          !(Id %in% potential_duplicates_old$Id))
 
       old <- old |>
         dplyr::filter(!(Id %in% potential_duplicates_new$Id) &
-                        !(Id %in% potential_duplicates_old$Id))
+          !(Id %in% potential_duplicates_old$Id))
 
       in_new_not_old <- new |>
         filter(!(Id %in% old$Id))
@@ -2364,9 +2360,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
         dplyr::select(-c(setdiff(colnames(new), colnames(old))))
 
       in_new_and_old_but_modified <- setdiff(in_new_and_old_but_modified, old |>
-                                               dplyr::select(-c(setdiff(
-                                                 colnames(old), colnames(new)
-                                               ))))
+        dplyr::select(-c(setdiff(
+          colnames(old), colnames(new)
+        ))))
 
       x <- old |>
         dplyr::filter(Id %in% new$Id) |>
@@ -2375,16 +2371,17 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
       if (nrow(in_new_and_old_but_modified) >= 1) {
         in_new_and_old_but_modified <- dplyr::inner_join(in_new_and_old_but_modified,
-                                                         setdiff(x, new |>
-                                                                   dplyr::select(-c(
-                                                                     setdiff(colnames(new), colnames(old))
-                                                                   ))),
-                                                         by = "Id") |>
-          #wide_to_long
+          setdiff(x, new |>
+            dplyr::select(-c(
+              setdiff(colnames(new), colnames(old))
+            ))),
+          by = "Id"
+        ) |>
+          # wide_to_long
           tidyr::pivot_longer(cols = -Id) |>
           dplyr::mutate(source = ifelse(stringr::str_sub(name, -2) == ".x", "new", "old")) |>
           dplyr::mutate(name = stringr::str_sub(name, 1, -3)) |>
-          #long_to_wide
+          # long_to_wide
           tidyr::pivot_wider(names_from = source, values_from = value) |>
           dplyr::mutate(new = as.character(new), old = as.character(old))
 
@@ -2394,11 +2391,11 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
       cli::cli_process_done()
       cli::cli_process_start(paste0("Creating change log for: ", most_recent_files[i]))
-      n_added = nrow(in_new_not_old)
-      n_edited = length(unique(in_new_and_old_but_modified$Id))
-      n_deleted = nrow(in_old_not_new)
-      vars_added = setdiff(colnames(new), colnames(old))
-      vars_dropped = setdiff(colnames(old), colnames(new))
+      n_added <- nrow(in_new_not_old)
+      n_edited <- length(unique(in_new_and_old_but_modified$Id))
+      n_deleted <- nrow(in_old_not_new)
+      vars_added <- setdiff(colnames(new), colnames(old))
+      vars_dropped <- setdiff(colnames(old), colnames(new))
       change_summary <- list(
         n_added = n_added,
         n_edited = n_edited,
@@ -2422,7 +2419,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
           ), ".rds")
         )
       )
-      #Move most recent to archive
+      # Move most recent to archive
       tidypolis_io(io = "read", file_path = (
         file.path(
           polis_data_folder,
@@ -2451,20 +2448,24 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
       cli::cli_process_done()
     }
-  } else{
+  } else {
     cli::cli_alert_info("No previous main Core Ready Files found, creating new files")
   }
 
-  most_recent_files_01 <- tidypolis_io(io = "list",
-                                       file_path = file.path(polis_data_folder, "Core_Ready_Files"))
+  most_recent_files_01 <- tidypolis_io(
+    io = "list",
+    file_path = file.path(polis_data_folder, "Core_Ready_Files")
+  )
   most_recent_file_01_patterns <- c(".rds", ".csv", ".xlsx")
-  most_recent_files_01 <- most_recent_files_01[grepl(paste(most_recent_file_01_patterns, collapse = "|"),
-                                                     most_recent_files_01)]
+  most_recent_files_01 <- most_recent_files_01[grepl(
+    paste(most_recent_file_01_patterns, collapse = "|"),
+    most_recent_files_01
+  )]
 
   if (length(most_recent_files_01) > 0) {
     for (i in 1:length(most_recent_files_01)) {
       cli::cli_process_start(paste0("Archiving Data for: ", most_recent_files_01[i]))
-      #move file to archive
+      # move file to archive
       tidypolis_io(
         io = "read",
         file_path = file.path(
@@ -2483,7 +2484,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
             most_recent_files_01[i]
           )
         )
-      #delete file
+      # delete file
       tidypolis_io(
         io = "delete",
         file_path = file.path(
@@ -2494,12 +2495,12 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
       )
       cli::cli_process_done()
     }
-  } else{
+  } else {
     cli::cli_alert_info("No previous secondary Core Ready Files found, creating new files")
   }
 
   cli::cli_process_start("Writing all final Core Ready files")
-  #Export files (as csv) to be used as pre-processing starting points
+  # Export files (as csv) to be used as pre-processing starting points
   tidypolis_io(
     obj = api_case_data,
     io = "write",
@@ -2564,7 +2565,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   update_polis_log(.event = "CORE Ready files and change logs complete", .event_type = "PROCESS")
 
-  #14. Remove temporary files from working environment, and set scientific notation back to whatever it was originally
+  # 14. Remove temporary files from working environment, and set scientific notation back to whatever it was originally
   cli::cli_process_start("Clearing memory from first step")
   rm(
     "change_summary",
@@ -6300,4 +6301,34 @@ clean_virus_table <- function(path, crosswalk,
 
   return(api_virus_sub3)
 
+}
+
+#' Helper function to create Core Ready Archive and Change Log
+#'
+#' @param polis_data_folder `str` Location of the POLIS data folder.
+#' @param timestamp `str` Folder name as the timestamp.
+#'
+#' @returns NULL
+#' @keywords internal
+#'
+create_core_ready_dir <- function(polis_data_folder, timestamp) {
+  cli_process_start("Checking on requisite file structure")
+
+  dirs <- c(
+    file.path(polis_data_folder, "Core_Ready_Files"),
+    file.path(polis_data_folder, "Core_Ready_Files", "Archive"),
+    file.path(polis_data_folder, "Core_Ready_Files", "Archive", timestamp),
+    file.path(polis_data_folder, "Core_Ready_Files", "Change Log"),
+    file.path(polis_data_folder, "Core_Ready_Files", "Change Log", timestamp)
+  )
+
+  sapply(dirs, function(x) {
+    if (!tidypolis_io(io = "exists.dir", file_path = x)) {
+      tidypolis_io(io = "create", file_path = x)
+    }
+  })
+
+  cli_process_done()
+
+  return(NULL)
 }
