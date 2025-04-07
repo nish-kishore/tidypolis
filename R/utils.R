@@ -2120,7 +2120,8 @@ check_missingness <- function(data,
 #' Process POLIS data into analytic datasets needed for CDC
 #' @import cli sirfunctions dplyr readr lubridate stringr tidyr stringi
 #' @param polis_data_folder str: location of the POLIS data folder, defaults to value stored from init_tidypolis
-#' @return Outputs intermediary core ready files
+#' @returns Outputs intermediary core ready files
+#'
 preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   if (!requireNamespace("purrr", quietly = TRUE)) {
@@ -5294,6 +5295,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
 #' Process WHO spatial data and output country, province and district level shape files and basic
 #' quality checks
+#'
 #' @description
 #' a function to process WHO spatial datasets
 #' @import dplyr sf lubridate stringr readr tibble cli
@@ -5301,6 +5303,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 #' if on edav the gdb will need to be zipped, ensure that the gdb and the zipped file name are the same
 #' @param output_folder str folder location to write outputs to
 #' @param edav boolean T or F, whether gdb is on EDAV or local
+#' @export
 process_spatial <- function(gdb_folder,
                             output_folder,
                             edav) {
@@ -6060,3 +6063,77 @@ if(exists("positives.new")){
 #' }
 #'
 
+# Private functions ----
+
+#' Clean Case data
+#'
+#' @description
+#' The function performs cleaning of the Case table. In particular,
+#' de-duplication, renaming of variables via crosswalk, and removal of
+#' empty columns.
+#'
+#' @param case_path `str` Path to case data.
+#' @param crosswalk_data `tibble` The crosswalk table.
+#' @param edav `bool` Is the case data located on EDAV? Defaults to the
+#' EDAV flag during [init_tidypolis()].
+#'
+#' @returns `tibble` cleaned Case data.
+#' @keywords internal
+#'
+clean_case_data <- function(case_path, crosswalk_data,
+                            edav = Sys.getenv("POLIS_EDAV_FLAG")) {
+
+  cli::cli_h2("Case")
+  cli::cli_process_start("Loading Case table")
+  api_case_2019_12_01_onward <-
+    tidypolis_io(io = "read", file_path = case_path) |>
+    dplyr::mutate_all(as.character)
+  cli::cli_process_done()
+
+  cli::cli_process_start("De-duplicating data")
+  api_case_sub1 <- api_case_2019_12_01_onward |>
+    dplyr::distinct()
+  cli::cli_process_done()
+
+  cli::cli_process_start("Crosswalk and rename variables")
+  api_case_sub1 <- api_case_sub1 |>
+    dplyr::rename(DosesTotal = DosesOPVNumber)
+  api_case_sub2 <- rename_via_crosswalk(api_data = api_case_sub1,
+                                        crosswalk = crosswalk,
+                                        table_name = "Case")
+  cli::cli_process_done()
+
+  cli::cli_process_start("Cleaning IPV/OPV variables")
+  api_case_sub3 <- api_case_sub2 |>
+    dplyr::mutate(
+      `total.number.of.ipv./.opv.doses` = NA_integer_,
+      Doses =  as.numeric(Doses),
+      `Virus Sequenced` = as.logical(`Virus Sequenced`),
+      `Advanced Notification` = dplyr::case_when(
+        `Advanced Notification` == TRUE ~ "Yes",
+        `Advanced Notification` == FALSE ~ "No",
+        TRUE ~ NA_character_
+      ),
+      `Dataset Lab` = dplyr::case_when(
+        `Dataset Lab` == TRUE ~ "Yes",
+        `Dataset Lab` == FALSE ~ "No",
+        TRUE ~ NA_character_
+      ),
+      `Is Breakthrough` = dplyr::case_when(
+        `Is Breakthrough` == TRUE ~ "Yes",
+        `Is Breakthrough` == FALSE ~ "No",
+        TRUE ~ NA_character_
+      )
+    ) |>
+    dplyr::select(c(crosswalk$Web_Name[crosswalk$Table %in% c("Case") &
+                                         !is.na(crosswalk$Web_Name)],
+                    crosswalk$API_Name[crosswalk$Table %in% c("Case") &
+                                         is.na(crosswalk$Web_Name)]))
+  cli::cli_process_done()
+
+  cli::cli_process_start("Removing empty columns")
+  api_case_sub3 <- remove_empty_columns(api_case_sub3)
+  cli::cli_process_done()
+
+  return(api_case_sub3)
+}
