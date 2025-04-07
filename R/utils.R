@@ -5825,7 +5825,7 @@ if(exists("positives.new")){
 #' @returns `tibble` cleaned Case data.
 #' @keywords internal
 #'
-clean_case_table <- function(path, crosswalk_data,
+clean_case_table <- function(path, crosswalk,
                             edav = Sys.getenv("POLIS_EDAV_FLAG")) {
 
   cli::cli_process_start("Loading Case table")
