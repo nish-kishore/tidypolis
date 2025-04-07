@@ -2222,7 +2222,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_h2("Virus")
   api_virus_data <- clean_virus_table(file.path(polis_data_folder, "virus.rds"), crosswalk_data)
   cli::cli_h2("Activity")
-  api_activity_data <- clean_activity_table(file.path(polis_data_folder, "activity.rds"), crosswalk_data)
+  api_activity_data <- clean_activity_table(file.path(polis_data_folder, "activity.rds"),
+                                            file.path(polis_data_folder, "sub_activity.rds"),
+                                            crosswalk_data)
 
   cli::cli_process_start("Loading long district shapefile")
   long.global.dist.01 <- sirfunctions::load_clean_dist_sp(type = "long")
@@ -6092,9 +6094,6 @@ clean_subactivity_table <- function(path, activity_table, crosswalk,
 
   rm(api_subactivity_sub2)
 
-  cli::cli_h2("Modifying and reconciling variable types")
-  #    Modify individual variables in the API files to match the coding in the web-interface downloads,
-  #    and retain only variables from the API files that are present in the web-interface downloads.
   cli::cli_process_start("Reconciling activity and subactivity variables")
   api_subactivity_sub4 <- api_subactivity_sub3 |>
     dplyr::mutate(
@@ -6167,11 +6166,12 @@ clean_subactivity_table <- function(path, activity_table, crosswalk,
 #' empty columns.
 #'
 #' @inheritParams clean_case_table
+#' @param subactivity_path `str` Path to the sub-activity table.
 #'
 #' @returns `tibble` A cleaned Activity table.
 #' @keywords internal
 #'
-clean_activity_table <- function(path, crosswalk,
+clean_activity_table <- function(path, subactivity_path, crosswalk,
                                  edav = Sys.getenv("POLIS_EDAV_FLAG")) {
 
   cli::cli_process_start("Loading activity data")
@@ -6180,9 +6180,16 @@ clean_activity_table <- function(path, crosswalk,
     dplyr::mutate_all(as.character)
   cli::cli_process_done()
 
+  cli::cli_process_start("Loading subactivity data")
+  sia_subactivity_code <- tidypolis_io(io = "read",
+                                           file_path = subactivity_path) |>
+    dplyr::distinct() |>
+    dplyr::pull(SIASubActivityCode)
+  cli::cli_process_done()
+
   cli::cli_process_start("De-duplicating data")
   api_activity_sub1 <- api_activity_complete |>
-    dplyr::filter(SIASubActivityCode %in% api_subactivity_sub1$SIASubActivityCode) |>
+    dplyr::filter(SIASubActivityCode %in% sia_subactivity_code) |>
     dplyr::distinct()
   cli::cli_process_done()
 

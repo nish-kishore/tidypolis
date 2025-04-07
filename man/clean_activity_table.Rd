@@ -4,10 +4,17 @@
 \alias{clean_activity_table}
 \title{Clean the Activity table}
 \usage{
-clean_activity_table(path, crosswalk, edav = Sys.getenv("POLIS_EDAV_FLAG"))
+clean_activity_table(
+  path,
+  subactivity_path,
+  crosswalk,
+  edav = Sys.getenv("POLIS_EDAV_FLAG")
+)
 }
 \arguments{
 \item{path}{\code{str} File path to the table.}
+
+\item{subactivity_path}{\code{str} Path to the sub-activity table.}
 
 \item{crosswalk}{\code{tibble} The crosswalk table. This is the output of
 \code{\link[=get_crosswalk_data]{get_crosswalk_data()}}.}

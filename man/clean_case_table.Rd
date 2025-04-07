@@ -4,16 +4,16 @@
 \alias{clean_case_table}
 \title{Clean Case table}
 \usage{
-clean_case_table(path, crosswalk_data, edav = Sys.getenv("POLIS_EDAV_FLAG"))
+clean_case_table(path, crosswalk, edav = Sys.getenv("POLIS_EDAV_FLAG"))
 }
 \arguments{
 \item{path}{\code{str} File path to the table.}
 
-\item{edav}{\code{bool} Data located on EDAV? Defaults to the
-EDAV flag.}
-
 \item{crosswalk}{\code{tibble} The crosswalk table. This is the output of
 \code{\link[=get_crosswalk_data]{get_crosswalk_data()}}.}
+
+\item{edav}{\code{bool} Data located on EDAV? Defaults to the
+EDAV flag.}
 }
 \value{
 \code{tibble} cleaned Case data.
