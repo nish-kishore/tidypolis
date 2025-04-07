@@ -9,7 +9,7 @@ clean_case_table(path, crosswalk_data, edav = Sys.getenv("POLIS_EDAV_FLAG"))
 \arguments{
 \item{path}{\code{str} File path to the table.}
 
-\item{edav}{\code{bool} Is the case data located on EDAV? Defaults to the
+\item{edav}{\code{bool} Data located on EDAV? Defaults to the
 EDAV flag.}
 
 \item{crosswalk}{\code{tibble} The crosswalk table. This is the output of

@@ -6075,7 +6075,7 @@ if(exists("positives.new")){
 #' @param path `str` File path to the table.
 #' @param crosswalk `tibble` The crosswalk table. This is the output of
 #' [get_crosswalk_data()].
-#' @param edav `bool` Is the case data located on EDAV? Defaults to the
+#' @param edav `bool` Data located on EDAV? Defaults to the
 #' EDAV flag.
 #'
 #' @returns `tibble` cleaned Case data.
@@ -6342,7 +6342,7 @@ clean_subactivity_table <- function(path, activity_table, crosswalk,
     rename_via_crosswalk(api_data = api_subactivity_sub2,
                          crosswalk = crosswalk,
                          table_name = "SubActivity") |>
-    dplyr::left_join(api_activity_sub2,
+    dplyr::left_join(activity_table,
                      by = c("SIA Sub-Activity Code" = "SIASubActivityCode"))
   cli::cli_process_done()
 
@@ -6460,35 +6460,32 @@ clean_activity_table <- function(path, crosswalk,
 #'
 #' @inheritParams clean_case_table
 #'
-#' @returns `tibble` Cleaned virus table
+#' @returns `tibble` Cleaned virus table.
 #' @keywords internal
 #'
 clean_virus_table <- function(path, crosswalk,
                               edav = Sys.getenv("POLIS_EDAV_FLAG")) {
 
-  #Read in the updated API datasets
-  cli::cli_h2("Loading data")
-
-  cli::cli_process_start("Virus")
+  cli::cli_process_start("Loading virus data")
   api_virus_complete <-
     tidypolis_io(io = "read", file_path = path) |>
     dplyr::mutate_all(as.character)
   cli::cli_process_done()
 
-  cli::cli_h2("De-duplicating data")
-
-  cli::cli_process_start("Virus")
+  cli::cli_process_start("De-duplicating data")
   api_virus_sub1 <- api_virus_complete |>
     dplyr::distinct()
   cli::cli_process_done()
 
-  cli::cli_h2("Crosswalk and rename variables")
+  rm(api_virus_complete)
 
-  cli::cli_process_start("Virus")
+  cli::cli_process_start("Crosswalk and rename variables")
   api_virus_sub2 <- rename_via_crosswalk(api_data = api_virus_sub1,
                                          crosswalk = crosswalk,
                                          table_name = "Virus")
   cli::cli_process_done()
+
+  rm(api_virus_sub1)
 
   cli::cli_process_start("Cleaning irregular location names")
   api_virus_sub3 <- api_virus_sub2 |>
@@ -6543,6 +6540,8 @@ clean_virus_table <- function(path, crosswalk,
       TRUE ~ NA_character_
     ))
   cli::cli_process_done()
+
+  rm(api_virus_sub2)
 
   cli::cli_process_start("Removing empty columns")
   api_virus_sub3 <- remove_empty_columns(api_virus_sub3)
