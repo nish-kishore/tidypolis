@@ -1173,6 +1173,9 @@ f.download.compare.02 <- function(df.from.f.download.compare.01,
 #' @returns tibble with lat/lon for all unsampled locations
 f.pre.stsample.01 <- function(df01, global.dist.01) {
 
+  global.dist.01 <- global.dist.01 |>
+    dplyr::rename(SHAPE = Shape)
+
   #need to identify cases with no lat/lon
   empty.coord <- df01 |>
     dplyr::filter(is.na(polis.latitude) | is.na(polis.longitude) |
@@ -3422,7 +3425,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   gc()
   # Function to create lat & long for AFP cases
   # Need to identify cases with no lat/lon
-  empty.coord.check <- df01 |>
+  empty.coord.check <- afp.linelist.fixed.final |>
     dplyr::filter(is.na(polis.latitude) | is.na(polis.longitude) |
                     (polis.latitude == 0 & polis.longitude == 0))
 
