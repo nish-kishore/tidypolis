@@ -2211,12 +2211,14 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_h1("Step 1/5: Basic cleaning and crosswalk across datasets")
 
   # update log for start of creation of CORE ready datasets
-  update_polis_log(.event = "Beginning Preprocessing - Creation of CORE Ready Datasets", .event_type = "START")
+  update_polis_log(.event = "Beginning Preprocessing - Creation of CORE Ready Datasets",
+                   .event_type = "START")
 
   crosswalk_data <- get_crosswalk_data()
 
   cli::cli_h2("Case")
-  api_case_data <- clean_case_table(file.path(polis_data_folder, "case.rds"), crosswalk_data)
+  api_case_data <- clean_case_table(file.path(polis_data_folder, "case.rds"),
+                                    crosswalk_data)
 
   cli::cli_h2("Environmental Samples")
   api_es_data <- clean_es_table(
@@ -2225,7 +2227,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   )
 
   cli::cli_h2("Virus")
-  api_virus_data <- clean_virus_table(file.path(polis_data_folder, "virus.rds"), crosswalk_data)
+  api_virus_data <- clean_virus_table(file.path(polis_data_folder, "virus.rds"),
+                                      crosswalk_data)
 
   cli::cli_h2("Activity")
   api_activity_data <- clean_activity_table(
@@ -2245,6 +2248,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     crosswalk_data,
     long.global.dist.01
   )
+
+  rm(crosswalk_data)
 
   # 13. Export csv files that match the web download, and create archive and change log
   cli::cli_h2("Creating change log and exporting data")
@@ -2273,320 +2278,28 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
                                              most_recent_file_patterns)
 
   if (length(most_recent_files) > 0) {
-    for (i in 1:length(most_recent_files)) {
-      cli::cli_process_start(paste0("Processing data for: ", most_recent_files[i]))
-      # compare current dataset to most recent and save summary to change_log
-      old <- tidypolis_io(
-        io = "read",
-        file_path = file.path(
-          polis_data_folder,
-          "Core_Ready_Files",
-          most_recent_files[i]
-        )
-      ) |>
-        dplyr::mutate_all(as.character)
-
-      if (grepl("EnvSamples", most_recent_files[i])) {
-        new <- api_es_data |>
-          dplyr::mutate(Id = `Env Sample Manual Edit Id`) |>
-          dplyr::mutate_all(as.character)
-
-        old <- old |>
-          dplyr::mutate(Id = `Env Sample Manual Edit Id`)
-      }
-
-      if (grepl("Viruses", most_recent_files[i])) {
-        new <- api_virus_data |>
-          dplyr::mutate(Id = `Virus ID`) |>
-          dplyr::mutate_all(as.character)
-
-        old <- old |>
-          dplyr::mutate(Id = `Virus ID`)
-      }
-
-      if (grepl("Human_Detailed", most_recent_files[i])) {
-        new <- api_case_data |>
-          dplyr::mutate(Id = `EPID`) |>
-          dplyr::mutate_all(as.character)
-
-        old <- old |>
-          dplyr::mutate(Id = `EPID`)
-      }
-
-      if (grepl("Activity", most_recent_files[i])) {
-        new <- api_subactivity_data |>
-          dplyr::mutate(Id = paste0(`SIA Sub-Activity Code`, "_", `Admin 2 Guid`)) |>
-          dplyr::mutate_all(as.character)
-
-        old <- old |>
-          dplyr::mutate(Id = paste0(`SIA Sub-Activity Code`, "_", `Admin 2 Guid`))
-      }
-
-      potential_duplicates_new <- new |>
-        dplyr::group_by(Id) |>
-        dplyr::summarise(count = n()) |>
-        dplyr::ungroup() |>
-        dplyr::filter(count >= 2)
-
-      potential_duplicates_old <- old |>
-        dplyr::group_by(Id) |>
-        dplyr::summarise(count = n()) |>
-        dplyr::ungroup() |>
-        dplyr::filter(count >= 2)
-
-      new <- new |>
-        dplyr::filter(!(Id %in% potential_duplicates_new$Id) &
-          !(Id %in% potential_duplicates_old$Id))
-
-      old <- old |>
-        dplyr::filter(!(Id %in% potential_duplicates_new$Id) &
-          !(Id %in% potential_duplicates_old$Id))
-
-      in_new_not_old <- new |>
-        filter(!(Id %in% old$Id))
-
-      in_old_not_new <- old |>
-        filter(!(Id %in% new$Id))
-
-      in_new_and_old_but_modified <- new |>
-        dplyr::filter(Id %in% old$Id) |>
-        dplyr::select(-c(setdiff(colnames(new), colnames(old))))
-
-      in_new_and_old_but_modified <- setdiff(in_new_and_old_but_modified, old |>
-        dplyr::select(-c(setdiff(
-          colnames(old), colnames(new)
-        ))))
-
-      x <- old |>
-        dplyr::filter(Id %in% new$Id) |>
-        dplyr::select(-c(setdiff(colnames(old), colnames(new))))
-
-
-      if (nrow(in_new_and_old_but_modified) >= 1) {
-        in_new_and_old_but_modified <- dplyr::inner_join(in_new_and_old_but_modified,
-          setdiff(x, new |>
-            dplyr::select(-c(
-              setdiff(colnames(new), colnames(old))
-            ))),
-          by = "Id"
-        ) |>
-          # wide_to_long
-          tidyr::pivot_longer(cols = -Id) |>
-          dplyr::mutate(source = ifelse(stringr::str_sub(name, -2) == ".x", "new", "old")) |>
-          dplyr::mutate(name = stringr::str_sub(name, 1, -3)) |>
-          # long_to_wide
-          tidyr::pivot_wider(names_from = source, values_from = value) |>
-          dplyr::mutate(new = as.character(new), old = as.character(old))
-
-        in_new_and_old_but_modified <- in_new_and_old_but_modified |>
-          dplyr::filter(new != old)
-      }
-
-      cli::cli_process_done()
-      cli::cli_process_start(paste0("Creating change log for: ", most_recent_files[i]))
-      n_added <- nrow(in_new_not_old)
-      n_edited <- length(unique(in_new_and_old_but_modified$Id))
-      n_deleted <- nrow(in_old_not_new)
-      vars_added <- setdiff(colnames(new), colnames(old))
-      vars_dropped <- setdiff(colnames(old), colnames(new))
-      change_summary <- list(
-        n_added = n_added,
-        n_edited = n_edited,
-        n_deleted = n_deleted,
-        vars_added = vars_added,
-        vars_dropped = vars_dropped,
-        obs_added = in_new_not_old,
-        obs_edited = in_new_and_old_but_modified,
-        obs_deleted = in_old_not_new
-      )
-      tidypolis_io(
-        io = "write",
-        obj = change_summary,
-        file_path = file.path(
-          polis_data_folder,
-          "Core_Ready_Files",
-          "Change Log",
-          timestamp,
-          paste0(substr(
-            most_recent_files[i], 1, nchar(most_recent_files[i]) - 4
-          ), ".rds")
-        )
-      )
-      # Move most recent to archive
-      tidypolis_io(io = "read", file_path = (
-        file.path(
-          polis_data_folder,
-          "Core_Ready_Files",
-          most_recent_files[i]
-        )
-      )) |>
-        tidypolis_io(
-          io = "write",
-          file_path = file.path(
-            polis_data_folder,
-            "Core_Ready_Files",
-            "Archive",
-            timestamp,
-            most_recent_files[i]
-          )
-        )
-
-      tidypolis_io(io = "delete", file_path = (
-        file.path(
-          polis_data_folder,
-          "Core_Ready_Files",
-          most_recent_files[i]
-        )
-      ))
-
-      cli::cli_process_done()
+    for (i in most_recent_files) {
+      create_change_log(polis_data_folder, i, timestamp,
+                        api_case_data,
+                        api_es_data,
+                        api_virus_data,
+                        api_subactivity_data)
     }
   } else {
     cli::cli_alert_info("No previous main Core Ready Files found, creating new files")
   }
 
-  most_recent_files_01 <- tidypolis_io(
-    io = "list",
-    file_path = file.path(polis_data_folder, "Core_Ready_Files")
-  )
-  most_recent_file_01_patterns <- c(".rds", ".csv", ".xlsx")
-  most_recent_files_01 <- most_recent_files_01[grepl(
-    paste(most_recent_file_01_patterns, collapse = "|"),
-    most_recent_files_01
-  )]
+  # Move files from the current POLIS data folder into the archive
+  archive_old_files(polis_data_folder, timestamp)
 
-  if (length(most_recent_files_01) > 0) {
-    for (i in 1:length(most_recent_files_01)) {
-      cli::cli_process_start(paste0("Archiving Data for: ", most_recent_files_01[i]))
-      # move file to archive
-      tidypolis_io(
-        io = "read",
-        file_path = file.path(
-          polis_data_folder,
-          "Core_Ready_Files",
-          most_recent_files_01[i]
-        )
-      ) |>
-        tidypolis_io(
-          io = "write",
-          file_path = file.path(
-            polis_data_folder,
-            "Core_Ready_Files",
-            "Archive",
-            timestamp,
-            most_recent_files_01[i]
-          )
-        )
-      # delete file
-      tidypolis_io(
-        io = "delete",
-        file_path = file.path(
-          polis_data_folder,
-          "Core_Ready_Files",
-          most_recent_files_01[i]
-        )
-      )
-      cli::cli_process_done()
-    }
-  } else {
-    cli::cli_alert_info("No previous secondary Core Ready Files found, creating new files")
-  }
-
-  cli::cli_process_start("Writing all final Core Ready files")
   # Export files (as csv) to be used as pre-processing starting points
-  tidypolis_io(
-    obj = api_case_data,
-    io = "write",
-    file_path = file.path(
-      polis_data_folder,
-      "Core_Ready_Files",
-      paste0(
-        "Human_Detailed_Dataset_",
-        timestamp,
-        "_from_01_Dec_2019_to_",
-        format(ts, "%d_%b_%Y"),
-        ".rds"
-      )
-    )
-  )
-  tidypolis_io(
-    obj = api_subactivity_data,
-    io = "write",
-    file_path = file.path(
-      polis_data_folder,
-      "Core_Ready_Files",
-      paste0(
-        "Activity_Data_with_All_Sub-Activities_(1_district_per_row)_",
-        timestamp,
-        "_from_01_Jan_2020_to_",
-        format(Sys.Date() + 365 / 2, "%d_%b_%Y"),
-        ".rds"
-      )
-    )
-  )
-  tidypolis_io(
-    obj = api_es_data,
-    io = "write",
-    file_path = file.path(
-      polis_data_folder,
-      "Core_Ready_Files",
-      paste0(
-        "EnvSamples_Detailed_Dataset_",
-        timestamp,
-        "_from_01_Jan_2000_to_",
-        format(ts, "%d_%b_%Y"),
-        ".rds"
-      )
-    )
-  )
-  tidypolis_io(
-    obj = api_virus_data,
-    io = "write",
-    file.path(
-      polis_data_folder,
-      "Core_Ready_Files",
-      paste0(
-        "Viruses_Detailed_Dataset_",
-        timestamp,
-        "_from_01_Dec_1999_to_",
-        format(ts, "%d_%b_%Y"),
-        ".rds"
-      )
-    )
-  )
-  cli::cli_process_done()
+  export_final_core_ready_files(polis_data_folder, ts, timestamp,
+                                api_case_data,
+                                api_subactivity_data,
+                                api_es_data,
+                                api_virus_data)
 
   update_polis_log(.event = "CORE Ready files and change logs complete", .event_type = "PROCESS")
-
-  # 14. Remove temporary files from working environment, and set scientific notation back to whatever it was originally
-  cli::cli_process_start("Clearing memory from first step")
-  rm(
-    "change_summary",
-    "crosswalk_data",
-    "in_new_and_old_but_modified",
-    "in_new_not_old",
-    "in_old_not_new",
-    "new",
-    "old",
-    "potential_duplicates_new",
-    "potential_duplicates_old",
-    "x",
-    "i",
-    "n_added",
-    "n_deleted",
-    "n_edited",
-    "vars_added",
-    "vars_dropped",
-    "api_activity_data",
-    "api_case_data",
-    "api_es_data",
-    "api_virus_data",
-    "api_subactivity_data",
-    "most_recent_file_01_patterns",
-    "most_recent_file_patterns"
-  )
-  gc()
-  cli::cli_process_done()
 
   #Step 2 - Creating AFP and EPI datasets ====
   update_polis_log(.event = "Creating AFP and Epi analytic datasets",
@@ -5805,6 +5518,8 @@ if(exists("positives.new")){
 
 # Private functions ----
 
+###### Step 1 Private Functions ----
+
 #' Clean Case table
 #'
 #' @description
@@ -6339,9 +6054,310 @@ get_most_recent_files <- function(polis_data_folder, patterns) {
     io = "list",
     file_path = file.path(polis_data_folder, "Core_Ready_Files")
   )
-  files <- files[endsWith(files, ".rds")]
   files <- files[grepl(paste(patterns, collapse = "|"), files)]
 
   return(files)
 }
 
+#' Create the change log for table data
+#'
+#' @param polis_data_folder `str` Path to the POLIS data folder
+#' @param file `str` Name of the file
+#' @param timestamp `str` Name of the timestamp folder
+#' @param api_case_data `tibble` Cleaned case data
+#' @param api_es_data `tibble` Cleaned ES data
+#' @param api_virus_data `tibble` Cleaned virus data
+#' @param api_subactivity_data `tibble` Cleaned subactivity data
+#'
+#' @returns `NULL`, if successful
+#' @keywords internal
+#'
+create_change_log <- function(polis_data_folder,
+                              file, timestamp,
+                              api_case_data,
+                              api_es_data,
+                              api_virus_data,
+                              api_subactivity_data) {
+
+  cli::cli_process_start(paste0("Processing data for: ", file))
+  # compare current dataset to most recent and save summary to change_log
+  old <- tidypolis_io(
+    io = "read",
+    file_path = file.path(
+      polis_data_folder,
+      "Core_Ready_Files",
+      file
+    )
+  ) |>
+    dplyr::mutate_all(as.character)
+
+  if (grepl("EnvSamples", file)) {
+    new <- api_es_data |>
+      dplyr::mutate(Id = `Env Sample Manual Edit Id`) |>
+      dplyr::mutate_all(as.character)
+
+    old <- old |>
+      dplyr::mutate(Id = `Env Sample Manual Edit Id`)
+  }
+
+  if (grepl("Viruses", file)) {
+    new <- api_virus_data |>
+      dplyr::mutate(Id = `Virus ID`) |>
+      dplyr::mutate_all(as.character)
+
+    old <- old |>
+      dplyr::mutate(Id = `Virus ID`)
+  }
+
+  if (grepl("Human_Detailed", file)) {
+    new <- api_case_data |>
+      dplyr::mutate(Id = `EPID`) |>
+      dplyr::mutate_all(as.character)
+
+    old <- old |>
+      dplyr::mutate(Id = `EPID`)
+  }
+
+  if (grepl("Activity", file)) {
+    new <- api_subactivity_data |>
+      dplyr::mutate(Id = paste0(`SIA Sub-Activity Code`, "_", `Admin 2 Guid`)) |>
+      dplyr::mutate_all(as.character)
+
+    old <- old |>
+      dplyr::mutate(Id = paste0(`SIA Sub-Activity Code`, "_", `Admin 2 Guid`))
+  }
+
+  potential_duplicates_new <- new |>
+    dplyr::group_by(Id) |>
+    dplyr::summarise(count = n()) |>
+    dplyr::ungroup() |>
+    dplyr::filter(count >= 2)
+
+  potential_duplicates_old <- old |>
+    dplyr::group_by(Id) |>
+    dplyr::summarise(count = n()) |>
+    dplyr::ungroup() |>
+    dplyr::filter(count >= 2)
+
+  new <- new |>
+    dplyr::filter(!(Id %in% potential_duplicates_new$Id) &
+                    !(Id %in% potential_duplicates_old$Id))
+
+  old <- old |>
+    dplyr::filter(!(Id %in% potential_duplicates_new$Id) &
+                    !(Id %in% potential_duplicates_old$Id))
+
+  in_new_not_old <- new |>
+    filter(!(Id %in% old$Id))
+
+  in_old_not_new <- old |>
+    filter(!(Id %in% new$Id))
+
+  in_new_and_old_but_modified <- new |>
+    dplyr::filter(Id %in% old$Id) |>
+    dplyr::select(-c(setdiff(colnames(new), colnames(old))))
+
+  in_new_and_old_but_modified <- setdiff(in_new_and_old_but_modified, old |>
+                                           dplyr::select(-c(setdiff(
+                                             colnames(old), colnames(new)
+                                           ))))
+
+  x <- old |>
+    dplyr::filter(Id %in% new$Id) |>
+    dplyr::select(-c(setdiff(colnames(old), colnames(new))))
+
+
+  if (nrow(in_new_and_old_but_modified) >= 1) {
+    in_new_and_old_but_modified <- dplyr::inner_join(in_new_and_old_but_modified,
+                                                     setdiff(x, new |>
+                                                               dplyr::select(-c(
+                                                                 setdiff(colnames(new), colnames(old))
+                                                               ))),
+                                                     by = "Id"
+    ) |>
+      # wide_to_long
+      tidyr::pivot_longer(cols = -Id) |>
+      dplyr::mutate(source = ifelse(stringr::str_sub(name, -2) == ".x", "new", "old")) |>
+      dplyr::mutate(name = stringr::str_sub(name, 1, -3)) |>
+      # long_to_wide
+      tidyr::pivot_wider(names_from = source, values_from = value) |>
+      dplyr::mutate(new = as.character(new), old = as.character(old))
+
+    in_new_and_old_but_modified <- in_new_and_old_but_modified |>
+      dplyr::filter(new != old)
+  }
+
+  cli::cli_process_done()
+
+  cli_process_start(paste0("Creating change log for: ", file))
+
+  n_added <- nrow(in_new_not_old)
+  n_edited <- length(unique(in_new_and_old_but_modified$Id))
+  n_deleted <- nrow(in_old_not_new)
+  vars_added <- setdiff(colnames(new), colnames(old))
+  vars_dropped <- setdiff(colnames(old), colnames(new))
+
+  change_summary <- list(
+    n_added = n_added,
+    n_edited = n_edited,
+    n_deleted = n_deleted,
+    vars_added = vars_added,
+    vars_dropped = vars_dropped,
+    obs_added = in_new_not_old,
+    obs_edited = in_new_and_old_but_modified,
+    obs_deleted = in_old_not_new
+  )
+
+  tidypolis_io(
+    io = "write",
+    obj = change_summary,
+    file_path = file.path(
+      polis_data_folder,
+      "Core_Ready_Files",
+      "Change Log",
+      timestamp,
+      paste0(substr(file, 1, nchar(file) - 4), ".rds")
+    )
+  )
+
+  # Move most recent to archive
+  tidypolis_io(io = "read", file_path = file.path(polis_data_folder, "Core_Ready_Files", file)) |>
+    tidypolis_io(
+      io = "write",
+      file_path = file.path(polis_data_folder, "Core_Ready_Files", "Archive", timestamp, file)
+    )
+
+  # Delete the original file
+  tidypolis_io(io = "delete", file_path = file.path(polis_data_folder, "Core_Ready_Files", file))
+  cli_process_done()
+
+  return(NULL)
+}
+
+#' Archives the old files in the data folder
+#'
+#' @param polis_data_folder `str` Path to the POLIS data folder
+#' @param timestamp `str` Time stamp folder name
+#'
+#' @returns NULL
+#' @keywords internal
+#'
+archive_old_files <- function(polis_data_folder, timestamp) {
+
+  cli_process_start("Archiving old files")
+  most_recent_files_01 <- get_most_recent_files(polis_data_folder,
+                                                c(".rds", ".csv", ".xlsx"))
+
+  if (length(most_recent_files_01) > 0) {
+    for (file in most_recent_files_01) {
+      cli_process_start(paste0("Archiving Data for: ", file))
+
+      tidypolis_io(
+        io = "read",
+        file_path = file.path(polis_data_folder, "Core_Ready_Files", file)
+      ) %>%
+        tidypolis_io(
+          io = "write",
+          file_path = file.path(polis_data_folder, "Core_Ready_Files", "Archive",
+                                timestamp, file)
+        )
+
+      tidypolis_io(
+        io = "delete",
+        file_path = file.path(polis_data_folder, "Core_Ready_Files", file)
+      )
+
+      cli_process_done()
+    }
+  } else {
+    cli_alert_info("No previous secondary Core Ready Files found, creating new files")
+  }
+}
+
+#' Export the final Core Ready files
+#'
+#' @param polis_data_folder `str` Path to the POLIS data folder.
+#' @param ts `ts` A Sys.time() output.
+#' @param timestamp `str` Formatted time stamp.
+#' @param api_case_data `tibble` Cleaned Case table.
+#' @param api_subactivity_data `tibble` Cleaned Subactivity table.
+#' @param api_es_data `tibble` Cleaned ES table.
+#' @param api_virus_data `tibble` Cleaned Virus table.
+#'
+#' @returns `NULL`
+#' @keywords internal
+#'
+export_final_core_ready_files <- function(polis_data_folder, ts, timestamp,
+                                          api_case_data,
+                                          api_subactivity_data,
+                                          api_es_data,
+                                          api_virus_data) {
+
+  cli::cli_process_start("Writing all final Core Ready files")
+
+  tidypolis_io(
+    obj = api_case_data,
+    io = "write",
+    file_path = file.path(
+      polis_data_folder,
+      "Core_Ready_Files",
+      paste0(
+        "Human_Detailed_Dataset_",
+        timestamp,
+        "_from_01_Dec_2019_to_",
+        format(ts, "%d_%b_%Y"),
+        ".rds"
+      )
+    )
+  )
+
+  tidypolis_io(
+    obj = api_subactivity_data,
+    io = "write",
+    file_path = file.path(
+      polis_data_folder,
+      "Core_Ready_Files",
+      paste0(
+        "Activity_Data_with_All_Sub-Activities_(1_district_per_row)_",
+        timestamp,
+        "_from_01_Jan_2020_to_",
+        format(Sys.Date() + 365 / 2, "%d_%b_%Y"),
+        ".rds"
+      )
+    )
+  )
+
+  tidypolis_io(
+    obj = api_es_data,
+    io = "write",
+    file_path = file.path(
+      polis_data_folder,
+      "Core_Ready_Files",
+      paste0(
+        "EnvSamples_Detailed_Dataset_",
+        timestamp,
+        "_from_01_Jan_2000_to_",
+        format(ts, "%d_%b_%Y"),
+        ".rds"
+      )
+    )
+  )
+
+  tidypolis_io(
+    obj = api_virus_data,
+    io = "write",
+    file.path(
+      polis_data_folder,
+      "Core_Ready_Files",
+      paste0(
+        "Viruses_Detailed_Dataset_",
+        timestamp,
+        "_from_01_Dec_1999_to_",
+        format(ts, "%d_%b_%Y"),
+        ".rds"
+      )
+    )
+  )
+
+  cli::cli_process_done()
+}
