@@ -2259,25 +2259,18 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     round(lubridate::second(ts), 0)
   )
 
-  # create directory
+  # create directory for the Archive and Changelogs
   create_core_ready_dir(polis_data_folder, timestamp)
 
   # Get list of most recent files
-  files_in_core_ready <- tidypolis_io(
-    io = "list",
-    file_path = file.path(polis_data_folder, "Core_Ready_Files")
-  )
-  most_recent_files <- files_in_core_ready[grepl(".rds", files_in_core_ready)]
   most_recent_file_patterns <- c(
     "Activity_Data",
     "EnvSamples",
     "Human_Detailed",
     "Viruses_Detailed"
   )
-  most_recent_files <- most_recent_files[grepl(
-    paste(most_recent_file_patterns, collapse = "|"),
-    most_recent_files
-  )]
+  most_recent_files <- get_most_recent_files(polis_data_folder,
+                                             most_recent_file_patterns)
 
   if (length(most_recent_files) > 0) {
     for (i in 1:length(most_recent_files)) {
@@ -6332,3 +6325,23 @@ create_core_ready_dir <- function(polis_data_folder, timestamp) {
 
   return(NULL)
 }
+
+#' Gets the most recent files in the Core Ready folder
+#'
+#' @param polis_data_folder `str` Location of the POLIS data folder.
+#' @param patterns `list` A list of patterns to select files.
+#'
+#' @returns `list` With names of the most recent files that matches the patterns.
+#' @keywords internal
+#'
+get_most_recent_files <- function(polis_data_folder, patterns) {
+  files <- tidypolis_io(
+    io = "list",
+    file_path = file.path(polis_data_folder, "Core_Ready_Files")
+  )
+  files <- files[endsWith(files, ".rds")]
+  files <- files[grepl(paste(patterns, collapse = "|"), files)]
+
+  return(files)
+}
+
