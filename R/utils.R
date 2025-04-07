@@ -2121,6 +2121,7 @@ check_missingness <- function(data,
 #' @import cli sirfunctions dplyr readr lubridate stringr tidyr stringi
 #' @param polis_data_folder str: location of the POLIS data folder, defaults to value stored from init_tidypolis
 #' @returns Outputs intermediary core ready files
+#' @keywords internal
 #'
 preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
@@ -6029,64 +6030,63 @@ if(exists("positives.new")){
 
 #Began work on pop processing pipeline but not ready for V1
 
-#' Preprocess population data into flat files
-#'
-#'  Process POLIS population data using CDC and other standards
-#'  readr dplyr
-#' str: "cdc" or "who" (default)
-#'  tibble: WHO POLIS population file, defaults to tidypolis folder
-#'  list with tibble for ctry, prov and dist
-#' process_pop <- function(type = "who", pop_file = readr::read_rds(file.path(Sys.getenv("POLIS_DATA_FOLDER"), "data", "pop.rds"))){
-#'
-#'   subset to <= 15
-#'   pop_file <- pop_file |>
-#'     filter(AgeGroupName == "0 to 15 years")
-#'
-#'   #extract into country prov and dist
-#'
-#'   x <- lapply(unique(pop_file$Admin0Name), function(x){
-#'     pop_file |>
-#'       filter(is.na(Admin1Name) & is.na(Admin2Name)) |>
-#'       rename(year = Year, u15pop = Value, GUID = Admin0GUID, ctry = Admin0Name) |>
-#'       mutate(u15pop = as.integer(u15pop)) |>
-#'       arrange(year) |>
-#'       filter(ctry == x) |>
-#'       group_by(year) |>
-#'       filter(!is.na(u15pop)) |>
-#'       filter(UpdatedDate == max(UpdatedDate, na.rm = T)) |>
-#'       ungroup() |>
-#'       select(ctry, year, u15pop, GUID) |>
-#'       full_join(tibble(ctry = x, year = 2000:(lubridate::year(Sys.time()))), by = c("ctry", "year"))
-#'   }) |>
-#'     bind_rows()
-#'
-#' }
-#'
+# Preprocess population data into flat files
+#
+#  Process POLIS population data using CDC and other standards
+#  readr dplyr
+# str: "cdc" or "who" (default)
+#  tibble: WHO POLIS population file, defaults to tidypolis folder
+#  list with tibble for ctry, prov and dist
+# process_pop <- function(type = "who", pop_file = readr::read_rds(file.path(Sys.getenv("POLIS_DATA_FOLDER"), "data", "pop.rds"))){
+#
+#   subset to <= 15
+#   pop_file <- pop_file |>
+#     filter(AgeGroupName == "0 to 15 years")
+#
+#   #extract into country prov and dist
+#
+#   x <- lapply(unique(pop_file$Admin0Name), function(x){
+#     pop_file |>
+#       filter(is.na(Admin1Name) & is.na(Admin2Name)) |>
+#       rename(year = Year, u15pop = Value, GUID = Admin0GUID, ctry = Admin0Name) |>
+#       mutate(u15pop = as.integer(u15pop)) |>
+#       arrange(year) |>
+#       filter(ctry == x) |>
+#       group_by(year) |>
+#       filter(!is.na(u15pop)) |>
+#       filter(UpdatedDate == max(UpdatedDate, na.rm = T)) |>
+#       ungroup() |>
+#       select(ctry, year, u15pop, GUID) |>
+#       full_join(tibble(ctry = x, year = 2000:(lubridate::year(Sys.time()))), by = c("ctry", "year"))
+#   }) |>
+#     bind_rows()
+#
+# }
 
 # Private functions ----
 
-#' Clean Case data
+#' Clean Case table
 #'
 #' @description
 #' The function performs cleaning of the Case table. In particular,
 #' de-duplication, renaming of variables via crosswalk, and removal of
 #' empty columns.
 #'
-#' @param case_path `str` Path to case data.
-#' @param crosswalk_data `tibble` The crosswalk table.
+#' @param path `str` File path to the table.
+#' @param crosswalk `tibble` The crosswalk table. This is the output of
+#' [get_crosswalk_data()].
 #' @param edav `bool` Is the case data located on EDAV? Defaults to the
-#' EDAV flag during [init_tidypolis()].
+#' EDAV flag.
 #'
 #' @returns `tibble` cleaned Case data.
 #' @keywords internal
 #'
-clean_case_data <- function(case_path, crosswalk_data,
+clean_case_table <- function(path, crosswalk_data,
                             edav = Sys.getenv("POLIS_EDAV_FLAG")) {
 
-  cli::cli_h2("Case")
   cli::cli_process_start("Loading Case table")
   api_case_2019_12_01_onward <-
-    tidypolis_io(io = "read", file_path = case_path) |>
+    tidypolis_io(io = "read", file_path = path) |>
     dplyr::mutate_all(as.character)
   cli::cli_process_done()
 
@@ -6136,4 +6136,418 @@ clean_case_data <- function(case_path, crosswalk_data,
   cli::cli_process_done()
 
   return(api_case_sub3)
+}
+
+#' Cleans the Environmental Surveillance Table
+#'
+#' @description
+#' The function performs cleaning of the Case table. In particular,
+#' de-duplication, renaming of variables via crosswalk, and removal of
+#' empty columns.
+#'
+#' @inheritParams clean_case_table
+#'
+#' @returns `tibble` Cleaned ES table
+#' @keywords internal
+#'
+clean_es_table <- function(path, crosswalk,
+                           edav = Sys.getenv("POLIS_EDAV_FLAG")) {
+
+  cli::cli_process_start("Loading Environmental Samples table")
+  api_es_complete <-
+    tidypolis_io(io = "read", file_path = path) |>
+    dplyr::mutate_all(as.character)
+  cli::cli_process_done()
+
+  cli::cli_process_start("De-duplicating data")
+  api_es_sub1 <- api_es_complete |>
+    dplyr::distinct()
+  cli::cli_process_done()
+
+  rm(api_es_complete)
+
+  cli::cli_process_start("Crosswalk and rename variables")
+  api_es_sub2 <- rename_via_crosswalk(api_data = api_es_sub1,
+                                      crosswalk = crosswalk,
+                                      table_name = "EnvSample")
+  cli::cli_process_done()
+
+  rm(api_es_sub1)
+
+  cli::cli_process_start("Cleaning site and location variables")
+  api_es_sub3 <- api_es_sub2 |>
+    dplyr::mutate(Site = paste0(`Site Code`, " - ", `Site Name`),
+                  `Country Iso2` = NA_character_) |>
+    dplyr::mutate_at(
+      c(
+        "Vaccine 1",
+        "Vaccine 2",
+        "Vaccine 3",
+        "Vdpv 1",
+        "Vdpv 2",
+        "Vdpv 3",
+        "Wild 1",
+        "Wild 2",
+        "Wild 3",
+        "nVaccine 2",
+        "nVDPV 2",
+        "PV 1",
+        "PV 2",
+        "PV 3",
+        "Is Suspected",
+        "NPEV"
+      ),
+      ~ dplyr::case_when(. == "TRUE" ~ "Yes",
+                         . == "FALSE" ~ "No",
+                         TRUE ~ NA_character_)
+    ) |>
+    dplyr::mutate_at(
+      c(
+        "Is Breakthrough",
+        "Under Process",
+        "Advanced Notification",
+        "Mixture"
+      ),
+      ~ dplyr::case_when(. == "TRUE" ~ "Yes",
+                         . == "FALSE" ~ "No",
+                         TRUE ~ NA_character_)
+    ) |>
+    dplyr::mutate_at(
+      c(
+        "Date Final Culture Result",
+        "Date Final Combined Result",
+        "Date Final Results Reported",
+        "Date Isol Sent Seq2",
+        "Date Isol Rec Seq2",
+        "Date Final Seq Result",
+        "Date Res Sent Out VDPV2",
+        "Date Res Sent Out VACCINE2",
+        "Date Isol Rec Seq1",
+        "Collection Date",
+        "Date F1 ref ITD",
+        "Date F2 ref ITD",
+        "Date F3 ref ITD",
+        "Date F4 ref ITD",
+        "Date F5 ref ITD",
+        "Date F6 ref ITD",
+        "Date Notification To HQ",
+        "Date received in lab",
+        "Date Shipped To Ref Lab",
+        "Publish Date",
+        "Uploaded Date"
+      ),
+      ~ as.character(format(as.Date(., format = "%Y-%m-%d"), format = "%d/%m/%Y"))
+    ) |>
+    dplyr::mutate_at(c("Created Date",
+                       "Updated Date"), ~ as.character(format(as.Date(., format =
+                                                                        "%Y-%m-%d"), format = "%d-%m-%Y"))) |>
+    dplyr::mutate(`Sample Id` = as.character(`Sample Id`)) |>
+    dplyr::select(c(crosswalk$Web_Name[crosswalk$Table %in% c("EnvSample") &
+                                         !is.na(crosswalk$Web_Name)],
+                    crosswalk$API_Name[crosswalk$Table %in% c("EnvSample") &
+                                         is.na(crosswalk$Web_Name)]))
+  cli::cli_process_done()
+
+  rm(api_es_sub2)
+
+  cli::cli_process_start("Removing empty columns")
+  api_es_sub3 <- remove_empty_columns(api_es_sub3)
+  cli::cli_process_done()
+
+  #if nVaccine 2 is removed recreate with empty values so downstream code doesn't break
+  es_names <- api_es_sub3 |>
+    names()
+
+  if (!"nVaccine 2" %in% es_names) {
+    api_es_sub3 <- api_es_sub3 |> cbind("nVaccine 2" = NA)
+  }
+
+  return(api_es_sub3)
+}
+
+#' Clean the subactivity table
+#'
+#' @description
+#' The function performs cleaning of the sub-activity table. In particular,
+#' de-duplication, renaming of variables via crosswalk, and removal of
+#' empty columns.
+#'
+#' @inheritParams clean_case_table
+#' @param activity_table `tibble` Output of [clean_activity_table()].
+#' @param long_dist_sf `tibble` District shapefile in long format. The output of
+#' `sirfunctions::load_clean_dist_sp(type = "long")`.
+#'
+#' @returns `tibble` Cleaned Sub-activity table.
+#' @keywords internal
+#'
+clean_subactivity_table <- function(path, activity_table, crosswalk,
+                                    long_dist_sf,
+                                    edav = Sys.getenv("POLIS_EDAV_FLAG")) {
+
+  cli::cli_process_start("Loading sub-activity table")
+  api_subactivity_complete <-
+    tidypolis_io(io = "read", file_path = path) |>
+    dplyr::mutate_all(as.character)
+  cli::cli_process_done()
+
+  cli::cli_process_start("De-duplicating data")
+  api_subactivity_sub1 <- api_subactivity_complete |>
+    dplyr::distinct()
+  cli::cli_process_done()
+
+  rm(api_subactivity_complete)
+
+  cli::cli_process_start("Processing sub-activity spatial data")
+  api_subactivity_sub2 <- api_subactivity_sub1 |>
+    dplyr::mutate(year = lubridate::year(DateFrom)) |>
+    dplyr::left_join(
+      long_dist_sf |>
+        dplyr::select(
+          active.year.01,
+          ADM0_GUID,
+          ADM1_NAME,
+          ADM1_GUID,
+          ADM2_NAME,
+          GUID
+        ) |>
+        dplyr::mutate(
+          ADM0_GUID = tolower(stringr::str_remove_all(ADM0_GUID, "\\{")),
+          ADM0_GUID = stringr::str_remove_all(ADM0_GUID, "\\}"),
+          ADM1_GUID = tolower(stringr::str_remove_all(ADM1_GUID, "\\{")),
+          ADM1_GUID = stringr::str_remove_all(ADM1_GUID, "\\}"),
+          GUID = tolower(stringr::str_remove_all(GUID, "\\{")),
+          GUID = stringr::str_remove_all(GUID, "\\}")
+        ),
+      by = c(
+        "year" = "active.year.01",
+        "Admin0Guid" = "ADM0_GUID",
+        "Admin1Name" = "ADM1_NAME",
+        "Admin2Name" = "ADM2_NAME"
+      ),
+      relationship = "many-to-many"
+    ) |>
+    dplyr::mutate(
+      Admin2Guid = dplyr::case_when(is.na(Admin2Guid) ~ GUID,
+                                    TRUE ~ Admin2Guid),
+      Admin1Guid = dplyr::case_when(is.na(Admin1Guid) ~ ADM1_GUID,
+                                    TRUE ~ Admin1Guid)
+    ) |>
+    dplyr::select(-year,-ADM1_GUID,-GUID)
+  cli::cli_process_done()
+
+  rm(api_subactivity_sub1)
+
+  cli::cli_process_start("Crosswalk and rename variables")
+  api_subactivity_sub3 <-
+    rename_via_crosswalk(api_data = api_subactivity_sub2,
+                         crosswalk = crosswalk,
+                         table_name = "SubActivity") |>
+    dplyr::left_join(api_activity_sub2,
+                     by = c("SIA Sub-Activity Code" = "SIASubActivityCode"))
+  cli::cli_process_done()
+
+  rm(api_subactivity_sub2)
+
+  cli::cli_h2("Modifying and reconciling variable types")
+  #    Modify individual variables in the API files to match the coding in the web-interface downloads,
+  #    and retain only variables from the API files that are present in the web-interface downloads.
+  cli::cli_process_start("Reconciling activity and subactivity variables")
+  api_subactivity_sub4 <- api_subactivity_sub3 |>
+    dplyr::mutate(
+      `IM loaded` = dplyr::case_when(
+        `IM loaded` == "TRUE" ~ "Yes",
+        `IM loaded` == "FALSE" ~ "No",
+        TRUE ~ NA_character_
+      )
+    ) |>
+    dplyr::mutate(
+      `LQAS loaded` = dplyr::case_when(
+        `LQAS loaded` == "TRUE" ~ "Yes",
+        `LQAS loaded` == "FALSE" ~ "No",
+        TRUE ~ NA_character_
+      )
+    ) |>
+    dplyr::mutate_at(c("Age Group %", "Area Targeted %", "Country Population %"),
+                     ~ as.numeric(.) * 100) |>
+    dplyr::mutate(`Area Population` = as.character(format(
+      round(as.numeric(`Area Population`), 1),
+      nsmall = 0,
+      big.mark = ","
+    ))) |>
+    dplyr::mutate_at(
+      c("Sub-Activity Initial Planned Date", "Last Updated Date"),
+      ~ lubridate::as_datetime(.)
+    ) |>
+    dplyr::mutate(`Activity Comments` = "") |>
+    dplyr::mutate(
+      `Targeted Population` = as.character(`Targeted Population`),
+      `Number of Doses` = as.character(`Number of Doses`)
+    ) |>
+    dplyr::mutate_at(
+      c(
+        "UNPD Country Population",
+        "Immunized Population",
+        "Admin 2 Targeted Population",
+        "Admin 2 Immunized Population",
+        "Admin2 children inaccessible",
+        "Number of Doses Approved",
+        "Children inaccessible",
+        "Activity parent children inaccessible",
+        "Admin 0 Id",
+        "Admin 1 Id",
+        "Admin 2 Id"
+      ),
+      as.numeric
+    ) |>
+    dplyr::select(c(crosswalk$Web_Name[crosswalk$Table %in% c("Activity", "SubActivity") &
+                                         !is.na(crosswalk$Web_Name)],
+                    crosswalk$API_Name[crosswalk$Table %in% c("SubActivity") &
+                                         is.na(crosswalk$Web_Name) &
+                                         crosswalk$API_Name != "ActivityAdminCoveragePercentage"]))
+  cli::cli_process_done()
+
+  rm(api_subactivity_sub3)
+
+  cli::cli_process_start("Removing empty columns")
+  api_subactivity_sub4 <- remove_empty_columns(api_subactivity_sub4)
+  cli::cli_process_done()
+
+  return(api_subactivity_sub4)
+}
+
+#' Clean the Activity table
+#'
+#' @description
+#' The function performs cleaning of the Activity table. In particular,
+#' de-duplication, renaming of variables via crosswalk, and removal of
+#' empty columns.
+#'
+#' @inheritParams clean_case_table
+#'
+#' @returns `tibble` A cleaned Activity table.
+#' @keywords internal
+#'
+clean_activity_table <- function(path, crosswalk,
+                                 edav = Sys.getenv("POLIS_EDAV_FLAG")) {
+
+  cli::cli_process_start("Loading activity data")
+  api_activity_complete <-
+    tidypolis_io(io = "read", file_path = path) |>
+    dplyr::mutate_all(as.character)
+  cli::cli_process_done()
+
+  cli::cli_process_start("De-duplicating data")
+  api_activity_sub1 <- api_activity_complete |>
+    dplyr::filter(SIASubActivityCode %in% api_subactivity_sub1$SIASubActivityCode) |>
+    dplyr::distinct()
+  cli::cli_process_done()
+
+  rm(api_activity_complete)
+
+  cli::cli_process_start("Crosswalk and rename variables")
+  api_activity_sub2 <-
+    rename_via_crosswalk(api_data = api_activity_sub1,
+                         crosswalk = crosswalk,
+                         table_name = "Activity") |>
+    dplyr::select(SIASubActivityCode, crosswalk$Web_Name[crosswalk$Table == "Activity"]) |>
+    dplyr::select(-c("Admin 0 Id"))
+  cli::cli_process_done()
+
+  return(api_activity_sub2)
+}
+
+#' Clean the virus table
+#'
+#' @inheritParams clean_case_table
+#'
+#' @returns `tibble` Cleaned virus table
+#' @keywords internal
+#'
+clean_virus_table <- function(path, crosswalk,
+                              edav = Sys.getenv("POLIS_EDAV_FLAG")) {
+
+  #Read in the updated API datasets
+  cli::cli_h2("Loading data")
+
+  cli::cli_process_start("Virus")
+  api_virus_complete <-
+    tidypolis_io(io = "read", file_path = path) |>
+    dplyr::mutate_all(as.character)
+  cli::cli_process_done()
+
+  cli::cli_h2("De-duplicating data")
+
+  cli::cli_process_start("Virus")
+  api_virus_sub1 <- api_virus_complete |>
+    dplyr::distinct()
+  cli::cli_process_done()
+
+  cli::cli_h2("Crosswalk and rename variables")
+
+  cli::cli_process_start("Virus")
+  api_virus_sub2 <- rename_via_crosswalk(api_data = api_virus_sub1,
+                                         crosswalk = crosswalk,
+                                         table_name = "Virus")
+  cli::cli_process_done()
+
+  cli::cli_process_start("Cleaning irregular location names")
+  api_virus_sub3 <- api_virus_sub2 |>
+    dplyr::mutate(location = paste(
+      toupper(Admin0OfficialName),
+      toupper(Admin1OfficialName),
+      toupper(Admin2OfficialName),
+      sep = ", "
+    )) |>
+    dplyr::mutate(location = stringr::str_squish(stringr::str_replace_all(location, ", NA,", ", "))) |>
+    dplyr::mutate(location = dplyr::case_when(
+      stringr::str_sub(location,-4) == ", NA" ~ substr(location, 1, nchar(location) - 4),
+      TRUE ~ location
+    )) |>
+    dplyr::mutate(location = stringr::str_replace_all(
+      location,
+      "ISLAMIC REPUBLIC OF IRAN",
+      "IRAN (ISLAMIC REPUBLIC OF)"
+    )) |>
+    dplyr::mutate(
+      location = stringr::str_replace_all(
+        location,
+        "UNITED KINGDOM OF GREAT BRITAIN AND NORTHERN IRELAND",
+        "THE UNITED KINGDOM"
+      )
+    ) |>
+
+    dplyr::mutate(`Virus Type(s)` = stringr::str_replace_all(`Virus Type(s)`, "NVACCINE", "nVACCINE")) |>
+
+    dplyr::mutate(
+      `Nt Changes` = dplyr::case_when(
+        grepl("VDPV", `VirusTypeName`) &
+          !is.na(`Nt Changes`) ~ `Nt Changes`,
+        grepl("VACCINE", VirusTypeName) &
+          !is.na(VaccineNtChangesFromSabin) ~ VaccineNtChangesFromSabin,
+        TRUE ~ NA_character_
+      )
+    ) |>
+    dplyr::mutate_at(c("Virus Date"), ~ lubridate::as_date(.)) |>
+    dplyr::mutate_at(
+      c("Is Breakthrough"),
+      ~ dplyr::case_when(. == "TRUE" ~ "Yes",
+                         . == "FALSE" ~ "No",
+                         TRUE ~ NA_character_)
+    ) |>
+    dplyr::select(c(crosswalk$Web_Name[crosswalk$Table %in% c("Virus") &
+                                         !is.na(crosswalk$Web_Name)],
+                    crosswalk$API_Name[crosswalk$Table %in% c("Virus") &
+                                         is.na(crosswalk$Web_Name)])) |>
+    dplyr::mutate(nt.changes.neighbor = dplyr::case_when(
+      !is.na(VdpvNtChangesClosestMatch) ~ VdpvNtChangesClosestMatch,
+      TRUE ~ NA_character_
+    ))
+  cli::cli_process_done()
+
+  cli::cli_process_start("Removing empty columns")
+  api_virus_sub3 <- remove_empty_columns(api_virus_sub3)
+  cli::cli_process_done()
+
+  return(api_virus_sub3)
+
 }
