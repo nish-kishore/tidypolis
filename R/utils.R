@@ -2160,7 +2160,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   # if on EDAV, create files to combine folder and write datasets into it
   if (length(missing_static_files) > 0) {
     if (Sys.getenv("POLIS_EDAV_FLAG")) {
-      static_file_folder_path <- file.path("Data", "core_files_to_combine")
+      static_file_folder_path <- file.path(Sys.getenv("DATA_FOLDER"), "core_files_to_combine")
 
       for (file in missing_static_files) {
         tidypolis_io(io = "read", file_path = file.path(static_file_folder_path, file)) |>
