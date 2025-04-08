@@ -2145,9 +2145,10 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   }
 
   #Step 0 - create a CORE datafiles to combine folder and check for datasets before continuing with pre-p =========
+  core_files_folder_path <- file.path(polis_data_folder, "core_files_to_combine")
 
-  if (!tidypolis_io(io = "exists.dir", file_path = paste0(polis_data_folder, "/core_files_to_combine"))) {
-    tidypolis_io(io = "create", file_path = paste0(polis_data_folder, "/core_files_to_combine"))
+  if (!tidypolis_io(io = "exists.dir", file_path = core_files_folder_path)) {
+    tidypolis_io(io = "create", file_path = core_files_folder_path)
   }
 
   missing_static_files <- check_static_files(polis_data_folder)
@@ -2158,12 +2159,12 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
       for (file in missing_static_files) {
         tidypolis_io(io = "read", file_path = file.path(static_file_folder_path, file)) |>
-          tidypolis_io(io = "write", file_path = file.path(polis_data_folder, "core_files_to_combine", file))
+          tidypolis_io(io = "write", file_path = file.path(core_files_folder_path, file))
       }
     } else {
       cli::cli_alert_warning(paste0(
         "Please request the following file(s) from the SIR team",
-        "and move them into: ", file.path(polis_data_folder, "core_files_to_combine")
+        "and move them into: ", core_files_folder_path
       ))
 
       for (file in missing_static_files) {
@@ -2172,6 +2173,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
       cli::cli_abort("Halting execution of preprocessing due to missing files.")
     }
   }
+
+  rm(core_files_folder_path, missing_static_files)
 
   #Step 1 - Basic cleaning and crosswalk ======
   cli::cli_h1("Step 1/5: Basic cleaning and crosswalk across datasets")
