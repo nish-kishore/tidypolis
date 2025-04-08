@@ -1009,7 +1009,7 @@ remove_empty_columns <- function(dataframe) {
 #' @import dplyr cli sirfunctions
 #' @return tibble: crosswalk data
 get_crosswalk_data <- function(
-    file_loc = file.path(Sys.get("DATA_FOLDER"), "misc/crosswalk.rds")
+    file_loc = file.path(Sys.getenv("DATA_FOLDER"), "misc/crosswalk.rds")
   ){
   cli::cli_process_start("Import crosswalk")
   crosswalk <-
