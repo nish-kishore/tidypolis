@@ -8,7 +8,9 @@
 #' and flags that other functions in tidypolis depends on.
 #'
 #' @import cli yaml tibble dplyr readr lubridate sirfunctions
-#' @param polis_folder `str` Location of folder where to store all information.
+#' @param polis_folder `str` Location of folder where to store all information from POLIS.
+#' @param data_folder `str` Path to the data folder that contains other file
+#' dependencies such as historical environment site data,
 #' @param edav `bool` Should the system use EDAV as it's cache; default `FALSE`.
 #' @returns Messages on process
 #' @examples
@@ -43,6 +45,7 @@ init_tidypolis <- function(
   # check if the data folder exists
   if (tidypolis_io(io = "exists.dir", file_path = data_folder)) {
     cli::cli_alert_success("Data folder found!")
+    Sys.setenv(DATA_FOLDER = data_folder)
     required_folders <- c("coverage", "pop", "spatial", "polis", "misc", "orpg")
     # Check if all the required folders are in the data folder
     dirs <- tidypolis_io(io = "list", file_path = data_folder)
