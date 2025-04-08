@@ -1009,11 +1009,11 @@ remove_empty_columns <- function(dataframe) {
 #' @import dplyr cli sirfunctions
 #' @return tibble: crosswalk data
 get_crosswalk_data <- function(
-    file_loc = "Data/misc/crosswalk.rds"
+    file_loc = file.path(Sys.get("DATA_FOLDER"), "misc/crosswalk.rds")
   ){
   cli::cli_process_start("Import crosswalk")
   crosswalk <-
-    sirfunctions::edav_io(io = "read", file_loc = file_loc) |>
+    tidypolis_io(io = "read", file_path = file_loc) |>
     #TrendID removed from export
     dplyr::filter(!API_Name %in% c("Admin0TrendId", "Admin0Iso2Code"))
   cli::cli_process_done()
@@ -1600,7 +1600,9 @@ f.summarise.metadata <- function(dataframe, categorical_max = 10){
 #' @import sirfunctions
 #' @returns tibble: env site list
 get_env_site_data <- function(){
-  envSiteYearList <- sirfunctions::edav_io(io = "read", file_loc = "Data/misc/env_sites.rds")
+  envSiteYearList <- tidypolis_io(io = "read",
+                                  file_path = file.path(Sys.getenv("DATA_FOLDER"),
+                                                                "misc/env_sites.rds"))
   return(envSiteYearList)
 }
 
@@ -1974,7 +1976,8 @@ cluster_dates_for_sias <- function(sia){
 #' @param min_obs int
 #' @param type str vaccine type
 run_cluster_dates <- function(data,
-                              cache_folder = "Data/sia_cluster_cache",
+                              cache_folder = file.path(Sys.getenv("DATA_FOLDER"),
+                                                       "sia_cluster_cache"),
                               min_obs = 4,
                               type){
 
@@ -3652,15 +3655,17 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   cluster_dates_for_sias(sia.clean.01)
 
-  sia.clusters <- edav_io(io = "list", file_loc = "GID/PEB/SIR/Data/sia_cluster_cache",
-                          default_dir = NULL) |>
+  sia.clusters <- dplyr::tibble(name = tidypolis_io(io = "list",
+                                                    file_path = file.path(Sys.getenv("DATA_FOLDER"),
+                                                                          "sia_cluster_cache"),
+                                                    full_names = TRUE)) |>
     dplyr::filter(grepl("data_cluster_cache", name)) |>
     dplyr::pull(name)
 
   sia.cluster.data <- list()
 
   for(i in 1:length(sia.clusters)){
-    sia.cluster.data[[length(sia.cluster.data) + 1]] <- edav_io(io = "read", file_loc = sia.clusters[i], default_dir = NULL)
+    sia.cluster.data[[length(sia.cluster.data) + 1]] <- tidypolis_io(io = "read", file_path = sia.clusters[i])
   }
 
   sia.rounds <- do.call(rbind.data.frame, sia.cluster.data) |>
@@ -4227,7 +4232,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_start("Creating CDC variables")
 
   #read in list of novel emergences supplied by ORPG
-  nopv.emrg <- sirfunctions::edav_io(io = "read", file_loc = "GID/PEB/SIR/Data/orpg/nopv_emg.table.rds", default_dir = NULL) |>
+  nopv.emrg <- tidypolis_io(io = "read",
+                            file_path = file.path(Sys.getenv("DATA_FOLDER"),
+                                                  "orpg/nopv_emg.table.rds")) |>
     dplyr::rename(emergencegroup = emergence_group,
                   vaccine.source = vaccine_source) |>
     dplyr::mutate(vaccine.source = dplyr::if_else(vaccine.source == "novel", "Novel", vaccine.source))

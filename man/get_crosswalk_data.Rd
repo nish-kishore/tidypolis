@@ -4,7 +4,9 @@
 \alias{get_crosswalk_data}
 \title{Get crosswalk data}
 \usage{
-get_crosswalk_data(file_loc = "Data/misc/crosswalk.rds")
+get_crosswalk_data(
+  file_loc = file.path(Sys.get("DATA_FOLDER"), "misc/crosswalk.rds")
+)
 }
 \arguments{
 \item{file_loc}{str: location of crosswalk file}

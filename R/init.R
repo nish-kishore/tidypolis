@@ -71,7 +71,7 @@ init_tidypolis <- function(
                                                  file.path(data_folder, "spatial"),
                                                  "\n Request the geodatabase from WHO.")),
                "misc" = cli::cli_alert(paste0("Request from the SIR team the environmental site cache file ",
-                                              "called env_sites.rds ",
+                                              "called env_sites.rds and the crosswalk file called crosswalk.rds ",
                                               "and place it in ",
                                               file.path(data_folder, "misc"))),
                "polis" = cli::cli_alert(paste0("Please create a folder called 'polis' in ",
