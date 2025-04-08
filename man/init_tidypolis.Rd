@@ -4,15 +4,18 @@
 \alias{init_tidypolis}
 \title{A function to intitialize a POLIS data folder}
 \usage{
-init_tidypolis(polis_folder, data_folder, edav = F)
+init_tidypolis(polis_folder = "POLIS", data_folder = "Data", edav = F)
 }
 \arguments{
-\item{polis_folder}{`str` Location of folder where to store all information.}
+\item{polis_folder}{`str` Location of folder where to store all information from POLIS.}
+
+\item{data_folder}{`str` Path to the data folder that contains other file
+dependencies such as historical environment site data, nOPV emergences etc...}
 
 \item{edav}{`bool` Should the system use EDAV as it's cache; default `FALSE`.}
 }
 \value{
-Messages on process
+Messages on process.
 }
 \description{
 Initialize API Key and local data cache for tidypolis. Inspired by the
@@ -20,7 +23,11 @@ tidycensus process for managing their API secrets.
 }
 \details{
 The function internally creates several global variables that sets up paths
-and flags that other functions in tidypolis depends on.
+and flags that other functions in tidypolis depends on. The `polis_folder` is
+not the same as the `data_folder`. The `polis_folder` houses
+files that are pulled from the POLIS API as well as preprocessed POLIS data.
+Pre-processing internally depends on some files within the `data_folder` that do not
+come from POLIS.
 }
 \examples{
 \dontrun{

@@ -5,14 +5,19 @@
 #' tidycensus process for managing their API secrets.
 #' @details
 #' The function internally creates several global variables that sets up paths
-#' and flags that other functions in tidypolis depends on.
+#' and flags that other functions in tidypolis depends on. The `polis_folder` is
+#' not the same as the `data_folder`. The `polis_folder` houses
+#' files that are pulled from the POLIS API as well as preprocessed POLIS data.
+#' Pre-processing internally depends on some files within the `data_folder` that do not
+#' come from POLIS.
 #'
 #' @import cli yaml tibble dplyr readr lubridate sirfunctions
 #' @param polis_folder `str` Location of folder where to store all information from POLIS.
 #' @param data_folder `str` Path to the data folder that contains other file
-#' dependencies such as historical environment site data,
+#' dependencies such as historical environment site data, nOPV emergences etc...
 #' @param edav `bool` Should the system use EDAV as it's cache; default `FALSE`.
-#' @returns Messages on process
+#'
+#' @returns Messages on process.
 #' @examples
 #' \dontrun{
 #' init_tidypolis(polis_folder = "POLIS", data_folder = "Data", edav = T) #create a polis data cache on CDC EDAV
@@ -58,13 +63,11 @@ init_tidypolis <- function(
 
       for (folder in check_folder) {
         switch(folder,
-               "coverage" = cli::cli_alert(paste0("Download the coverage data at: ",
-                                                  "https://www.healthdata.org/research-analysis/health-risks-issues/vaccine-coverage-data",
-                                                  "\nGo to the National Vaccine Coverage folder and download both vacc_mcv1.csv and vacc_dpt1.csv",
+               "coverage" = cli::cli_alert(paste0( "Request the pop files from the CDC PEB SIR team and ",
                                                   " and place them in a folder called 'coverage' in ", data_folder)
                                            ),
-               "pop" = cli::cli_alert("Please request the pop files from the CDC PEB SIR team."),
-               "spatial" = cli::cli_alert(paste0("Please ensure that the output of process_spatial() is: ",
+               "pop" = cli::cli_alert("Request the pop files from the CDC PEB SIR team."),
+               "spatial" = cli::cli_alert(paste0("Ensure that the output of process_spatial() is: ",
                                                  file.path(data_folder, "spatial"),
                                                  "\n Request the geodatabase from WHO.")),
                "misc" = cli::cli_alert(paste0("Request from the SIR team the environmental site cache file ",
@@ -77,8 +80,20 @@ init_tidypolis <- function(
                                               " and add it to: ", file.path(data_folder, "orpg")))
                )
       }
+
+      cli::cli_abort("Unable to process POLIS data until all the files are collected.")
     } else {
       cli::cli_alert_success("Required data folders present")
+    }
+
+    optional_folder <- "sia_cluster_cache"
+    if (!optional_folder %in% dirs) {
+      cli::cli_alert(paste0("SIA cluster cache not found in the specified data folder. ",
+                            "SIA clustering algorithm for SIA round numbers will not be performed during preprocessing. ",
+                            "\nNOTE: Although optional, if you wish to perform this operation, please contact the CDC PEB SIR team."))
+      Sys.setenv(SIA_CLUSTERING_FLAG = FALSE)
+    } else {
+      Sys.setenv(SIA_CLUSTERING_FLAG = TRUE)
     }
 
   } else {
