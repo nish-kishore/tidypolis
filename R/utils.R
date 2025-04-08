@@ -2151,7 +2151,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     tidypolis_io(io = "create", file_path = core_files_folder_path)
   }
 
-  missing_static_files <- check_static_files(polis_data_folder)
+  missing_static_files <- check_missing_static_files(core_files_folder_path)
   # if on EDAV, create files to combine folder and write datasets into it
   if (length(missing_static_files) > 0) {
     if (Sys.getenv("POLIS_EDAV_FLAG")) {
@@ -5995,18 +5995,18 @@ if(exists("positives.new")){
   }
 }
 
-#' Check the historical static files
+#' Check for missing static files
 #'
 #' @description
 #' Performs a check for the static files.
 #'
-#' @param polis_data_folder `str` Path to the POLIS data folder.
+#' @param core_files_folder_path `str` Path to the `core_files_to_combine` folder.
 #' @param edav `bool` Check static files on EDAV?
 #'
 #' @returns `list` A list of missing files.
 #' @keywords internal
 #'
-check_static_files <- function(polis_data_folder,
+check_missing_static_files <- function(core_files_folder_path,
                                edav_flag = Sys.getenv("POLIS_EDAV_FLAG")) {
 
   required_files <- c(
@@ -6019,8 +6019,7 @@ check_static_files <- function(polis_data_folder,
   )
 
   core_files_to_combine <- tidypolis_io(io = "list",
-                                          file_path = file.path(polis_data_folder,
-                                                                "core_files_to_combine"),
+                                          file_path = core_files_folder_path,
                                         edav = edav_flag)
   missing_static_files <- setdiff(required_files, core_files_to_combine)
 
