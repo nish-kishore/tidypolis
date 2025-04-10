@@ -1304,7 +1304,7 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
     } |>
     dplyr::select(-dplyr::all_of(c("GUID", "yr.st", "yr.end")))
 
-  sf::st_geometry(df07) <- NULL
+  df07$geometry <- NULL
 
   sf::st_geometry(global.dist.02) <- NULL
 
@@ -1421,7 +1421,7 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
                      "ADM1_NAME", "ADM2_NAME")) |>
     dplyr::mutate(geo.corrected = ifelse(is.na(geo.corrected), 0, geo.corrected))
 
-  sf::st_geometry(df09) <- NULL
+  df09$Shape <- NULL
 
   final.guid.check <- df09 |>
     dplyr::filter((paste0("{", stringr::str_to_upper(admin2guid), "}", sep = "") != Admin2GUID |
