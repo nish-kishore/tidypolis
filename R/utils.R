@@ -2877,7 +2877,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   gc()
   # Function to create lat & long for AFP cases
   # Need to identify cases with no lat/lon
-  empty.coord.check <- df01 |>
+  empty.coord.check <- afp.linelist.fixed.final |>
     dplyr::filter(is.na(polis.latitude) | is.na(polis.longitude) |
                     (polis.latitude == 0 & polis.longitude == 0))
 
