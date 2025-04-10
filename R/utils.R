@@ -1194,12 +1194,12 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
 
   #removing all bad shapes post make valid
   valid.shapes <- global.dist.02[check.dist.2$value, ] |>
-    dplyr::select(GUID, ADM1_GUID, ADM0_GUID, yr.st, yr.end, SHAPE)
+    dplyr::select(GUID, ADM1_GUID, ADM0_GUID, yr.st, yr.end, Shape)
 
   cli::cli_process_start("Evaluating invalid district shapes")
   #invalid shapes for which we'll turn off s2
   invalid.shapes <- global.dist.02[!check.dist.2$value, ] |>
-    dplyr::select(GUID, ADM1_GUID, ADM0_GUID, yr.st, yr.end, SHAPE)
+    dplyr::select(GUID, ADM1_GUID, ADM0_GUID, yr.st, yr.end, Shape)
 
   #do 2 seperate st_joins the first, df02, is for valid shapes and those attached cases
   df02 <- sf::st_join(df01.sf |>
@@ -1304,9 +1304,9 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
     } |>
     dplyr::select(-dplyr::all_of(c("GUID", "yr.st", "yr.end")))
 
-  df07$geometry <- NULL
+  sf::st_geometry(df07) <- NULL
 
-  global.dist.02$SHAPE <- NULL
+  sf::st_geometry(global.dist.02) <- NULL
 
   #feed only cases with empty coordinates into st_sample (vars = GUID, nperarm, id, SHAPE)
   if (nrow(empty.coord |> dplyr::filter(Admin2GUID != "{NA}")) > 0) {
@@ -1371,7 +1371,7 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
       tidyr::uncount(nperarm)
   ) |>
     dplyr::left_join(tibble::as_tibble(empty.coord.02) |>
-                       dplyr::select(-SHAPE),
+                       dplyr::select(-Shape),
                      by = "GUID")
 
   pt02 <- pt01_joined |>
@@ -1421,7 +1421,7 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
                      "ADM1_NAME", "ADM2_NAME")) |>
     dplyr::mutate(geo.corrected = ifelse(is.na(geo.corrected), 0, geo.corrected))
 
-  df09$SHAPE <- NULL
+  sf::st_geometry(df09) <- NULL
 
   final.guid.check <- df09 |>
     dplyr::filter((paste0("{", stringr::str_to_upper(admin2guid), "}", sep = "") != Admin2GUID |
