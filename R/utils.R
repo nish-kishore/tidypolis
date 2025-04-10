@@ -2299,6 +2299,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
                                 api_es_data,
                                 api_virus_data)
 
+  rm(api_case_data, api_es_data, api_virus_data, api_activity_data,
+     api_subactivity_data)
+
   update_polis_log(.event = "CORE Ready files and change logs complete", .event_type = "PROCESS")
 
   #Step 2 - Creating AFP and EPI datasets ====
