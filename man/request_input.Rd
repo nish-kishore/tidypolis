@@ -16,7 +16,7 @@ request_input(request, vals, error_resp = "Valid input not chosen", max_i = 3)
 \item{max_i}{int:}
 }
 \value{
-val from `vals` or stops output
+val from \code{vals} or stops output
 }
 \description{
 Manage input

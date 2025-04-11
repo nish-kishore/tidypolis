@@ -15,24 +15,24 @@ tidypolis_io(
 )
 }
 \arguments{
-\item{obj}{`str` Object to be loaded into EDAV.}
+\item{obj}{\code{str} Object to be loaded into EDAV.}
 
-\item{io}{`str` read/write/list/exists/create/delete}
+\item{io}{\code{str} read/write/list/exists/create/delete}
 
-\item{file_path}{`str` Absolute path of file.}
+\item{file_path}{\code{str} Absolute path of file.}
 
-\item{edav}{`bool` Whether to interact with EDAV files. Defaults to `FALSE`.}
+\item{edav}{\code{bool} Whether to interact with EDAV files. Defaults to \code{FALSE}.}
 
-\item{azcontainer}{`Azure container` An Azure container object.}
+\item{azcontainer}{\verb{Azure container} An Azure container object.}
 
-\item{full_names}{`bool` If you want to include the full reference path in the response, default `FALSE`.}
+\item{full_names}{\code{bool} If you want to include the full reference path in the response, default \code{FALSE}.}
 
-\item{edav_default_dir}{`str` If `edav = TRUE`, specify the default directory used for `sirfunctions::edav_io()`.
-By default, this is `"GID/PEB/SIR"`.}
+\item{edav_default_dir}{\code{str} If \code{edav = TRUE}, specify the default directory used for \code{sirfunctions::edav_io()}.
+By default, this is \code{"GID/PEB/SIR"}.}
 }
 \value{
-Conditional on `io`. If `io` is "read", then it will return a tibble. If `io` is `"list"`, it will return a
-list of file names. Otherwise, the function will return `NULL`. `exists.dir` and `exists.file` will return a `bool`.
+Conditional on \code{io}. If \code{io} is "read", then it will return a tibble. If \code{io} is \code{"list"}, it will return a
+list of file names. Otherwise, the function will return \code{NULL}. \code{exists.dir} and \code{exists.file} will return a \code{bool}.
 }
 \description{
 Manages read/write/list/create/delete functions for tidypolis
