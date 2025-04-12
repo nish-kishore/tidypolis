@@ -4,11 +4,17 @@
 \alias{get_env_site_data}
 \title{Function to get cached env site data}
 \usage{
-get_env_site_data()
+get_env_site_data(
+  file_loc = file.path(Sys.getenv("POLIS_DATA_FOLDER"), "misc", "env_sites.rds")
+)
+}
+\arguments{
+\item{file_loc}{`path` Path to the env_sites.rds file.}
 }
 \value{
-tibble: env site list
+`tibble` Env site list
 }
 \description{
 Function to get cached env site data
 }
+\keyword{internal}

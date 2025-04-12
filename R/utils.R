@@ -1009,7 +1009,9 @@ remove_empty_columns <- function(dataframe) {
 #' @import dplyr cli sirfunctions
 #' @return tibble: crosswalk data
 get_crosswalk_data <- function(
-    file_loc = file.path(Sys.getenv("DATA_FOLDER"), "misc/crosswalk.rds")
+    file_loc = file.path(Sys.getenv("POLIS_DATA_FOLDER"),
+                         "misc",
+                         "crosswalk.rds")
   ){
   cli::cli_process_start("Import crosswalk")
   crosswalk <-
@@ -1597,12 +1599,15 @@ f.summarise.metadata <- function(dataframe, categorical_max = 10){
 
 #' Function to get cached env site data
 #' @description Function to get cached env site data
-#' @import sirfunctions
-#' @returns tibble: env site list
-get_env_site_data <- function(){
+#' @param file_loc `path` Path to the env_sites.rds file.
+#'
+#' @returns `tibble` Env site list
+#' @keywords internal
+get_env_site_data <- function(file_loc = file.path(Sys.getenv("POLIS_DATA_FOLDER"),
+                                                       "misc",
+                                                       "env_sites.rds")) {
   envSiteYearList <- tidypolis_io(io = "read",
-                                  file_path = file.path(Sys.getenv("DATA_FOLDER"),
-                                                                "misc/env_sites.rds"))
+                                  file_path = file_loc)
   return(envSiteYearList)
 }
 
@@ -1976,7 +1981,8 @@ cluster_dates_for_sias <- function(sia){
 #' @param min_obs int
 #' @param type str vaccine type
 run_cluster_dates <- function(data,
-                              cache_folder = file.path(Sys.getenv("DATA_FOLDER"),
+                              cache_folder = file.path(Sys.getenv("POLIS_DATA_FOLDER"),
+                                                       "misc",
                                                        "sia_cluster_cache"),
                               min_obs = 4,
                               type){
@@ -2159,14 +2165,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   missing_static_files <- check_missing_static_files(core_files_folder_path)
   # if on EDAV, create files to combine folder and write datasets into it
   if (length(missing_static_files) > 0) {
-    if (Sys.getenv("POLIS_EDAV_FLAG")) {
-      static_file_folder_path <- file.path(Sys.getenv("DATA_FOLDER"), "core_files_to_combine")
-
-      for (file in missing_static_files) {
-        tidypolis_io(io = "read", file_path = file.path(static_file_folder_path, file)) |>
-          tidypolis_io(io = "write", file_path = file.path(core_files_folder_path, file))
-      }
-    } else {
       cli::cli_alert_warning(paste0(
         "Please request the following file(s) from the SIR team",
         "and move them into: ", core_files_folder_path
@@ -2177,7 +2175,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
       }
       cli::cli_abort("Halting execution of preprocessing due to missing files.")
     }
-  }
 
   rm(core_files_folder_path, missing_static_files)
 
@@ -2225,7 +2222,447 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   rm(crosswalk_data)
 
-  # 13. Export csv files that match the web download, and create archive and change log
+  cli::cli_process_start("Virus")
+  api_virus_complete <-
+    tidypolis_io(io = "read", file_path = paste0(polis_data_folder, "/virus.rds")) |>
+    dplyr::mutate_all(as.character)
+  cli::cli_process_done()
+
+  cli::cli_process_start("Activity")
+  api_activity_complete <-
+    tidypolis_io(io = "read", file_path = paste0(polis_data_folder, "/activity.rds")) |>
+    dplyr::mutate_all(as.character)
+  cli::cli_process_done()
+
+
+  #Get geodatabase to auto-fill missing GUIDs
+  cli::cli_process_start("Long district spatial file")
+  if (Sys.getenv("POLIS_EDAV_FLAG")) {
+    long.global.dist.01 <- sirfunctions::load_clean_dist_sp(type = "long")
+  } else {
+    long.global.dist.01 <- tidypolis_io(io = "read",
+                                        file_path = file.path(Sys.getenv("POLIS_DATA_FOLDER"),
+                                                              "misc",
+                                                              "global.dist.rds"))
+    long.global.dist.01 <- long.global.dist.01 |>
+      dplyr::mutate(
+        STARTDATE = lubridate::as_date(STARTDATE),
+        # Typo in the dist start date (year) in shapefiles. Temporary correcting the start date for South Darfur in Sudan
+        STARTDATE = dplyr::if_else(ADM0_GUID == "{3050873E-F010-4C4F-82D1-541E3C4FD887}" & ADM1_GUID == "{0836D898-32B9-4912-AEA2-D07BD6E50ED8}" &
+                                     STARTDATE == "2018-01-01",
+                                   STARTDATE + 365, STARTDATE
+        ),
+
+        # Error in shapes of LAR district in FARS province of IRAN.
+        # Received confirmation from WHO - Start date should be '2021-01-01'.
+        # Manually making corrections until WHO fix it in the original geodatabase.
+        STARTDATE = dplyr::if_else(ADM0_GUID == "{2EEA3A5C-8A36-4A18-A7AB-1B927A092A60}" & ADM1_GUID == "{76F33E17-ADB9-4582-A533-4C96286864E3}" &
+                                     GUID == "{54464216-2BD3-4F30-BF2C-3846BEE6805D}" & STARTDATE == "2020-01-01",
+                                   STARTDATE + 366, STARTDATE
+        ),
+        yr.st = lubridate::year(STARTDATE),
+        yr.end = lubridate::year(ENDDATE),
+        ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"), "COTE D IVOIRE", ADM0_NAME)
+      )
+    long.global.dist.01 <- lapply(2000:lubridate::year(Sys.Date()),
+                                  \(i) sirfunctions:::f.yrs.01(long.global.dist.01, i))
+    long.global.dist.01 <-  do.call(rbind, long.global.dist.01)
+  }
+  cli::cli_process_done()
+
+
+  cli::cli_h2("De-duplicating data")
+
+  cli::cli_process_start("Sub-activity")
+  api_subactivity_sub1 <- api_subactivity_complete |>
+    dplyr::distinct()
+  cli::cli_process_done()
+
+  cli::cli_process_start("Activity")
+  api_activity_sub1 <- api_activity_complete |>
+    dplyr::filter(SIASubActivityCode %in% api_subactivity_sub1$SIASubActivityCode) |>
+    dplyr::distinct()
+  cli::cli_process_done()
+
+  cli::cli_process_start("Environmental Samples")
+  api_es_sub1 <- api_es_complete |>
+    dplyr::distinct()
+  cli::cli_process_done()
+
+  cli::cli_process_start("Case")
+  api_case_sub1 <- api_case_2019_12_01_onward |>
+    dplyr::distinct()
+  cli::cli_process_done()
+
+  cli::cli_process_start("Virus")
+  api_virus_sub1 <- api_virus_complete |>
+    dplyr::distinct()
+  cli::cli_process_done()
+
+  cli::cli_process_start("Clearing memory")
+  rm("api_subactivity_complete", "api_activity_complete", "api_es_complete",
+     "api_case_2019_12_01_onward", "api_virus_complete")
+  gc()
+  cli::cli_process_done()
+
+  cli::cli_process_start("Processing sub-activity spatial data")
+  api_subactivity_sub2 <- api_subactivity_sub1 |>
+    dplyr::mutate(year = lubridate::year(DateFrom)) |>
+    dplyr::left_join(
+      long.global.dist.01 |>
+        dplyr::select(
+          active.year.01,
+          ADM0_GUID,
+          ADM1_NAME,
+          ADM1_GUID,
+          ADM2_NAME,
+          GUID
+        ) |>
+        dplyr::mutate(
+          ADM0_GUID = tolower(stringr::str_remove_all(ADM0_GUID, "\\{")),
+          ADM0_GUID = stringr::str_remove_all(ADM0_GUID, "\\}"),
+          ADM1_GUID = tolower(stringr::str_remove_all(ADM1_GUID, "\\{")),
+          ADM1_GUID = stringr::str_remove_all(ADM1_GUID, "\\}"),
+          GUID = tolower(stringr::str_remove_all(GUID, "\\{")),
+          GUID = stringr::str_remove_all(GUID, "\\}")
+        ),
+      by = c(
+        "year" = "active.year.01",
+        "Admin0Guid" = "ADM0_GUID",
+        "Admin1Name" = "ADM1_NAME",
+        "Admin2Name" = "ADM2_NAME"
+      ),
+      relationship = "many-to-many"
+    ) |>
+    dplyr::mutate(
+      Admin2Guid = dplyr::case_when(is.na(Admin2Guid) ~ GUID,
+                                    TRUE ~ Admin2Guid),
+      Admin1Guid = dplyr::case_when(is.na(Admin1Guid) ~ ADM1_GUID,
+                                    TRUE ~ Admin1Guid)
+    ) |>
+    dplyr::select(-year,-ADM1_GUID,-GUID)
+  cli::cli_process_done()
+
+  cli::cli_process_start("Clearing memory")
+  rm("api_subactivity_sub1")
+  gc()
+  cli::cli_process_done()
+
+  #Import the crosswalk file and use it to rename all data elements in the API-downloaded tables.
+
+  cli::cli_h2("Crosswalk and rename variables")
+
+  crosswalk <- get_crosswalk_data()
+
+  cli::cli_process_start("Case")
+  api_case_sub1 <- api_case_sub1 |>
+    dplyr::rename(DosesTotal = DosesOPVNumber)
+  api_case_sub2 <- rename_via_crosswalk(api_data = api_case_sub1,
+                                        crosswalk = crosswalk,
+                                        table_name = "Case")
+  cli::cli_process_done()
+
+  cli::cli_process_start("Environmental Samples")
+  api_es_sub2 <- rename_via_crosswalk(api_data = api_es_sub1,
+                                      crosswalk = crosswalk,
+                                      table_name = "EnvSample")
+  cli::cli_process_done()
+
+  cli::cli_process_start("Virus")
+  api_virus_sub2 <- rename_via_crosswalk(api_data = api_virus_sub1,
+                                         crosswalk = crosswalk,
+                                         table_name = "Virus")
+  cli::cli_process_done()
+
+  cli::cli_process_start("Activity")
+  api_activity_sub2 <-
+    rename_via_crosswalk(api_data = api_activity_sub1,
+                         crosswalk = crosswalk,
+                         table_name = "Activity") |>
+    dplyr::select(SIASubActivityCode, crosswalk$Web_Name[crosswalk$Table == "Activity"]) |>
+    dplyr::select(-c("Admin 0 Id"))
+  cli::cli_process_done()
+
+  cli::cli_process_start("Sub-activity")
+  api_subactivity_sub3 <-
+    rename_via_crosswalk(api_data = api_subactivity_sub2,
+                         crosswalk = crosswalk,
+                         table_name = "SubActivity") |>
+    dplyr::left_join(api_activity_sub2,
+                     by = c("SIA Sub-Activity Code" = "SIASubActivityCode"))
+  cli::cli_process_done()
+
+  cli::cli_process_start("Clearing memory")
+  rm("api_activity_sub1", "api_case_sub1", "api_es_sub1", "api_subactivity_sub2",
+     "api_virus_sub1")
+
+  cli::cli_process_done()
+
+
+  cli::cli_h2("Modifying and reconciling variable types")
+  #    Modify individual variables in the API files to match the coding in the web-interface downloads,
+  #    and retain only variables from the API files that are present in the web-interface downloads.
+  cli::cli_process_start("Reconciling activity and subactivity variables")
+  api_subactivity_sub4 <- api_subactivity_sub3 |>
+    dplyr::mutate(
+      `IM loaded` = dplyr::case_when(
+        `IM loaded` == "TRUE" ~ "Yes",
+        `IM loaded` == "FALSE" ~ "No",
+        TRUE ~ NA_character_
+      )
+    ) |>
+    dplyr::mutate(
+      `LQAS loaded` = dplyr::case_when(
+        `LQAS loaded` == "TRUE" ~ "Yes",
+        `LQAS loaded` == "FALSE" ~ "No",
+        TRUE ~ NA_character_
+      )
+    ) |>
+    dplyr::mutate_at(c("Age Group %", "Area Targeted %", "Country Population %"),
+                     ~ as.numeric(.) * 100) |>
+    dplyr::mutate(`Area Population` = as.character(format(
+      round(as.numeric(`Area Population`), 1),
+      nsmall = 0,
+      big.mark = ","
+    ))) |>
+    dplyr::mutate_at(
+      c("Sub-Activity Initial Planned Date", "Last Updated Date"),
+      ~ lubridate::as_datetime(.)
+    ) |>
+    dplyr::mutate(`Activity Comments` = "") |>
+    dplyr::mutate(
+      `Targeted Population` = as.character(`Targeted Population`),
+      `Number of Doses` = as.character(`Number of Doses`)
+    ) |>
+    dplyr::mutate_at(
+      c(
+        "UNPD Country Population",
+        "Immunized Population",
+        "Admin 2 Targeted Population",
+        "Admin 2 Immunized Population",
+        "Admin2 children inaccessible",
+        "Number of Doses Approved",
+        "Children inaccessible",
+        "Activity parent children inaccessible",
+        "Admin 0 Id",
+        "Admin 1 Id",
+        "Admin 2 Id"
+      ),
+      as.numeric
+    ) |>
+    dplyr::select(c(crosswalk$Web_Name[crosswalk$Table %in% c("Activity", "SubActivity") &
+                                         !is.na(crosswalk$Web_Name)],
+                    crosswalk$API_Name[crosswalk$Table %in% c("SubActivity") &
+                                         is.na(crosswalk$Web_Name) &
+                                         crosswalk$API_Name != "ActivityAdminCoveragePercentage"]))
+  cli::cli_process_done()
+
+  cli::cli_process_start("Clearing memory")
+  rm("api_subactivity_sub3")
+  gc()
+  cli::cli_process_done()
+
+  cli::cli_process_start("Cleaning IPV/OPV variables")
+  api_case_sub3 <- api_case_sub2 |>
+    dplyr::mutate(
+      `total.number.of.ipv./.opv.doses` = NA_integer_,
+      Doses =  as.numeric(Doses),
+      `Virus Sequenced` = as.logical(`Virus Sequenced`),
+      `Advanced Notification` = dplyr::case_when(
+        `Advanced Notification` == TRUE ~ "Yes",
+        `Advanced Notification` == FALSE ~ "No",
+        TRUE ~ NA_character_
+      ),
+      `Dataset Lab` = dplyr::case_when(
+        `Dataset Lab` == TRUE ~ "Yes",
+        `Dataset Lab` == FALSE ~ "No",
+        TRUE ~ NA_character_
+      ),
+      `Is Breakthrough` = dplyr::case_when(
+        `Is Breakthrough` == TRUE ~ "Yes",
+        `Is Breakthrough` == FALSE ~ "No",
+        TRUE ~ NA_character_
+      )
+    ) |>
+    dplyr::select(c(crosswalk$Web_Name[crosswalk$Table %in% c("Case") &
+                                         !is.na(crosswalk$Web_Name)],
+                    crosswalk$API_Name[crosswalk$Table %in% c("Case") &
+                                         is.na(crosswalk$Web_Name)]))
+  cli::cli_process_done()
+
+  cli::cli_process_start("Clearing memory")
+  rm("api_case_sub2")
+  gc()
+  cli::cli_process_done()
+
+  cli::cli_process_start("Cleaning site and location variables")
+  api_es_sub3 <- api_es_sub2 |>
+    dplyr::mutate(Site = paste0(`Site Code`, " - ", `Site Name`),
+                  `Country Iso2` = NA_character_) |>
+    dplyr::mutate_at(
+      c(
+        "Vaccine 1",
+        "Vaccine 2",
+        "Vaccine 3",
+        "Vdpv 1",
+        "Vdpv 2",
+        "Vdpv 3",
+        "Wild 1",
+        "Wild 2",
+        "Wild 3",
+        "nVaccine 2",
+        "nVDPV 2",
+        "PV 1",
+        "PV 2",
+        "PV 3",
+        "Is Suspected",
+        "NPEV"
+      ),
+      ~ dplyr::case_when(. == "TRUE" ~ "Yes",
+                  . == "FALSE" ~ "No",
+                  TRUE ~ NA_character_)
+    ) |>
+
+    dplyr::mutate_at(
+      c(
+        "Is Breakthrough",
+        "Under Process",
+        "Advanced Notification",
+        "Mixture"
+      ),
+      ~ dplyr::case_when(. == "TRUE" ~ "Yes",
+                  . == "FALSE" ~ "No",
+                  TRUE ~ NA_character_)
+    ) |>
+    dplyr::mutate_at(
+      c(
+        "Date Final Culture Result",
+        "Date Final Combined Result",
+        "Date Final Results Reported",
+        "Date Isol Sent Seq2",
+        "Date Isol Rec Seq2",
+        "Date Final Seq Result",
+        "Date Res Sent Out VDPV2",
+        "Date Res Sent Out VACCINE2",
+        "Date Isol Rec Seq1",
+        "Collection Date",
+        "Date F1 ref ITD",
+        "Date F2 ref ITD",
+        "Date F3 ref ITD",
+        "Date F4 ref ITD",
+        "Date F5 ref ITD",
+        "Date F6 ref ITD",
+        "Date Notification To HQ",
+        "Date received in lab",
+        "Date Shipped To Ref Lab",
+        "Publish Date",
+        "Uploaded Date"
+      ),
+      ~ as.character(format(as.Date(., format = "%Y-%m-%d"), format = "%d/%m/%Y"))
+    ) |>
+    dplyr::mutate_at(c("Created Date",
+                "Updated Date"), ~ as.character(format(as.Date(., format =
+                                                                 "%Y-%m-%d"), format = "%d-%m-%Y"))) |>
+    dplyr::mutate(`Sample Id` = as.character(`Sample Id`)) |>
+    dplyr::select(c(crosswalk$Web_Name[crosswalk$Table %in% c("EnvSample") &
+                                  !is.na(crosswalk$Web_Name)],
+             crosswalk$API_Name[crosswalk$Table %in% c("EnvSample") &
+                                  is.na(crosswalk$Web_Name)]))
+  cli::cli_process_done()
+
+  cli::cli_process_start("Clearing memory")
+  rm("api_es_sub2")
+  gc()
+  cli::cli_process_done()
+
+
+  cli::cli_process_start("Cleaning irregular location names")
+  api_virus_sub3 <- api_virus_sub2 |>
+    dplyr::mutate(location = paste(
+      toupper(Admin0OfficialName),
+      toupper(Admin1OfficialName),
+      toupper(Admin2OfficialName),
+      sep = ", "
+    )) |>
+    dplyr::mutate(location = stringr::str_squish(stringr::str_replace_all(location, ", NA,", ", "))) |>
+    dplyr::mutate(location = dplyr::case_when(
+      stringr::str_sub(location,-4) == ", NA" ~ substr(location, 1, nchar(location) - 4),
+      TRUE ~ location
+    )) |>
+    dplyr::mutate(location = stringr::str_replace_all(
+      location,
+      "ISLAMIC REPUBLIC OF IRAN",
+      "IRAN (ISLAMIC REPUBLIC OF)"
+    )) |>
+    dplyr::mutate(
+      location = stringr::str_replace_all(
+        location,
+        "UNITED KINGDOM OF GREAT BRITAIN AND NORTHERN IRELAND",
+        "THE UNITED KINGDOM"
+      )
+    ) |>
+
+    dplyr::mutate(`Virus Type(s)` = stringr::str_replace_all(`Virus Type(s)`, "NVACCINE", "nVACCINE")) |>
+
+    dplyr::mutate(
+      `Nt Changes` = dplyr::case_when(
+        grepl("VDPV", `VirusTypeName`) &
+          !is.na(`Nt Changes`) ~ `Nt Changes`,
+        grepl("VACCINE", VirusTypeName) &
+          !is.na(VaccineNtChangesFromSabin) ~ VaccineNtChangesFromSabin,
+        TRUE ~ NA_character_
+      )
+    ) |>
+    dplyr::mutate_at(c("Virus Date"), ~ lubridate::as_date(.)) |>
+    dplyr::mutate_at(
+      c("Is Breakthrough"),
+      ~ dplyr::case_when(. == "TRUE" ~ "Yes",
+                  . == "FALSE" ~ "No",
+                  TRUE ~ NA_character_)
+    ) |>
+    dplyr::select(c(crosswalk$Web_Name[crosswalk$Table %in% c("Virus") &
+                                  !is.na(crosswalk$Web_Name)],
+             crosswalk$API_Name[crosswalk$Table %in% c("Virus") &
+                                  is.na(crosswalk$Web_Name)])) |>
+    dplyr::mutate(nt.changes.neighbor = dplyr::case_when(
+      !is.na(VdpvNtChangesClosestMatch) ~ VdpvNtChangesClosestMatch,
+      TRUE ~ NA_character_
+    ))
+  cli::cli_process_done()
+
+  cli::cli_process_start("Clearing memory")
+  rm("api_virus_sub2")
+  gc()
+  cli::cli_process_done()
+
+
+  cli::cli_process_start("Removing empty columns")
+
+  cli::cli_h3("Case")
+  api_case_sub3 <- remove_empty_columns(api_case_sub3)
+
+  cli::cli_h3("Sub-activity")
+  api_subactivity_sub4 <- remove_empty_columns(api_subactivity_sub4)
+
+  cli::cli_h3("ES")
+  api_es_sub3 <- remove_empty_columns(api_es_sub3)
+
+  #if nVaccine 2 is removed recreate with empty values so downstream code doesn't break
+
+  es_names <- api_es_sub3 |>
+    names()
+
+  if(!"nVaccine 2" %in% es_names){
+    api_es_sub3 <- api_es_sub3 |>
+      cbind("nVaccine 2" = NA)
+  }
+
+  cli::cli_h3("Virus")
+  api_virus_sub3 <- remove_empty_columns(api_virus_sub3)
+
+  cli::cli_process_done()
+
+  #13. Export csv files that match the web download, and create archive and change log
   cli::cli_h2("Creating change log and exporting data")
   ts <- Sys.time()
   timestamp <- paste0(
@@ -2674,7 +3111,23 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     )
 
   #match country shapes and names first
-  long.global.ctry.01 <- load_clean_ctry_sp(type = "long")
+  if (Sys.getenv("POLIS_EDAV_FLAG")) {
+    long.global.ctry.01 <- sirfunctions::load_clean_ctry_sp(type = "long")
+  } else {
+    long.global.ctry.01 <- tidypolis_io(io = "read",
+                                        file_path = file.path(Sys.getenv("POLIS_DATA_FOLDER"),
+                                                              "misc",
+                                                              "global.ctry.rds"))
+    long.global.ctry.01 <- long.global.ctry.01 |>
+      dplyr::mutate(
+        yr.st = lubridate::year(STARTDATE),
+        yr.end = lubridate::year(ENDDATE),
+        ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"), "COTE D IVOIRE", ADM0_NAME)
+      )
+    long.global.ctry.01 <- lapply(2000:lubridate::year(Sys.Date()),
+                                  \(i) sirfunctions:::f.yrs.01(long.global.ctry.01, i))
+    long.global.ctry.01 <-  do.call(rbind, long.global.ctry.01)
+  }
 
   shapes <- long.global.ctry.01 |>
     tibble::as_tibble() |>
@@ -2708,7 +3161,24 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   rm(long.global.ctry.01)
 
   #match province GUIDs and names for correction
-  long.global.prov.01 <- load_clean_prov_sp(type = "long")
+  if (Sys.getenv("POLIS_EDAV_FLAG")) {
+    long.global.prov.01 <- load_clean_prov_sp(type = "long")
+  } else {
+    long.global.prov.01 <- tidypolis_io(io = "read",
+                                        file_path = file.path(Sys.getenv("POLIS_DATA_FOLDER"),
+                                                              "misc",
+                                                              "global.prov.rds"))
+    long.global.prov.01 <- long.global.prov.01 |>
+      dplyr::mutate(
+        yr.st = lubridate::year(STARTDATE),
+        yr.end = lubridate::year(ENDDATE),
+        ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"), "COTE D IVOIRE", ADM0_NAME)
+      )
+    long.global.prov.01 <- lapply(2000:lubridate::year(Sys.Date()),
+                                  \(i) sirfunctions:::f.yrs.01(long.global.prov.01, i))
+    long.global.prov.01 <-  do.call(rbind, long.global.prov.01)
+  }
+
 
   shapes <- long.global.prov.01 |>
     tibble::as_tibble() |>
@@ -2839,7 +3309,34 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   rm("afp.linelist.fixed.02", "afp.linelist.fixed.03")
   gc()
 
-  global.dist.01 <- sirfunctions::load_clean_dist_sp()
+  if (Sys.getenv("POLIS_EDAV_FLAG")) {
+    global.dist.01 <- sirfunctions::load_clean_dist_sp()
+  } else {
+    global.dist.01 <- tidypolis_io(io = "read",
+                                   file_path = file.path(Sys.getenv("POLIS_DATA_FOLDER"),
+                                                              "misc",
+                                                              "global.dist.rds"))
+    global.dist.01 <- global.dist.01 |>
+      dplyr::mutate(
+        STARTDATE = lubridate::as_date(STARTDATE),
+        # Typo in the dist start date (year) in shapefiles. Temporary correcting the start date for South Darfur in Sudan
+        STARTDATE = dplyr::if_else(ADM0_GUID == "{3050873E-F010-4C4F-82D1-541E3C4FD887}" & ADM1_GUID == "{0836D898-32B9-4912-AEA2-D07BD6E50ED8}" &
+                                     STARTDATE == "2018-01-01",
+                                   STARTDATE + 365, STARTDATE
+        ),
+
+        # Error in shapes of LAR district in FARS province of IRAN.
+        # Received confirmation from WHO - Start date should be '2021-01-01'.
+        # Manually making corrections until WHO fix it in the original geodatabase.
+        STARTDATE = dplyr::if_else(ADM0_GUID == "{2EEA3A5C-8A36-4A18-A7AB-1B927A092A60}" & ADM1_GUID == "{76F33E17-ADB9-4582-A533-4C96286864E3}" &
+                                     GUID == "{54464216-2BD3-4F30-BF2C-3846BEE6805D}" & STARTDATE == "2020-01-01",
+                                   STARTDATE + 366, STARTDATE
+        ),
+        yr.st = lubridate::year(STARTDATE),
+        yr.end = lubridate::year(ENDDATE),
+        ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"), "COTE D IVOIRE", ADM0_NAME)
+      )
+  }
 
   #identify afp cases w/ bad adm2guids
   cli::cli_process_start("Checking District GUIDs")
@@ -3656,7 +4153,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cluster_dates_for_sias(sia.clean.01)
 
   sia.clusters <- dplyr::tibble(name = tidypolis_io(io = "list",
-                                                    file_path = file.path(Sys.getenv("DATA_FOLDER"),
+                                                    file_path = file.path(Sys.getenv("POLIS_DATA_FOLDER"),
+                                                                          "misc",
                                                                           "sia_cluster_cache"),
                                                     full_names = TRUE)) |>
     dplyr::filter(grepl("data_cluster_cache", name)) |>
@@ -4014,7 +4512,20 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   es.03 = es.03|>
     dplyr::mutate(ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"),"COTE D IVOIRE",ADM0_NAME))
 
-  global.ctry.01 <- sirfunctions::load_clean_ctry_sp()
+  if (Sys.getenv("POLIS_EDAV_FLAG")) {
+    global.ctry.01 <- sirfunctions::load_clean_ctry_sp()
+  } else {
+    global.ctry.01 <- tidypolis_io(io = "read",
+                                        file_path = file.path(Sys.getenv("POLIS_DATA_FOLDER"),
+                                                              "misc",
+                                                              "global.ctry.rds"))
+    global.ctry.01 <- global.ctry.01 |>
+      dplyr::mutate(
+        yr.st = lubridate::year(STARTDATE),
+        yr.end = lubridate::year(ENDDATE),
+        ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"), "COTE D IVOIRE", ADM0_NAME)
+      )
+  }
 
   sf::sf_use_s2(F)
   shape.name.01 <- global.ctry.01 |>
@@ -4233,8 +4744,9 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   #read in list of novel emergences supplied by ORPG
   nopv.emrg <- tidypolis_io(io = "read",
-                            file_path = file.path(Sys.getenv("DATA_FOLDER"),
-                                                  "orpg/nopv_emg.table.rds")) |>
+                            file_path = file.path(Sys.getenv("POLIS_DATA_FOLDER"),
+                                                  "misc",
+                                                  "nopv_emg.table.rds")) |>
     dplyr::rename(emergencegroup = emergence_group,
                   vaccine.source = vaccine_source) |>
     dplyr::mutate(vaccine.source = dplyr::if_else(vaccine.source == "novel", "Novel", vaccine.source))

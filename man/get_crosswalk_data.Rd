@@ -5,7 +5,7 @@
 \title{Get crosswalk data}
 \usage{
 get_crosswalk_data(
-  file_loc = file.path(Sys.get("DATA_FOLDER"), "misc/crosswalk.rds")
+  file_loc = file.path(Sys.getenv("POLIS_DATA_FOLDER"), "misc", "crosswalk.rds")
 )
 }
 \arguments{
