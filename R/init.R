@@ -3,18 +3,9 @@
 #' @description
 #' Initialize API Key and local data cache for tidypolis. Inspired by the
 #' tidycensus process for managing their API secrets.
-#' @details
-#' The function internally creates several global variables that sets up paths
-#' and flags that other functions in tidypolis depends on. The `polis_folder` is
-#' not the same as the `data_folder`. The `polis_folder` houses
-#' files that are pulled from the POLIS API as well as preprocessed POLIS data.
-#' Pre-processing internally depends on some files within the `data_folder` that do not
-#' come from POLIS.
 #'
 #' @import cli yaml tibble dplyr readr lubridate sirfunctions
 #' @param polis_folder `str` Location of folder where to store all information from POLIS.
-#' @param data_folder `str` Path to the data folder that contains other file
-#' dependencies such as historical environment site data, nOPV emergences etc...
 #' @param edav `bool` Should the system use EDAV as it's cache; default `FALSE`.
 #'
 #' @returns Messages on process.
@@ -27,7 +18,6 @@
 #' @export
 init_tidypolis <- function(
     polis_folder = "POLIS",
-    data_folder = "Data",
     edav = F
     ){
 
@@ -46,60 +36,6 @@ init_tidypolis <- function(
   }else{
     Sys.setenv(POLIS_EDAV_FLAG = F)
   }
-
-  # check if the data folder exists
-  if (tidypolis_io(io = "exists.dir", file_path = data_folder)) {
-    cli::cli_alert_success("Data folder found!")
-    Sys.setenv(DATA_FOLDER = data_folder)
-    required_folders <- c("coverage", "pop", "spatial", "polis", "misc", "orpg")
-    # Check if all the required folders are in the data folder
-    dirs <- tidypolis_io(io = "list", file_path = data_folder)
-
-    check_folder <- setdiff(required_folders, dirs)
-
-    if (length(check_folder) > 0) {
-      cli::cli_alert(paste0("Following required folders not found: ",
-                            paste0(check_folder, collapse = ", ")))
-
-      for (folder in check_folder) {
-        switch(folder,
-               "coverage" = cli::cli_alert(paste0( "Request the pop files from the CDC PEB SIR team and ",
-                                                  " and place them in a folder called 'coverage' in ", data_folder)
-                                           ),
-               "pop" = cli::cli_alert("Request the pop files from the CDC PEB SIR team."),
-               "spatial" = cli::cli_alert(paste0("Ensure that the output of process_spatial() is: ",
-                                                 file.path(data_folder, "spatial"),
-                                                 "\n Request the geodatabase from WHO.")),
-               "misc" = cli::cli_alert(paste0("Request from the SIR team the environmental site cache file ",
-                                              "called env_sites.rds and the crosswalk file called crosswalk.rds ",
-                                              "and place it in ",
-                                              file.path(data_folder, "misc"))),
-               "polis" = cli::cli_alert(paste0("Please create a folder called 'polis' in ",
-                                               data_folder)),
-               "orpg" = cli::cli_alert(paste0("Please request the file 'npov_emg.table.rds' from the SIR Team",
-                                              " and add it to: ", file.path(data_folder, "orpg")))
-               )
-      }
-
-      cli::cli_abort("Unable to process POLIS data until all the files are collected.")
-    } else {
-      cli::cli_alert_success("Required data folders present")
-    }
-
-    optional_folder <- "sia_cluster_cache"
-    if (!optional_folder %in% dirs) {
-      cli::cli_alert(paste0("SIA cluster cache not found in the specified data folder. ",
-                            "SIA clustering algorithm for SIA round numbers will not be performed during preprocessing. ",
-                            "\nNOTE: Although optional, if you wish to perform this operation, please contact the CDC PEB SIR team."))
-      Sys.setenv(SIA_CLUSTERING_FLAG = FALSE)
-    } else {
-      Sys.setenv(SIA_CLUSTERING_FLAG = TRUE)
-    }
-
-  } else {
-    cli::cli_abort("Data folder not found.")
-  }
-
 
   #check if polis folder exists, if not create it after asking for validation
   if(tidypolis_io(io = "exists.dir", file_path = polis_folder)){
@@ -129,6 +65,41 @@ init_tidypolis <- function(
     tidypolis_io(io = "create", file_path = paste0(polis_folder, "/data"))
   }
   Sys.setenv(POLIS_DATA_CACHE = paste0(polis_folder,"/data"))
+
+  # Check for required files
+  if (tidypolis_io(io = "exists.dir", file_path = file.path(polis_folder, "misc"))) {
+    cli::cli_alert_info("No misc folder inside POLIS folder, creating...")
+  } else {
+    cli::cli_alert_success("misc folder found! Checking for required files")
+    required_files <- c(
+      "crosswalk.rds",
+      "env_sites.rds",
+      "nopv_emg.table.rds",
+      "global.dist.rds",
+      "global.prov.rds",
+      "global.ctry.rds"
+    )
+    misc_folder_files <- tidypolis_io(io = "list", file_path = file.path(polis_folder, "misc"))
+    missing_files <- setdiff(required_files, misc_folder_files)
+
+    if (length(missing_files > 0)) {
+      cli::cli_alert(paste0("Following required files not found: ",
+                            paste0(missing_files, collapse = ", ")))
+      cli::cli_abort("Please request these files from the CDC PEB SIR Team")
+    } else {
+      cli::cli_alert_success("All required files present!")
+    }
+
+    optional_folder <- "sia_cluster_cache"
+    if (!optional_folder %in% misc_folder_files) {
+      cli::cli_alert(paste0("SIA cluster cache not found in the misc folder. ",
+                            "SIA clustering algorithm for SIA round numbers will not be performed during preprocessing. ",
+                            "\nNOTE: Although optional, if you wish to perform this operation, please contact the CDC PEB SIR team."))
+      Sys.setenv(SIA_CLUSTERING_FLAG = FALSE)
+    } else {
+      Sys.setenv(SIA_CLUSTERING_FLAG = TRUE)
+    }
+  }
 
   #check if key details exist, if not ask for them, test them and store them
   #if they exist, check the key
