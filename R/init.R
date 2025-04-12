@@ -67,38 +67,39 @@ init_tidypolis <- function(
   Sys.setenv(POLIS_DATA_CACHE = paste0(polis_folder,"/data"))
 
   # Check for required files
-  if (tidypolis_io(io = "exists.dir", file_path = file.path(polis_folder, "misc"))) {
-    cli::cli_alert_info("No misc folder inside POLIS folder, creating...")
+  if (!tidypolis_io(io = "exists.dir", file_path = file.path(polis_folder, "misc"))) {
+    cli::cli_alert_info("- No misc folder inside POLIS folder, creating...")
+    } else {
+    cli::cli_alert_success("- misc folder found! Checking for required files")
+    }
+
+  required_files <- c(
+    "crosswalk.rds",
+    "env_sites.rds",
+    "nopv_emg.table.rds",
+    "global.dist.rds",
+    "global.prov.rds",
+    "global.ctry.rds"
+  )
+  misc_folder_files <- tidypolis_io(io = "list", file_path = file.path(polis_folder, "misc"))
+  missing_files <- setdiff(required_files, misc_folder_files)
+
+  if (length(missing_files > 0)) {
+    cli::cli_alert(paste0("Following required files not found in the misc folder: ",
+                          paste0(missing_files, collapse = ", ")))
+    cli::cli_abort("Please request these files from the CDC PEB SIR Team")
   } else {
-    cli::cli_alert_success("misc folder found! Checking for required files")
-    required_files <- c(
-      "crosswalk.rds",
-      "env_sites.rds",
-      "nopv_emg.table.rds",
-      "global.dist.rds",
-      "global.prov.rds",
-      "global.ctry.rds"
-    )
-    misc_folder_files <- tidypolis_io(io = "list", file_path = file.path(polis_folder, "misc"))
-    missing_files <- setdiff(required_files, misc_folder_files)
+    cli::cli_alert_success(" - All required files present!")
+  }
 
-    if (length(missing_files > 0)) {
-      cli::cli_alert(paste0("Following required files not found: ",
-                            paste0(missing_files, collapse = ", ")))
-      cli::cli_abort("Please request these files from the CDC PEB SIR Team")
-    } else {
-      cli::cli_alert_success("All required files present!")
-    }
-
-    optional_folder <- "sia_cluster_cache"
-    if (!optional_folder %in% misc_folder_files) {
-      cli::cli_alert(paste0("SIA cluster cache not found in the misc folder. ",
-                            "SIA clustering algorithm for SIA round numbers will not be performed during preprocessing. ",
-                            "\nNOTE: Although optional, if you wish to perform this operation, please contact the CDC PEB SIR team."))
-      Sys.setenv(SIA_CLUSTERING_FLAG = FALSE)
-    } else {
-      Sys.setenv(SIA_CLUSTERING_FLAG = TRUE)
-    }
+  optional_folder <- "sia_cluster_cache"
+  if (!optional_folder %in% misc_folder_files) {
+    cli::cli_alert_info(paste0("  - SIA cluster cache not found in the misc folder. ",
+                          "SIA clustering algorithm for SIA round numbers will not be performed during preprocessing. ",
+                          "\n   - NOTE: Although optional, if you wish to perform this operation, please contact the CDC PEB SIR team."))
+    Sys.setenv(SIA_CLUSTERING_FLAG = FALSE)
+  } else {
+    Sys.setenv(SIA_CLUSTERING_FLAG = TRUE)
   }
 
   #check if key details exist, if not ask for them, test them and store them
