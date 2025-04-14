@@ -1310,7 +1310,7 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
 
   sf::st_geometry(global.dist.02) <- NULL
 
-  #feed only cases with empty coordinates into st_sample (vars = GUID, nperarm, id, SHAPE)
+  #feed only cases with empty coordinates into st_sample (vars = GUID, nperarm, id, Shape)
   if (nrow(empty.coord |> dplyr::filter(Admin2GUID != "{NA}")) > 0) {
   # remove NAs because can't be sampled
   empty.coord.01 <- empty.coord |>
@@ -3660,7 +3660,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   # This is the final SIA file which would be used for analysis.
   #Compare the final file to last week's final file to identify any differences in var_names, var_classes, or categorical responses
   sia.06 <- sia.06 |>
-    dplyr::select(-dplyr::starts_with("SHAPE"))
+    dplyr::select(-dplyr::starts_with("Shape"))
 
   old.file <- x[grepl("sia_2020", x)]
 
@@ -5031,7 +5031,7 @@ process_spatial <- function(gdb_folder,
   row.num.prov <- which(check.prov.valid$value == FALSE)
   invalid.prov.shapes <- global.prov.01 |>
     dplyr::slice(row.num.prov) |>
-    dplyr::select(ADM0_NAME, ADM1_NAME, GUID, yr.st, yr.end, SHAPE) |>
+    dplyr::select(ADM0_NAME, ADM1_NAME, GUID, yr.st, yr.end, Shape) |>
     dplyr::arrange(ADM0_NAME)
 
   sf::st_geometry(invalid.prov.shapes) <- NULL
@@ -5047,7 +5047,7 @@ process_spatial <- function(gdb_folder,
   }
 
   empty.prov <- global.prov.01 |>
-    dplyr::mutate(empty = sf::st_is_empty(SHAPE)) |>
+    dplyr::mutate(empty = sf::st_is_empty(Shape)) |>
     dplyr::filter(empty == TRUE)
 
   if(nrow(empty.prov) > 0) {
@@ -5082,7 +5082,7 @@ process_spatial <- function(gdb_folder,
   }
 
   if(nrow(dupe.guid.prov) > 1) {
-    dupe.guid.prov$SHAPE <- NULL
+    dupe.guid.prov$Shape <- NULL
     if(edav) {
       tidypolis_io(io = "write", edav = T,
                    file_path = paste0(output_folder, "/duplicate_prov_guid.csv"),
@@ -5095,7 +5095,7 @@ process_spatial <- function(gdb_folder,
   }
 
   if(nrow(dupe.name.prov) > 1) {
-    dupe.name.prov$SHAPE <- NULL
+    dupe.name.prov$Shape <- NULL
     if(edav) {
       tidypolis_io(io = "write", edav = T,
                    file_path = paste0(output_folder, "/duplicate_prov_name.csv"),
@@ -5128,7 +5128,7 @@ process_spatial <- function(gdb_folder,
   row.num.dist <- which(check.dist.valid$value == FALSE)
   invalid.dist.shapes <- global.dist.01 |>
     dplyr::slice(row.num.dist) |>
-    dplyr::select(ADM0_NAME, ADM1_NAME, ADM2_NAME, GUID, yr.st, yr.end, SHAPE) |>
+    dplyr::select(ADM0_NAME, ADM1_NAME, ADM2_NAME, GUID, yr.st, yr.end, Shape) |>
     dplyr::arrange(ADM0_NAME)
 
   sf::st_geometry(invalid.dist.shapes) <- NULL
@@ -5144,7 +5144,7 @@ process_spatial <- function(gdb_folder,
   }
 
   empty.dist <- global.dist.01 |>
-    dplyr::mutate(empty = sf::st_is_empty(SHAPE)) |>
+    dplyr::mutate(empty = sf::st_is_empty(Shape)) |>
     dplyr::filter(empty == TRUE)
 
   if(nrow(empty.dist) > 0) {
@@ -5180,7 +5180,7 @@ process_spatial <- function(gdb_folder,
   }
 
   if(nrow(dupe.guid.dist) > 1) {
-    dupe.guid.dist$SHAPE <- NULL
+    dupe.guid.dist$Shape <- NULL
     if(edav) {
       tidypolis_io(io = "write", edav = T,
                    file_path = paste0(output_folder, "/duplicate_dist_guid.csv"),
@@ -5193,7 +5193,7 @@ process_spatial <- function(gdb_folder,
   }
 
   if(nrow(dupe.name.dist) > 1) {
-    dupe.name.dist$SHAPE <- NULL
+    dupe.name.dist$Shape <- NULL
     if(edav) {
       tidypolis_io(io = "write", edav = T,
                    file_path = paste0(output_folder, "/duplicate_dist_name.csv"),
@@ -5314,7 +5314,7 @@ add_gpei_cases <- function(azcontainer = suppressMessages(get_azure_storage_conn
   global.ctry <- sirfunctions::load_clean_ctry_sp()
 
   long.global.prov <- sirfunctions::load_clean_prov_sp(type = "long")
-  long.global.prov$SHAPE <- NULL
+  long.global.prov$Shape <- NULL
   global.prov <- sirfunctions::load_clean_prov_sp()
 
   current.polis.pos <- sirfunctions::edav_io(io = "read", file_loc = polis_pos_loc)
@@ -5332,7 +5332,7 @@ add_gpei_cases <- function(azcontainer = suppressMessages(get_azure_storage_conn
   rm(long.global.prov)
 
 if(nrow(proxy.data.fill.prov) >= 1) {
-  #feed only cases with empty coordinates into st_sample (vars = GUID, nperarm, id, SHAPE)
+  #feed only cases with empty coordinates into st_sample (vars = GUID, nperarm, id, Shape)
   proxy.data.fill.prov.01 <- proxy.data.fill.prov |>
     tibble::as_tibble() |>
     dplyr::group_by(adm1guid) |>
@@ -5386,7 +5386,7 @@ if(nrow(proxy.data.fill.prov) >= 1) {
       tidyr::uncount(nperarm)
   ) |>
     dplyr::left_join(tibble::as_tibble(proxy.data.fill.prov.02) |>
-                       dplyr::select(-SHAPE),
+                       dplyr::select(-Shape),
                      by = "GUID")
 
   pt02 <- pt01_joined |>
