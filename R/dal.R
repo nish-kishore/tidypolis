@@ -116,19 +116,19 @@ tidypolis_io <- function(
         return(x)
       }
     } else {
-      if (!grepl(".rds|.rda|.csv", file_path)) {
+      if (!grepl("\\.rds$|\\.rda$|\\.csv$", file_path)) {
         stop("At the moment only 'rds' 'rda' and 'csv' are supported for reading.")
       }
 
-      if (grepl(".rds", file_path)) {
+      if (grepl("\\.rds$", file_path)) {
         return(readr::read_rds(file_path))
       }
 
-      if (grepl(".rda", file_path)) {
+      if (grepl("\\.rda$", file_path)) {
         return(load(file_path))
       }
 
-      if (grepl(".csv", file_path)) {
+      if (grepl("\\.csv$", file_path)) {
         return(readr::read_csv(file_path))
       }
     }
@@ -147,19 +147,19 @@ tidypolis_io <- function(
         azcontainer = azcontainer
       )
     } else {
-      if (!grepl(".rds|.rda|.csv", file_path)) {
+      if (!grepl("\\.rds$|\\.rda$|\\.csv$", file_path)) {
         stop("At the moment only 'rds' 'rda' and 'csv' are supported for reading.")
       }
 
-      if (grepl(".rds", file_path)) {
+      if (grepl("\\.rds$", file_path)) {
         readr::write_rds(x = obj, file = file_path)
       }
 
-      if (grepl(".rda", file_path)) {
+      if (grepl("\\.rda$", file_path)) {
         save(list = obj, file = file_path)
       }
 
-      if (grepl(".csv", file_path)) {
+      if (grepl("\\.csv$", file_path)) {
         readr::write_csv(x = obj, file = file_path)
       }
     }
