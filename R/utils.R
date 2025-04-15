@@ -1009,11 +1009,13 @@ remove_empty_columns <- function(dataframe) {
 #' @import dplyr cli sirfunctions
 #' @return tibble: crosswalk data
 get_crosswalk_data <- function(
-    file_loc = "Data/misc/crosswalk.rds"
+    file_loc = file.path(Sys.getenv("POLIS_DATA_FOLDER"),
+                         "misc",
+                         "crosswalk.rds")
   ){
   cli::cli_process_start("Import crosswalk")
   crosswalk <-
-    sirfunctions::edav_io(io = "read", file_loc = file_loc) |>
+    tidypolis_io(io = "read", file_path = file_loc) |>
     #TrendID removed from export
     dplyr::filter(!API_Name %in% c("Admin0TrendId", "Admin0Iso2Code"))
   cli::cli_process_done()
@@ -1173,9 +1175,6 @@ f.download.compare.02 <- function(df.from.f.download.compare.01,
 #' @returns tibble with lat/lon for all unsampled locations
 f.pre.stsample.01 <- function(df01, global.dist.01) {
 
-  global.dist.01 <- global.dist.01 |>
-    dplyr::rename(SHAPE = Shape)
-
   #need to identify cases with no lat/lon
   empty.coord <- df01 |>
     dplyr::filter(is.na(polis.latitude) | is.na(polis.longitude) |
@@ -1311,7 +1310,7 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
 
   sf::st_geometry(global.dist.02) <- NULL
 
-  #feed only cases with empty coordinates into st_sample (vars = GUID, nperarm, id, SHAPE)
+  #feed only cases with empty coordinates into st_sample (vars = GUID, nperarm, id, Shape)
   if (nrow(empty.coord |> dplyr::filter(Admin2GUID != "{NA}")) > 0) {
   # remove NAs because can't be sampled
   empty.coord.01 <- empty.coord |>
@@ -1597,10 +1596,15 @@ f.summarise.metadata <- function(dataframe, categorical_max = 10){
 
 #' Function to get cached env site data
 #' @description Function to get cached env site data
-#' @import sirfunctions
-#' @returns tibble: env site list
-get_env_site_data <- function(){
-  envSiteYearList <- sirfunctions::edav_io(io = "read", file_loc = "Data/misc/env_sites.rds")
+#' @param file_loc `path` Path to the env_sites.rds file.
+#'
+#' @returns `tibble` Env site list
+#' @keywords internal
+get_env_site_data <- function(file_loc = file.path(Sys.getenv("POLIS_DATA_FOLDER"),
+                                                       "misc",
+                                                       "env_sites.rds")) {
+  envSiteYearList <- tidypolis_io(io = "read",
+                                  file_path = file_loc)
   return(envSiteYearList)
 }
 
@@ -1974,11 +1978,12 @@ cluster_dates_for_sias <- function(sia){
 #' @param min_obs int
 #' @param type str vaccine type
 run_cluster_dates <- function(data,
-                              cache_folder = "Data/sia_cluster_cache",
+                              cache_folder = file.path(Sys.getenv("POLIS_DATA_FOLDER"),
+                                                       "misc",
+                                                       "sia_cluster_cache"),
                               min_obs = 4,
                               type){
 
-  Sys.setenv(POLIS_EDAV_FLAG = T)
   #check which locations meet minimum obs requirements
   in_data <- data |>
     dplyr::filter(vaccine.type == type) |>
@@ -2156,14 +2161,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   missing_static_files <- check_missing_static_files(core_files_folder_path)
   # if on EDAV, create files to combine folder and write datasets into it
   if (length(missing_static_files) > 0) {
-    if (Sys.getenv("POLIS_EDAV_FLAG")) {
-      static_file_folder_path <- file.path("Data", "core_files_to_combine")
-
-      for (file in missing_static_files) {
-        tidypolis_io(io = "read", file_path = file.path(static_file_folder_path, file)) |>
-          tidypolis_io(io = "write", file_path = file.path(core_files_folder_path, file))
-      }
-    } else {
       cli::cli_alert_warning(paste0(
         "Please request the following file(s) from the SIR team",
         "and move them into: ", core_files_folder_path
@@ -2174,7 +2171,6 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
       }
       cli::cli_abort("Halting execution of preprocessing due to missing files.")
     }
-  }
 
   rm(core_files_folder_path, missing_static_files)
 
@@ -2208,8 +2204,42 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     crosswalk_data
   )
 
-  cli::cli_process_start("Loading long district shapefile")
-  long.global.dist.01 <- sirfunctions::load_clean_dist_sp(type = "long")
+  cli::cli_process_start("Long district spatial file")
+  if (Sys.getenv("POLIS_EDAV_FLAG")) {
+    long.global.dist.01 <- sirfunctions::load_clean_dist_sp(type = "long")
+  } else {
+    long.global.dist.01 <- tidypolis_io(io = "read",
+                                        file_path = file.path(Sys.getenv("POLIS_DATA_FOLDER"),
+                                                              "misc",
+                                                              "global.dist.rds"))
+    long.global.dist.01 <- long.global.dist.01 |>
+      dplyr::mutate(
+        STARTDATE = lubridate::as_date(STARTDATE),
+        # Typo in the dist start date (year) in shapefiles.
+        # Temporary correcting the start date for South Darfur in Sudan
+        STARTDATE = dplyr::if_else(ADM0_GUID == "{3050873E-F010-4C4F-82D1-541E3C4FD887}" &
+                                     ADM1_GUID == "{0836D898-32B9-4912-AEA2-D07BD6E50ED8}" &
+                                     STARTDATE == "2018-01-01",
+                                   STARTDATE + 365, STARTDATE
+        ),
+
+        # Error in shapes of LAR district in FARS province of IRAN.
+        # Received confirmation from WHO - Start date should be '2021-01-01'.
+        # Manually making corrections until WHO fix it in the original geodatabase.
+        STARTDATE = dplyr::if_else(ADM0_GUID == "{2EEA3A5C-8A36-4A18-A7AB-1B927A092A60}" &
+                                     ADM1_GUID == "{76F33E17-ADB9-4582-A533-4C96286864E3}" &
+                                     GUID == "{54464216-2BD3-4F30-BF2C-3846BEE6805D}" &
+                                     STARTDATE == "2020-01-01",
+                                   STARTDATE + 366, STARTDATE
+        ),
+        yr.st = lubridate::year(STARTDATE),
+        yr.end = lubridate::year(ENDDATE),
+        ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"), "COTE D IVOIRE", ADM0_NAME)
+      )
+    long.global.dist.01 <- lapply(2000:lubridate::year(Sys.Date()),
+                                  \(i) sirfunctions:::f.yrs.01(long.global.dist.01, i))
+    long.global.dist.01 <-  do.call(rbind, long.global.dist.01)
+  }
   cli::cli_process_done()
 
   cli::cli_h2("Sub-activity")
@@ -2222,7 +2252,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   rm(crosswalk_data)
 
-  # 13. Export csv files that match the web download, and create archive and change log
+  #13. Export csv files that match the web download, and create archive and change log
   cli::cli_h2("Creating change log and exporting data")
   ts <- Sys.time()
   timestamp <- paste0(
@@ -2671,7 +2701,23 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     )
 
   #match country shapes and names first
-  long.global.ctry.01 <- load_clean_ctry_sp(type = "long")
+  if (Sys.getenv("POLIS_EDAV_FLAG")) {
+    long.global.ctry.01 <- sirfunctions::load_clean_ctry_sp(type = "long")
+  } else {
+    long.global.ctry.01 <- tidypolis_io(io = "read",
+                                        file_path = file.path(Sys.getenv("POLIS_DATA_FOLDER"),
+                                                              "misc",
+                                                              "global.ctry.rds"))
+    long.global.ctry.01 <- long.global.ctry.01 |>
+      dplyr::mutate(
+        yr.st = lubridate::year(STARTDATE),
+        yr.end = lubridate::year(ENDDATE),
+        ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"), "COTE D IVOIRE", ADM0_NAME)
+      )
+    long.global.ctry.01 <- lapply(2000:lubridate::year(Sys.Date()),
+                                  \(i) sirfunctions:::f.yrs.01(long.global.ctry.01, i))
+    long.global.ctry.01 <-  do.call(rbind, long.global.ctry.01)
+  }
 
   shapes <- long.global.ctry.01 |>
     tibble::as_tibble() |>
@@ -2705,7 +2751,24 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   rm(long.global.ctry.01)
 
   #match province GUIDs and names for correction
-  long.global.prov.01 <- load_clean_prov_sp(type = "long")
+  if (Sys.getenv("POLIS_EDAV_FLAG")) {
+    long.global.prov.01 <- load_clean_prov_sp(type = "long")
+  } else {
+    long.global.prov.01 <- tidypolis_io(io = "read",
+                                        file_path = file.path(Sys.getenv("POLIS_DATA_FOLDER"),
+                                                              "misc",
+                                                              "global.prov.rds"))
+    long.global.prov.01 <- long.global.prov.01 |>
+      dplyr::mutate(
+        yr.st = lubridate::year(STARTDATE),
+        yr.end = lubridate::year(ENDDATE),
+        ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"), "COTE D IVOIRE", ADM0_NAME)
+      )
+    long.global.prov.01 <- lapply(2000:lubridate::year(Sys.Date()),
+                                  \(i) sirfunctions:::f.yrs.01(long.global.prov.01, i))
+    long.global.prov.01 <-  do.call(rbind, long.global.prov.01)
+  }
+
 
   shapes <- long.global.prov.01 |>
     tibble::as_tibble() |>
@@ -2836,7 +2899,34 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   rm("afp.linelist.fixed.02", "afp.linelist.fixed.03")
   gc()
 
-  global.dist.01 <- sirfunctions::load_clean_dist_sp()
+  if (Sys.getenv("POLIS_EDAV_FLAG")) {
+    global.dist.01 <- sirfunctions::load_clean_dist_sp()
+  } else {
+    global.dist.01 <- tidypolis_io(io = "read",
+                                   file_path = file.path(Sys.getenv("POLIS_DATA_FOLDER"),
+                                                              "misc",
+                                                              "global.dist.rds"))
+    global.dist.01 <- global.dist.01 |>
+      dplyr::mutate(
+        STARTDATE = lubridate::as_date(STARTDATE),
+        # Typo in the dist start date (year) in shapefiles. Temporary correcting the start date for South Darfur in Sudan
+        STARTDATE = dplyr::if_else(ADM0_GUID == "{3050873E-F010-4C4F-82D1-541E3C4FD887}" & ADM1_GUID == "{0836D898-32B9-4912-AEA2-D07BD6E50ED8}" &
+                                     STARTDATE == "2018-01-01",
+                                   STARTDATE + 365, STARTDATE
+        ),
+
+        # Error in shapes of LAR district in FARS province of IRAN.
+        # Received confirmation from WHO - Start date should be '2021-01-01'.
+        # Manually making corrections until WHO fix it in the original geodatabase.
+        STARTDATE = dplyr::if_else(ADM0_GUID == "{2EEA3A5C-8A36-4A18-A7AB-1B927A092A60}" & ADM1_GUID == "{76F33E17-ADB9-4582-A533-4C96286864E3}" &
+                                     GUID == "{54464216-2BD3-4F30-BF2C-3846BEE6805D}" & STARTDATE == "2020-01-01",
+                                   STARTDATE + 366, STARTDATE
+        ),
+        yr.st = lubridate::year(STARTDATE),
+        yr.end = lubridate::year(ENDDATE),
+        ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"), "COTE D IVOIRE", ADM0_NAME)
+      )
+  }
 
   #identify afp cases w/ bad adm2guids
   cli::cli_process_start("Checking District GUIDs")
@@ -3569,7 +3659,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   # This is the final SIA file which would be used for analysis.
   #Compare the final file to last week's final file to identify any differences in var_names, var_classes, or categorical responses
   sia.06 <- sia.06 |>
-    dplyr::select(-dplyr::starts_with("SHAPE"))
+    dplyr::select(-dplyr::starts_with("Shape"))
 
   old.file <- x[grepl("sia_2020", x)]
 
@@ -3652,15 +3742,18 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   cluster_dates_for_sias(sia.clean.01)
 
-  sia.clusters <- edav_io(io = "list", file_loc = "GID/PEB/SIR/Data/sia_cluster_cache",
-                          default_dir = NULL) |>
+  sia.clusters <- dplyr::tibble(name = tidypolis_io(io = "list",
+                                                    file_path = file.path(Sys.getenv("POLIS_DATA_FOLDER"),
+                                                                          "misc",
+                                                                          "sia_cluster_cache"),
+                                                    full_names = TRUE)) |>
     dplyr::filter(grepl("data_cluster_cache", name)) |>
     dplyr::pull(name)
 
   sia.cluster.data <- list()
 
   for(i in 1:length(sia.clusters)){
-    sia.cluster.data[[length(sia.cluster.data) + 1]] <- edav_io(io = "read", file_loc = sia.clusters[i], default_dir = NULL)
+    sia.cluster.data[[length(sia.cluster.data) + 1]] <- tidypolis_io(io = "read", file_path = sia.clusters[i])
   }
 
   sia.rounds <- do.call(rbind.data.frame, sia.cluster.data) |>
@@ -4009,7 +4102,20 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   es.03 = es.03|>
     dplyr::mutate(ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"),"COTE D IVOIRE",ADM0_NAME))
 
-  global.ctry.01 <- sirfunctions::load_clean_ctry_sp()
+  if (Sys.getenv("POLIS_EDAV_FLAG")) {
+    global.ctry.01 <- sirfunctions::load_clean_ctry_sp()
+  } else {
+    global.ctry.01 <- tidypolis_io(io = "read",
+                                        file_path = file.path(Sys.getenv("POLIS_DATA_FOLDER"),
+                                                              "misc",
+                                                              "global.ctry.rds"))
+    global.ctry.01 <- global.ctry.01 |>
+      dplyr::mutate(
+        yr.st = lubridate::year(STARTDATE),
+        yr.end = lubridate::year(ENDDATE),
+        ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"), "COTE D IVOIRE", ADM0_NAME)
+      )
+  }
 
   sf::sf_use_s2(F)
   shape.name.01 <- global.ctry.01 |>
@@ -4227,7 +4333,10 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_start("Creating CDC variables")
 
   #read in list of novel emergences supplied by ORPG
-  nopv.emrg <- sirfunctions::edav_io(io = "read", file_loc = "GID/PEB/SIR/Data/orpg/nopv_emg.table.rds", default_dir = NULL) |>
+  nopv.emrg <- tidypolis_io(io = "read",
+                            file_path = file.path(Sys.getenv("POLIS_DATA_FOLDER"),
+                                                  "misc",
+                                                  "nopv_emg.table.rds")) |>
     dplyr::rename(emergencegroup = emergence_group,
                   vaccine.source = vaccine_source) |>
     dplyr::mutate(vaccine.source = dplyr::if_else(vaccine.source == "novel", "Novel", vaccine.source))
@@ -4921,7 +5030,7 @@ process_spatial <- function(gdb_folder,
   row.num.prov <- which(check.prov.valid$value == FALSE)
   invalid.prov.shapes <- global.prov.01 |>
     dplyr::slice(row.num.prov) |>
-    dplyr::select(ADM0_NAME, ADM1_NAME, GUID, yr.st, yr.end, SHAPE) |>
+    dplyr::select(ADM0_NAME, ADM1_NAME, GUID, yr.st, yr.end, Shape) |>
     dplyr::arrange(ADM0_NAME)
 
   sf::st_geometry(invalid.prov.shapes) <- NULL
@@ -4937,7 +5046,7 @@ process_spatial <- function(gdb_folder,
   }
 
   empty.prov <- global.prov.01 |>
-    dplyr::mutate(empty = sf::st_is_empty(SHAPE)) |>
+    dplyr::mutate(empty = sf::st_is_empty(Shape)) |>
     dplyr::filter(empty == TRUE)
 
   if(nrow(empty.prov) > 0) {
@@ -4972,7 +5081,7 @@ process_spatial <- function(gdb_folder,
   }
 
   if(nrow(dupe.guid.prov) > 1) {
-    dupe.guid.prov$SHAPE <- NULL
+    dupe.guid.prov$Shape <- NULL
     if(edav) {
       tidypolis_io(io = "write", edav = T,
                    file_path = paste0(output_folder, "/duplicate_prov_guid.csv"),
@@ -4985,7 +5094,7 @@ process_spatial <- function(gdb_folder,
   }
 
   if(nrow(dupe.name.prov) > 1) {
-    dupe.name.prov$SHAPE <- NULL
+    dupe.name.prov$Shape <- NULL
     if(edav) {
       tidypolis_io(io = "write", edav = T,
                    file_path = paste0(output_folder, "/duplicate_prov_name.csv"),
@@ -5018,7 +5127,7 @@ process_spatial <- function(gdb_folder,
   row.num.dist <- which(check.dist.valid$value == FALSE)
   invalid.dist.shapes <- global.dist.01 |>
     dplyr::slice(row.num.dist) |>
-    dplyr::select(ADM0_NAME, ADM1_NAME, ADM2_NAME, GUID, yr.st, yr.end, SHAPE) |>
+    dplyr::select(ADM0_NAME, ADM1_NAME, ADM2_NAME, GUID, yr.st, yr.end, Shape) |>
     dplyr::arrange(ADM0_NAME)
 
   sf::st_geometry(invalid.dist.shapes) <- NULL
@@ -5034,7 +5143,7 @@ process_spatial <- function(gdb_folder,
   }
 
   empty.dist <- global.dist.01 |>
-    dplyr::mutate(empty = sf::st_is_empty(SHAPE)) |>
+    dplyr::mutate(empty = sf::st_is_empty(Shape)) |>
     dplyr::filter(empty == TRUE)
 
   if(nrow(empty.dist) > 0) {
@@ -5070,7 +5179,7 @@ process_spatial <- function(gdb_folder,
   }
 
   if(nrow(dupe.guid.dist) > 1) {
-    dupe.guid.dist$SHAPE <- NULL
+    dupe.guid.dist$Shape <- NULL
     if(edav) {
       tidypolis_io(io = "write", edav = T,
                    file_path = paste0(output_folder, "/duplicate_dist_guid.csv"),
@@ -5083,7 +5192,7 @@ process_spatial <- function(gdb_folder,
   }
 
   if(nrow(dupe.name.dist) > 1) {
-    dupe.name.dist$SHAPE <- NULL
+    dupe.name.dist$Shape <- NULL
     if(edav) {
       tidypolis_io(io = "write", edav = T,
                    file_path = paste0(output_folder, "/duplicate_dist_name.csv"),
@@ -5204,7 +5313,7 @@ add_gpei_cases <- function(azcontainer = suppressMessages(get_azure_storage_conn
   global.ctry <- sirfunctions::load_clean_ctry_sp()
 
   long.global.prov <- sirfunctions::load_clean_prov_sp(type = "long")
-  long.global.prov$SHAPE <- NULL
+  long.global.prov$Shape <- NULL
   global.prov <- sirfunctions::load_clean_prov_sp()
 
   current.polis.pos <- sirfunctions::edav_io(io = "read", file_loc = polis_pos_loc)
@@ -5222,7 +5331,7 @@ add_gpei_cases <- function(azcontainer = suppressMessages(get_azure_storage_conn
   rm(long.global.prov)
 
 if(nrow(proxy.data.fill.prov) >= 1) {
-  #feed only cases with empty coordinates into st_sample (vars = GUID, nperarm, id, SHAPE)
+  #feed only cases with empty coordinates into st_sample (vars = GUID, nperarm, id, Shape)
   proxy.data.fill.prov.01 <- proxy.data.fill.prov |>
     tibble::as_tibble() |>
     dplyr::group_by(adm1guid) |>
@@ -5276,7 +5385,7 @@ if(nrow(proxy.data.fill.prov) >= 1) {
       tidyr::uncount(nperarm)
   ) |>
     dplyr::left_join(tibble::as_tibble(proxy.data.fill.prov.02) |>
-                       dplyr::select(-SHAPE),
+                       dplyr::select(-Shape),
                      by = "GUID")
 
   pt02 <- pt01_joined |>

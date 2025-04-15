@@ -6,7 +6,7 @@
 \usage{
 run_cluster_dates(
   data,
-  cache_folder = "Data/sia_cluster_cache",
+  cache_folder = file.path(Sys.getenv("POLIS_DATA_FOLDER"), "misc", "sia_cluster_cache"),
   min_obs = 4,
   type
 )

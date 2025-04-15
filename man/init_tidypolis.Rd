@@ -4,15 +4,15 @@
 \alias{init_tidypolis}
 \title{A function to intitialize a POLIS data folder}
 \usage{
-init_tidypolis(polis_data_folder, edav = F)
+init_tidypolis(polis_folder = "POLIS", edav = F)
 }
 \arguments{
-\item{polis_data_folder}{str: location of folder where to store all information}
+\item{polis_folder}{`str` Location of folder where to store all information from POLIS.}
 
-\item{edav}{boolean: should the system use EDAV as it's cache; default FALSE}
+\item{edav}{`bool` Should the system use EDAV as it's cache; default `FALSE`.}
 }
 \value{
-Messages on process
+Messages on process.
 }
 \description{
 Initialize API Key and local data cache for tidypolis. Inspired by the
@@ -20,8 +20,8 @@ tidycensus process for managing their API secrets.
 }
 \examples{
 \dontrun{
-init_tidypolis(polis_data_folder = "POLIS", edav = T) #create a polis data cache on CDC EDAV
-init_tidypolis("C:/Users/"user_name"/Desktop/polis", edav = F)
+init_tidypolis(polis_folder = "POLIS", data_folder = "Data", edav = T) #create a polis data cache on CDC EDAV
+init_tidypolis("C:/Users/user_name/Desktop/polis", "C:/Users/user_name/Desktop/data", edav = F)
 #create a polis data cache on your local desktop
 }
 }
