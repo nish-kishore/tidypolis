@@ -1984,7 +1984,6 @@ run_cluster_dates <- function(data,
                               min_obs = 4,
                               type){
 
-  Sys.setenv(POLIS_EDAV_FLAG = T)
   #check which locations meet minimum obs requirements
   in_data <- data |>
     dplyr::filter(vaccine.type == type) |>
