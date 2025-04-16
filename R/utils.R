@@ -1026,10 +1026,14 @@ get_crosswalk_data <- function(
                          "crosswalk.rds")
   ){
   cli::cli_process_start("Import crosswalk")
-  crosswalk <-
-    tidypolis_io(io = "read", file_path = file_loc) |>
-    #TrendID removed from export
-    dplyr::filter(!API_Name %in% c("Admin0TrendId", "Admin0Iso2Code"))
+  invisible(
+    capture.output(
+      crosswalk <-
+          tidypolis_io(io = "read", file_path = file_loc) |>
+          #TrendID removed from export
+          dplyr::filter(!API_Name %in% c("Admin0TrendId", "Admin0Iso2Code"))
+          )
+  )
   cli::cli_process_done()
   return(crosswalk)
 }
