@@ -729,7 +729,7 @@ run_single_table_diagnostic <-
 #' Update local POLIS interaction log
 #'
 #' @description Update the POLIS log
-#' @import tibble
+#' @import tibble cli
 #' @param log_file str: location of cache file
 #' @param .time dttm: time of update
 #' @param .user double: user who conducted the action
@@ -743,35 +743,47 @@ update_polis_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
                              .event){
 
   log_file_path <- log_file
-  log_file <- tidypolis_io(io = "read", file_path = log_file_path)
+  invisible(capture.output(log_file <- tidypolis_io(io = "read", file_path = log_file_path)))
 
   log_names <- log_file |>
     names()
 
   if(!"event_type" %in% log_names){
 
-    log_file |>
-      cbind(event_type = NA) |>
-      tibble::add_row(time = .time,
-                      user = .user,
-                      event_type = "INFO",
-                      event = "Updating log format") |>
-      tibble::add_row(time = .time,
-                      user = .user,
-                      event_type = .event_type,
-                      event = .event) |>
-      tidypolis_io(io = "write", file_path = log_file_path)
+    invisible(
+      capture.output(
+        log_file |>
+          cbind(event_type = NA) |>
+          tibble::add_row(time = .time,
+                          user = .user,
+                          event_type = "INFO",
+                          event = "Updating log format") |>
+          tibble::add_row(time = .time,
+                          user = .user,
+                          event_type = .event_type,
+                          event = .event) |>
+          tidypolis_io(io = "write", file_path = log_file_path)
+      )
+    )
+
 
   }else{
 
-  log_file |>
-    tibble::add_row(time = .time,
-                    user = .user,
-                    event_type = .event_type,
-                    event = .event) |>
-    tidypolis_io(io = "write", file_path = log_file_path)
+    invisible(
+      capture.output(
+        log_file |>
+          tibble::add_row(time = .time,
+                          user = .user,
+                          event_type = .event_type,
+                          event = .event) |>
+          tidypolis_io(io = "write", file_path = log_file_path)
+      )
+    )
 
-    }
+  }
+
+  cli::cli_alert_info(paste0("Updated tidypolis log -- Event Type: ", .event_type))
+
 }
 
 #### Local Cache ####
