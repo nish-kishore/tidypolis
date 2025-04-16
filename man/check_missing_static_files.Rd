@@ -10,12 +10,12 @@ check_missing_static_files(
 )
 }
 \arguments{
-\item{core_files_folder_path}{`str` Path to the `core_files_to_combine` folder.}
+\item{core_files_folder_path}{\code{str} Path to the \code{core_files_to_combine} folder.}
 
-\item{edav}{`bool` Check static files on EDAV?}
+\item{edav}{\code{bool} Check static files on EDAV?}
 }
 \value{
-`list` A list of missing files.
+\code{list} A list of missing files.
 }
 \description{
 Performs a check for the static files.

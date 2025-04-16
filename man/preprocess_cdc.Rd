@@ -4,10 +4,10 @@
 \alias{preprocess_cdc}
 \title{Preprocess data process data in the CDC style}
 \usage{
-preprocess_cdc(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"))
+preprocess_cdc(polis_folder = Sys.getenv("POLIS_DATA_FOLDER"))
 }
 \arguments{
-\item{polis_data_folder}{str: location of the POLIS data folder, defaults to value stored from init_tidypolis}
+\item{polis_folder}{str: location of the POLIS data folder}
 }
 \value{
 Outputs intermediary core ready files
