@@ -2261,7 +2261,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   cli::cli_process_done()
 
   cli::cli_h2("Sub-activity")
-  api_subactivity_data <- clean_subactivity_table(
+  api_subactivity_data <- s1_clean_subactivity_table(
     file.path(polis_data_folder, "sub_activity.rds"),
     api_activity_data,
     crosswalk_data,
@@ -2269,6 +2269,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   )
 
   rm(crosswalk_data)
+
+  invisible(capture.output(gc()))
 
   #13. Export csv files that match the web download, and create archive and change log
   cli::cli_h2("Creating change log and exporting data")
@@ -2284,7 +2286,7 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   )
 
   # create directory for the Archive and Changelogs
-  create_core_ready_dir(polis_data_folder, timestamp)
+  s1_create_core_ready_dir(polis_data_folder, timestamp)
 
   # Get list of most recent files
   most_recent_file_patterns <- c(
@@ -2293,12 +2295,12 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     "Human_Detailed",
     "Viruses_Detailed"
   )
-  most_recent_files <- get_most_recent_files(polis_data_folder,
+  most_recent_files <- s1_get_most_recent_files(polis_data_folder,
                                              most_recent_file_patterns)
 
   if (length(most_recent_files) > 0) {
     for (i in most_recent_files) {
-      create_change_log(polis_data_folder, i, timestamp,
+      s1_create_change_log(polis_data_folder, i, timestamp,
                         api_case_data,
                         api_es_data,
                         api_virus_data,
@@ -2308,11 +2310,15 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
     cli::cli_alert_info("No previous main Core Ready Files found, creating new files")
   }
 
+  invisible(capture.output(gc()))
+
   # Move files from the current POLIS data folder into the archive
-  archive_old_files(polis_data_folder, timestamp)
+  s1_archive_old_files(polis_data_folder, timestamp)
+
+  invisible(capture.output(gc()))
 
   # Export files (as csv) to be used as pre-processing starting points
-  export_final_core_ready_files(polis_data_folder, ts, timestamp,
+  s1_export_final_core_ready_files(polis_data_folder, ts, timestamp,
                                 api_case_data,
                                 api_subactivity_data,
                                 api_es_data,
@@ -2320,6 +2326,8 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
 
   rm(api_case_data, api_es_data, api_virus_data, api_activity_data,
      api_subactivity_data)
+
+  invisible(capture.output(gc()))
 
   update_polis_log(.event = "CORE Ready files and change logs complete", .event_type = "PROCESS")
 
@@ -4644,6 +4652,7 @@ s1_clean_case_table <- function(path, crosswalk,
   cli::cli_process_start("De-duplicating data")
   api_case_sub1 <- api_case_2019_12_01_onward |>
     dplyr::distinct()
+  rm(api_case_2019_12_01_onward)
   cli::cli_process_done()
 
   cli::cli_process_start("Crosswalk and rename variables")
@@ -4652,6 +4661,7 @@ s1_clean_case_table <- function(path, crosswalk,
   api_case_sub2 <- rename_via_crosswalk(api_data = api_case_sub1,
                                         crosswalk = crosswalk,
                                         table_name = "Case")
+  rm(api_case_sub1)
   cli::cli_process_done()
 
   cli::cli_process_start("Cleaning IPV/OPV variables")
@@ -4680,6 +4690,7 @@ s1_clean_case_table <- function(path, crosswalk,
                                          !is.na(crosswalk$Web_Name)],
                     crosswalk$API_Name[crosswalk$Table %in% c("Case") &
                                          is.na(crosswalk$Web_Name)]))
+  rm(api_case_sub2)
   cli::cli_process_done()
 
   cli::cli_process_start("Removing empty columns")
@@ -4705,9 +4716,11 @@ s1_clean_es_table <- function(path, crosswalk,
                            edav = Sys.getenv("POLIS_EDAV_FLAG")) {
 
   cli::cli_process_start("Loading Environmental Samples table")
-  api_es_complete <-
+  invisible(capture.output(
+      api_es_complete <-
     tidypolis_io(io = "read", file_path = path) |>
     dplyr::mutate_all(as.character)
+  ))
   cli::cli_process_done()
 
   cli::cli_process_start("De-duplicating data")
@@ -4816,6 +4829,157 @@ s1_clean_es_table <- function(path, crosswalk,
   return(api_es_sub3)
 }
 
+#' Clean the virus table
+#'
+#' @inheritParams s1_clean_case_table
+#'
+#' @returns `tibble` Cleaned virus table.
+#' @keywords internal
+#'
+s1_clean_virus_table <- function(path, crosswalk,
+                              edav = Sys.getenv("POLIS_EDAV_FLAG")) {
+
+  cli::cli_process_start("Loading virus data")
+  invisible(capture.output(
+      api_virus_complete <-
+    tidypolis_io(io = "read", file_path = path) |>
+    dplyr::mutate_all(as.character)
+  ))
+  cli::cli_process_done()
+
+  cli::cli_process_start("De-duplicating data")
+  api_virus_sub1 <- api_virus_complete |>
+    dplyr::distinct()
+  cli::cli_process_done()
+
+  rm(api_virus_complete)
+
+  cli::cli_process_start("Crosswalk and rename variables")
+  api_virus_sub2 <- rename_via_crosswalk(api_data = api_virus_sub1,
+                                         crosswalk = crosswalk,
+                                         table_name = "Virus")
+  cli::cli_process_done()
+
+  rm(api_virus_sub1)
+
+  cli::cli_process_start("Cleaning irregular location names")
+  api_virus_sub3 <- api_virus_sub2 |>
+    dplyr::mutate(location = paste(
+      toupper(Admin0OfficialName),
+      toupper(Admin1OfficialName),
+      toupper(Admin2OfficialName),
+      sep = ", "
+    )) |>
+    dplyr::mutate(location = stringr::str_squish(stringr::str_replace_all(location, ", NA,", ", "))) |>
+    dplyr::mutate(location = dplyr::case_when(
+      stringr::str_sub(location,-4) == ", NA" ~ substr(location, 1, nchar(location) - 4),
+      TRUE ~ location
+    )) |>
+    dplyr::mutate(location = stringr::str_replace_all(
+      location,
+      "ISLAMIC REPUBLIC OF IRAN",
+      "IRAN (ISLAMIC REPUBLIC OF)"
+    )) |>
+    dplyr::mutate(
+      location = stringr::str_replace_all(
+        location,
+        "UNITED KINGDOM OF GREAT BRITAIN AND NORTHERN IRELAND",
+        "THE UNITED KINGDOM"
+      )
+    ) |>
+
+    dplyr::mutate(`Virus Type(s)` = stringr::str_replace_all(`Virus Type(s)`, "NVACCINE", "nVACCINE")) |>
+
+    dplyr::mutate(
+      `Nt Changes` = dplyr::case_when(
+        grepl("VDPV", `VirusTypeName`) &
+          !is.na(`Nt Changes`) ~ `Nt Changes`,
+        grepl("VACCINE", VirusTypeName) &
+          !is.na(VaccineNtChangesFromSabin) ~ VaccineNtChangesFromSabin,
+        TRUE ~ NA_character_
+      )
+    ) |>
+    dplyr::mutate_at(c("Virus Date"), ~ lubridate::as_date(.)) |>
+    dplyr::mutate_at(
+      c("Is Breakthrough"),
+      ~ dplyr::case_when(. == "TRUE" ~ "Yes",
+                         . == "FALSE" ~ "No",
+                         TRUE ~ NA_character_)
+    ) |>
+    dplyr::select(c(crosswalk$Web_Name[crosswalk$Table %in% c("Virus") &
+                                         !is.na(crosswalk$Web_Name)],
+                    crosswalk$API_Name[crosswalk$Table %in% c("Virus") &
+                                         is.na(crosswalk$Web_Name)])) |>
+    dplyr::mutate(nt.changes.neighbor = dplyr::case_when(
+      !is.na(VdpvNtChangesClosestMatch) ~ VdpvNtChangesClosestMatch,
+      TRUE ~ NA_character_
+    ))
+  cli::cli_process_done()
+
+  rm(api_virus_sub2)
+
+  cli::cli_process_start("Removing empty columns")
+  api_virus_sub3 <- remove_empty_columns(api_virus_sub3)
+  cli::cli_process_done()
+
+  return(api_virus_sub3)
+
+}
+
+#' Clean the Activity table
+#'
+#' @description
+#' The function performs cleaning of the Activity table. In particular,
+#' de-duplication, renaming of variables via crosswalk, and removal of
+#' empty columns.
+#'
+#' @inheritParams s1_clean_case_table
+#' @param subactivity_path `str` Path to the sub-activity table.
+#'
+#' @returns `tibble` A cleaned Activity table.
+#' @keywords internal
+#'
+s1_clean_activity_table <- function(path, subactivity_path, crosswalk,
+                                 edav = Sys.getenv("POLIS_EDAV_FLAG")) {
+
+  cli::cli_process_start("Loading activity data")
+  invisible(capture.output(
+      api_activity_complete <-
+    tidypolis_io(io = "read", file_path = path) |>
+    dplyr::mutate_all(as.character)
+  ))
+
+  cli::cli_process_done()
+
+  cli::cli_process_start("Loading subactivity data")
+  invisible(capture.output(
+      sia_subactivity_code <- tidypolis_io(io = "read",
+                                           file_path = subactivity_path) |>
+    dplyr::distinct() |>
+    dplyr::pull(SIASubActivityCode)
+  ))
+  cli::cli_process_done()
+
+  cli::cli_process_start("De-duplicating data")
+  api_activity_sub1 <- api_activity_complete |>
+    dplyr::filter(SIASubActivityCode %in% sia_subactivity_code) |>
+    dplyr::distinct()
+  cli::cli_process_done()
+
+  rm(api_activity_complete)
+
+  cli::cli_process_start("Crosswalk and rename variables")
+  api_activity_sub2 <-
+    rename_via_crosswalk(api_data = api_activity_sub1,
+                         crosswalk = crosswalk,
+                         table_name = "Activity") |>
+    dplyr::select(SIASubActivityCode, crosswalk$Web_Name[crosswalk$Table == "Activity"]) |>
+    dplyr::select(-c("Admin 0 Id"))
+  cli::cli_process_done()
+
+  return(api_activity_sub2)
+}
+
 #' Clean the subactivity table
 #'
 #' @description
@@ -4836,9 +5000,11 @@ s1_clean_subactivity_table <- function(path, activity_table, crosswalk,
                                     edav = Sys.getenv("POLIS_EDAV_FLAG")) {
 
   cli::cli_process_start("Loading sub-activity table")
-  api_subactivity_complete <-
+  invisible(capture.output(
+      api_subactivity_complete <-
     tidypolis_io(io = "read", file_path = path) |>
     dplyr::mutate_all(as.character)
+  ))
   cli::cli_process_done()
 
   cli::cli_process_start("De-duplicating data")
@@ -4963,150 +5129,6 @@ s1_clean_subactivity_table <- function(path, activity_table, crosswalk,
   return(api_subactivity_sub4)
 }
 
-#' Clean the Activity table
-#'
-#' @description
-#' The function performs cleaning of the Activity table. In particular,
-#' de-duplication, renaming of variables via crosswalk, and removal of
-#' empty columns.
-#'
-#' @inheritParams s1_clean_case_table
-#' @param subactivity_path `str` Path to the sub-activity table.
-#'
-#' @returns `tibble` A cleaned Activity table.
-#' @keywords internal
-#'
-s1_clean_activity_table <- function(path, subactivity_path, crosswalk,
-                                 edav = Sys.getenv("POLIS_EDAV_FLAG")) {
-
-  cli::cli_process_start("Loading activity data")
-  api_activity_complete <-
-    tidypolis_io(io = "read", file_path = path) |>
-    dplyr::mutate_all(as.character)
-  cli::cli_process_done()
-
-  cli::cli_process_start("Loading subactivity data")
-  sia_subactivity_code <- tidypolis_io(io = "read",
-                                           file_path = subactivity_path) |>
-    dplyr::distinct() |>
-    dplyr::pull(SIASubActivityCode)
-  cli::cli_process_done()
-
-  cli::cli_process_start("De-duplicating data")
-  api_activity_sub1 <- api_activity_complete |>
-    dplyr::filter(SIASubActivityCode %in% sia_subactivity_code) |>
-    dplyr::distinct()
-  cli::cli_process_done()
-
-  rm(api_activity_complete)
-
-  cli::cli_process_start("Crosswalk and rename variables")
-  api_activity_sub2 <-
-    rename_via_crosswalk(api_data = api_activity_sub1,
-                         crosswalk = crosswalk,
-                         table_name = "Activity") |>
-    dplyr::select(SIASubActivityCode, crosswalk$Web_Name[crosswalk$Table == "Activity"]) |>
-    dplyr::select(-c("Admin 0 Id"))
-  cli::cli_process_done()
-
-  return(api_activity_sub2)
-}
-
-#' Clean the virus table
-#'
-#' @inheritParams s1_clean_case_table
-#'
-#' @returns `tibble` Cleaned virus table.
-#' @keywords internal
-#'
-s1_clean_virus_table <- function(path, crosswalk,
-                              edav = Sys.getenv("POLIS_EDAV_FLAG")) {
-
-  cli::cli_process_start("Loading virus data")
-  api_virus_complete <-
-    tidypolis_io(io = "read", file_path = path) |>
-    dplyr::mutate_all(as.character)
-  cli::cli_process_done()
-
-  cli::cli_process_start("De-duplicating data")
-  api_virus_sub1 <- api_virus_complete |>
-    dplyr::distinct()
-  cli::cli_process_done()
-
-  rm(api_virus_complete)
-
-  cli::cli_process_start("Crosswalk and rename variables")
-  api_virus_sub2 <- rename_via_crosswalk(api_data = api_virus_sub1,
-                                         crosswalk = crosswalk,
-                                         table_name = "Virus")
-  cli::cli_process_done()
-
-  rm(api_virus_sub1)
-
-  cli::cli_process_start("Cleaning irregular location names")
-  api_virus_sub3 <- api_virus_sub2 |>
-    dplyr::mutate(location = paste(
-      toupper(Admin0OfficialName),
-      toupper(Admin1OfficialName),
-      toupper(Admin2OfficialName),
-      sep = ", "
-    )) |>
-    dplyr::mutate(location = stringr::str_squish(stringr::str_replace_all(location, ", NA,", ", "))) |>
-    dplyr::mutate(location = dplyr::case_when(
-      stringr::str_sub(location,-4) == ", NA" ~ substr(location, 1, nchar(location) - 4),
-      TRUE ~ location
-    )) |>
-    dplyr::mutate(location = stringr::str_replace_all(
-      location,
-      "ISLAMIC REPUBLIC OF IRAN",
-      "IRAN (ISLAMIC REPUBLIC OF)"
-    )) |>
-    dplyr::mutate(
-      location = stringr::str_replace_all(
-        location,
-        "UNITED KINGDOM OF GREAT BRITAIN AND NORTHERN IRELAND",
-        "THE UNITED KINGDOM"
-      )
-    ) |>
-
-    dplyr::mutate(`Virus Type(s)` = stringr::str_replace_all(`Virus Type(s)`, "NVACCINE", "nVACCINE")) |>
-
-    dplyr::mutate(
-      `Nt Changes` = dplyr::case_when(
-        grepl("VDPV", `VirusTypeName`) &
-          !is.na(`Nt Changes`) ~ `Nt Changes`,
-        grepl("VACCINE", VirusTypeName) &
-          !is.na(VaccineNtChangesFromSabin) ~ VaccineNtChangesFromSabin,
-        TRUE ~ NA_character_
-      )
-    ) |>
-    dplyr::mutate_at(c("Virus Date"), ~ lubridate::as_date(.)) |>
-    dplyr::mutate_at(
-      c("Is Breakthrough"),
-      ~ dplyr::case_when(. == "TRUE" ~ "Yes",
-                         . == "FALSE" ~ "No",
-                         TRUE ~ NA_character_)
-    ) |>
-    dplyr::select(c(crosswalk$Web_Name[crosswalk$Table %in% c("Virus") &
-                                         !is.na(crosswalk$Web_Name)],
-                    crosswalk$API_Name[crosswalk$Table %in% c("Virus") &
-                                         is.na(crosswalk$Web_Name)])) |>
-    dplyr::mutate(nt.changes.neighbor = dplyr::case_when(
-      !is.na(VdpvNtChangesClosestMatch) ~ VdpvNtChangesClosestMatch,
-      TRUE ~ NA_character_
-    ))
-  cli::cli_process_done()
-
-  rm(api_virus_sub2)
-
-  cli::cli_process_start("Removing empty columns")
-  api_virus_sub3 <- remove_empty_columns(api_virus_sub3)
-  cli::cli_process_done()
-
-  return(api_virus_sub3)
-
-}
-
 #' Helper function to create Core Ready Archive and Change Log
 #'
 #' @param polis_data_folder `str` Location of the POLIS data folder.
@@ -5115,7 +5137,7 @@ s1_clean_virus_table <- function(path, crosswalk,
 #' @returns NULL
 #' @keywords internal
 #'
-create_core_ready_dir <- function(polis_data_folder, timestamp) {
+s1_create_core_ready_dir <- function(polis_data_folder, timestamp) {
   cli_process_start("Checking on requisite file structure")
 
   dirs <- c(
@@ -5145,7 +5167,7 @@ create_core_ready_dir <- function(polis_data_folder, timestamp) {
 #' @returns `list` With names of the most recent files that matches the patterns.
 #' @keywords internal
 #'
-get_most_recent_files <- function(polis_data_folder, patterns) {
+s1_get_most_recent_files <- function(polis_data_folder, patterns) {
   files <- tidypolis_io(
     io = "list",
     file_path = file.path(polis_data_folder, "Core_Ready_Files")
@@ -5168,7 +5190,7 @@ get_most_recent_files <- function(polis_data_folder, patterns) {
 #' @returns `NULL`, if successful
 #' @keywords internal
 #'
-create_change_log <- function(polis_data_folder,
+s1_create_change_log <- function(polis_data_folder,
                               file, timestamp,
                               api_case_data,
                               api_es_data,
@@ -5177,7 +5199,7 @@ create_change_log <- function(polis_data_folder,
 
   cli::cli_process_start(paste0("Processing data for: ", file))
   # compare current dataset to most recent and save summary to change_log
-  old <- tidypolis_io(
+  invisible(capture.output(  old <- tidypolis_io(
     io = "read",
     file_path = file.path(
       polis_data_folder,
@@ -5185,7 +5207,7 @@ create_change_log <- function(polis_data_folder,
       file
     )
   ) |>
-    dplyr::mutate_all(as.character)
+    dplyr::mutate_all(as.character)))
 
   if (grepl("EnvSamples", file)) {
     new <- api_es_data |>
@@ -5304,7 +5326,7 @@ create_change_log <- function(polis_data_folder,
     obs_deleted = in_old_not_new
   )
 
-  tidypolis_io(
+invisible(capture.output(  tidypolis_io(
     io = "write",
     obj = change_summary,
     file_path = file.path(
@@ -5314,17 +5336,22 @@ create_change_log <- function(polis_data_folder,
       timestamp,
       paste0(substr(file, 1, nchar(file) - 4), ".rds")
     )
-  )
+  )))
 
-  # Move most recent to archive
+invisible(capture.output(
+    # Move most recent to archive
   tidypolis_io(io = "read", file_path = file.path(polis_data_folder, "Core_Ready_Files", file)) |>
     tidypolis_io(
       io = "write",
       file_path = file.path(polis_data_folder, "Core_Ready_Files", "Archive", timestamp, file)
     )
+))
+
+invisible(capture.output(
 
   # Delete the original file
   tidypolis_io(io = "delete", file_path = file.path(polis_data_folder, "Core_Ready_Files", file))
+))
   cli_process_done()
 
   return(NULL)
@@ -5338,30 +5365,34 @@ create_change_log <- function(polis_data_folder,
 #' @returns NULL
 #' @keywords internal
 #'
-archive_old_files <- function(polis_data_folder, timestamp) {
+s1_archive_old_files <- function(polis_data_folder, timestamp) {
 
   cli_process_start("Archiving old files")
-  most_recent_files_01 <- get_most_recent_files(polis_data_folder,
+  most_recent_files_01 <- s1_get_most_recent_files(polis_data_folder,
                                                 c(".rds", ".csv", ".xlsx"))
 
   if (length(most_recent_files_01) > 0) {
     for (file in most_recent_files_01) {
       cli_process_start(paste0("Archiving Data for: ", file))
 
-      tidypolis_io(
-        io = "read",
-        file_path = file.path(polis_data_folder, "Core_Ready_Files", file)
-      ) %>%
-        tidypolis_io(
-          io = "write",
-          file_path = file.path(polis_data_folder, "Core_Ready_Files", "Archive",
-                                timestamp, file)
-        )
+      invisible(capture.output(
+              tidypolis_io(
+                io = "read",
+                file_path = file.path(polis_data_folder, "Core_Ready_Files", file)
+              ) %>%
+                tidypolis_io(
+                  io = "write",
+                  file_path = file.path(polis_data_folder, "Core_Ready_Files", "Archive",
+                                        timestamp, file)
+                )
+      ))
 
-      tidypolis_io(
-        io = "delete",
-        file_path = file.path(polis_data_folder, "Core_Ready_Files", file)
-      )
+      invisible(capture.output(
+              tidypolis_io(
+                io = "delete",
+                file_path = file.path(polis_data_folder, "Core_Ready_Files", file)
+              )
+      ))
 
       cli_process_done()
     }
@@ -5383,7 +5414,7 @@ archive_old_files <- function(polis_data_folder, timestamp) {
 #' @returns `NULL`
 #' @keywords internal
 #'
-export_final_core_ready_files <- function(polis_data_folder, ts, timestamp,
+s1_export_final_core_ready_files <- function(polis_data_folder, ts, timestamp,
                                           api_case_data,
                                           api_subactivity_data,
                                           api_es_data,
@@ -5391,69 +5422,77 @@ export_final_core_ready_files <- function(polis_data_folder, ts, timestamp,
 
   cli::cli_process_start("Writing all final Core Ready files")
 
-  tidypolis_io(
-    obj = api_case_data,
-    io = "write",
-    file_path = file.path(
-      polis_data_folder,
-      "Core_Ready_Files",
-      paste0(
-        "Human_Detailed_Dataset_",
-        timestamp,
-        "_from_01_Dec_2019_to_",
-        format(ts, "%d_%b_%Y"),
-        ".rds"
+invisible(capture.output(
+    tidypolis_io(
+      obj = api_case_data,
+      io = "write",
+      file_path = file.path(
+        polis_data_folder,
+        "Core_Ready_Files",
+        paste0(
+          "Human_Detailed_Dataset_",
+          timestamp,
+          "_from_01_Dec_2019_to_",
+          format(ts, "%d_%b_%Y"),
+          ".rds"
+        )
       )
     )
-  )
+))
 
-  tidypolis_io(
-    obj = api_subactivity_data,
-    io = "write",
-    file_path = file.path(
-      polis_data_folder,
-      "Core_Ready_Files",
-      paste0(
-        "Activity_Data_with_All_Sub-Activities_(1_district_per_row)_",
-        timestamp,
-        "_from_01_Jan_2020_to_",
-        format(Sys.Date() + 365 / 2, "%d_%b_%Y"),
-        ".rds"
+invisible(capture.output(
+    tidypolis_io(
+      obj = api_subactivity_data,
+      io = "write",
+      file_path = file.path(
+        polis_data_folder,
+        "Core_Ready_Files",
+        paste0(
+          "Activity_Data_with_All_Sub-Activities_(1_district_per_row)_",
+          timestamp,
+          "_from_01_Jan_2020_to_",
+          format(Sys.Date() + 365 / 2, "%d_%b_%Y"),
+          ".rds"
+        )
       )
-    )
   )
+))
 
-  tidypolis_io(
-    obj = api_es_data,
-    io = "write",
-    file_path = file.path(
-      polis_data_folder,
-      "Core_Ready_Files",
-      paste0(
-        "EnvSamples_Detailed_Dataset_",
-        timestamp,
-        "_from_01_Jan_2000_to_",
-        format(ts, "%d_%b_%Y"),
-        ".rds"
+invisible(capture.output(
+    tidypolis_io(
+      obj = api_es_data,
+      io = "write",
+      file_path = file.path(
+        polis_data_folder,
+        "Core_Ready_Files",
+        paste0(
+          "EnvSamples_Detailed_Dataset_",
+          timestamp,
+          "_from_01_Jan_2000_to_",
+          format(ts, "%d_%b_%Y"),
+          ".rds"
+        )
       )
-    )
   )
+))
 
-  tidypolis_io(
-    obj = api_virus_data,
-    io = "write",
-    file.path(
-      polis_data_folder,
-      "Core_Ready_Files",
-      paste0(
-        "Viruses_Detailed_Dataset_",
-        timestamp,
-        "_from_01_Dec_1999_to_",
-        format(ts, "%d_%b_%Y"),
-        ".rds"
+invisible(capture.output(
+    tidypolis_io(
+      obj = api_virus_data,
+      io = "write",
+      file.path(
+        polis_data_folder,
+        "Core_Ready_Files",
+        paste0(
+          "Viruses_Detailed_Dataset_",
+          timestamp,
+          "_from_01_Dec_1999_to_",
+          format(ts, "%d_%b_%Y"),
+          ".rds"
+        )
       )
-    )
   )
+))
 
   cli::cli_process_done()
 }
