@@ -2200,24 +2200,26 @@ preprocess_cdc <- function(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")) {
   crosswalk_data <- get_crosswalk_data()
 
   cli::cli_h2("Case")
-  api_case_data <- clean_case_table(file.path(polis_data_folder, "case.rds"),
-                                    crosswalk_data)
+  api_case_data <- s1_clean_case_table(
+    path = file.path(polis_data_folder, "case.rds"),
+    crosswalk = crosswalk_data)
 
   cli::cli_h2("Environmental Samples")
-  api_es_data <- clean_es_table(
-    file.path(polis_data_folder, "environmental_sample.rds"),
-    crosswalk_data
+  api_es_data <- s1_clean_es_table(
+    path = file.path(polis_data_folder, "environmental_sample.rds"),
+    crosswalk = crosswalk_data
   )
 
   cli::cli_h2("Virus")
-  api_virus_data <- clean_virus_table(file.path(polis_data_folder, "virus.rds"),
-                                      crosswalk_data)
+  api_virus_data <- s1_clean_virus_table(
+    path = file.path(polis_data_folder, "virus.rds"),
+    crosswalk = crosswalk_data)
 
   cli::cli_h2("Activity")
-  api_activity_data <- clean_activity_table(
-    file.path(polis_data_folder, "activity.rds"),
-    file.path(polis_data_folder, "sub_activity.rds"),
-    crosswalk_data
+  api_activity_data <- s1_clean_activity_table(
+    path = file.path(polis_data_folder, "activity.rds"),
+    subactivity_path = file.path(polis_data_folder, "sub_activity.rds"),
+    crosswalk = crosswalk_data
   )
 
   cli::cli_process_start("Long district spatial file")
@@ -4628,13 +4630,15 @@ check_missing_static_files <- function(core_files_folder_path,
 #' @returns `tibble` cleaned Case data.
 #' @keywords internal
 #'
-clean_case_table <- function(path, crosswalk,
+s1_clean_case_table <- function(path, crosswalk,
                             edav = Sys.getenv("POLIS_EDAV_FLAG")) {
 
   cli::cli_process_start("Loading Case table")
-  api_case_2019_12_01_onward <-
+  invisible(capture.output(
+    api_case_2019_12_01_onward <-
     tidypolis_io(io = "read", file_path = path) |>
     dplyr::mutate_all(as.character)
+  ))
   cli::cli_process_done()
 
   cli::cli_process_start("De-duplicating data")
@@ -4692,12 +4696,12 @@ clean_case_table <- function(path, crosswalk,
 #' de-duplication, renaming of variables via crosswalk, and removal of
 #' empty columns.
 #'
-#' @inheritParams clean_case_table
+#' @inheritParams s1_clean_case_table
 #'
 #' @returns `tibble` Cleaned ES table
 #' @keywords internal
 #'
-clean_es_table <- function(path, crosswalk,
+s1_clean_es_table <- function(path, crosswalk,
                            edav = Sys.getenv("POLIS_EDAV_FLAG")) {
 
   cli::cli_process_start("Loading Environmental Samples table")
@@ -4819,7 +4823,7 @@ clean_es_table <- function(path, crosswalk,
 #' de-duplication, renaming of variables via crosswalk, and removal of
 #' empty columns.
 #'
-#' @inheritParams clean_case_table
+#' @inheritParams s1_clean_case_table
 #' @param activity_table `tibble` Output of [clean_activity_table()].
 #' @param long_dist_sf `tibble` District shapefile in long format. The output of
 #' `sirfunctions::load_clean_dist_sp(type = "long")`.
@@ -4827,7 +4831,7 @@ clean_es_table <- function(path, crosswalk,
 #' @returns `tibble` Cleaned Sub-activity table.
 #' @keywords internal
 #'
-clean_subactivity_table <- function(path, activity_table, crosswalk,
+s1_clean_subactivity_table <- function(path, activity_table, crosswalk,
                                     long_dist_sf,
                                     edav = Sys.getenv("POLIS_EDAV_FLAG")) {
 
@@ -4966,13 +4970,13 @@ clean_subactivity_table <- function(path, activity_table, crosswalk,
 #' de-duplication, renaming of variables via crosswalk, and removal of
 #' empty columns.
 #'
-#' @inheritParams clean_case_table
+#' @inheritParams s1_clean_case_table
 #' @param subactivity_path `str` Path to the sub-activity table.
 #'
 #' @returns `tibble` A cleaned Activity table.
 #' @keywords internal
 #'
-clean_activity_table <- function(path, subactivity_path, crosswalk,
+s1_clean_activity_table <- function(path, subactivity_path, crosswalk,
                                  edav = Sys.getenv("POLIS_EDAV_FLAG")) {
 
   cli::cli_process_start("Loading activity data")
@@ -5010,12 +5014,12 @@ clean_activity_table <- function(path, subactivity_path, crosswalk,
 
 #' Clean the virus table
 #'
-#' @inheritParams clean_case_table
+#' @inheritParams s1_clean_case_table
 #'
 #' @returns `tibble` Cleaned virus table.
 #' @keywords internal
 #'
-clean_virus_table <- function(path, crosswalk,
+s1_clean_virus_table <- function(path, crosswalk,
                               edav = Sys.getenv("POLIS_EDAV_FLAG")) {
 
   cli::cli_process_start("Loading virus data")
