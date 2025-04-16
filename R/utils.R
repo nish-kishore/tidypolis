@@ -5439,7 +5439,7 @@ export_final_core_ready_files <- function(polis_data_folder, ts, timestamp,
 }
 
 
-#### Step 2 modular functions ####
+###### Step 2 Private Functions ----
 
 #' Find Latest Archive in Core Ready Files
 #'
