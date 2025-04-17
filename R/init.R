@@ -26,7 +26,7 @@ init_tidypolis <- function(
       expr = {
         x <- sirfunctions::edav_io(io = "list")
         rm(x)
-        cli::cli_alert_info("EDAV connection verified!")
+        cli::cli_alert_success("EDAV connection verified!")
         },
       error = function(e){
         cli::cli_abort("EDAV connection failed, please try again.")
@@ -59,18 +59,18 @@ init_tidypolis <- function(
 
   cli::cli_alert_info("Checking POLIS data folder structure")
   if("data" %in% tidypolis_io(io = "list", file_path = polis_folder)){
-    cli::cli_alert_success("- Data folder identified")
+    cli::cli_alert_success("Data folder identified")
   }else{
-    cli::cli_alert_success("- Creating 'data' folder")
+    cli::cli_alert_success("Creating 'data' folder")
     tidypolis_io(io = "create", file_path = paste0(polis_folder, "/data"))
   }
   Sys.setenv(POLIS_DATA_CACHE = paste0(polis_folder,"/data"))
 
   # Check for required files
   if (!tidypolis_io(io = "exists.dir", file_path = file.path(polis_folder, "misc"))) {
-    cli::cli_alert_info("- No misc folder inside POLIS folder, creating...")
+    cli::cli_alert_info("No misc folder inside POLIS folder, creating...")
     } else {
-    cli::cli_alert_success("- misc folder found! Checking for required files")
+    cli::cli_alert_success("misc folder found! Checking for required files")
     }
 
   required_files <- c(
@@ -89,7 +89,7 @@ init_tidypolis <- function(
                           paste0(missing_files, collapse = ", ")))
     cli::cli_abort("Please request these files from the CDC PEB SIR Team")
   } else {
-    cli::cli_alert_success(" - All required files present!")
+    cli::cli_alert_success("All required files present!")
   }
 
   optional_folder <- "sia_cluster_cache"
@@ -121,8 +121,13 @@ init_tidypolis <- function(
   if(cred_file_exists){
     cli::cli_alert_success("POLIS API Key found - validating key")
 
-    if(test_polis_key(tidypolis_io(io = "read", file_path = cred_file)$polis_api_key)){
-      Sys.setenv(POLIS_API_KEY = tidypolis_io(io = "read", file_path = cred_file)$polis_api_key)
+    invisible(capture.output(
+      api_key <- tidypolis_io(io = "read", file_path = cred_file)$polis_api_key
+    ))
+
+
+    if(test_polis_key(api_key)){
+      Sys.setenv(POLIS_API_KEY = api_key)
       cli::cli_alert_success("POLIS API Key validated!")
       invalid_key <- F
     }else{
@@ -177,23 +182,29 @@ init_tidypolis <- function(
 
   if(tidypolis_io(io = "exists.file", file_path = cache_file)){
     cli::cli_alert_success("Previous cache located!")
-    cache <- tidypolis_io(io = "read", file_path = cache_file)
+    invisible(capture.output(
+      cache <- tidypolis_io(io = "read", file_path = cache_file)
+    ))
     if("pop" %in% dplyr::pull(cache, table)){
       cli::cli_alert_success("Cache version is up to date!")
     }else{
       cli::cli_alert_info("Updating cache version")
-      cache |>
-        dplyr::bind_rows(
-          dplyr::tibble(
-            "table" = "pop",
-            "endpoint" = "Population",
-            "polis_id" = "Id"
-          )
-        )|>
-        tidypolis_io(io = "write", file_path = cache_file)
+
+      invisible(capture.output(
+        cache |>
+          dplyr::bind_rows(
+            dplyr::tibble(
+              "table" = "pop",
+              "endpoint" = "Population",
+              "polis_id" = "Id"
+            )
+          )|>
+          tidypolis_io(io = "write", file_path = cache_file)
+      ))
     }
   }else{
-    tibble::tibble(
+
+    cache_tibble <- tibble::tibble(
       "table" = c("cache", "virus", "case", "human_specimen", "environmental_sample",
                   "activity", "sub_activity", "lqas", "im", "population", "geography",
                   "synonym", "indicator", "reference_data", "pop"),
@@ -211,8 +222,11 @@ init_tidypolis <- function(
                     polis_update_value = ifelse(table == "cache", Sys.time(), NA),
                     polis_update_value = lubridate::as_datetime(polis_update_value),
                     nrow = ifelse(table == "cache", 14, NA),
-                    last_user = Sys.getenv("USERNAME")) |>
-      tidypolis_io(io = "write", file_path = cache_file)
+                    last_user = Sys.getenv("USERNAME"))
+
+    invisible(capture.output(
+      tidypolis_io(obj = cache_tibble, io = "write", file_path = cache_file)
+    ))
     cli::cli_alert_success("No cache located, creating cache file.")
   }
   Sys.setenv(POLIS_CACHE_FILE = cache_file)
@@ -224,12 +238,14 @@ init_tidypolis <- function(
   if(tidypolis_io(io = "exists.file", file_path = log_file)){
     cli::cli_alert_success("Previous log located!")
   }else{
-    tibble::tibble(
-      "time" = Sys.time(),
-      "user" = Sys.getenv("USERNAME"),
-      "event" = "Log created"
-    ) |>
-      tidypolis_io(io = "write", file_path = log_file)
+    invisible(capture.output(
+      tibble::tibble(
+        "time" = Sys.time(),
+        "user" = Sys.getenv("USERNAME"),
+        "event" = "Log created"
+      ) |>
+        tidypolis_io(io = "write", file_path = log_file)
+    ))
     cli::cli_alert_success("No log located, creating log file.")
   }
   Sys.setenv(POLIS_LOG_FILE = log_file)
