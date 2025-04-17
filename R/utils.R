@@ -2116,7 +2116,14 @@ check_missingness <- function(data,
       dplyr::summarise(dplyr::across(dplyr::everything(), ~ mean(is.na(.)) * 100), .by = c("yronset", "place.admin.0")) |>
       dplyr::filter(dplyr::if_any(dplyr::any_of(afp.vars), ~ . >= 10))
 
-    tidypolis_io(io = "write", obj = missing_by_group, file_path = paste0(Sys.getenv("POLIS_DATA_CACHE"), "/Core_Ready_Files/afp_missingness.rds"))
+    invisible(capture.output(
+      tidypolis_io(io = "write",
+                   obj = missing_by_group,
+                   file_path = paste0(Sys.getenv("POLIS_DATA_CACHE"),
+                                      "/Core_Ready_Files/afp_missingness.rds"))
+    ))
+
+
   }
 
   if (type == "ES") {
@@ -2127,7 +2134,15 @@ check_missingness <- function(data,
       dplyr::filter(who.region >= 10 | collection.date >= 10)
 
     if (nrow(missing_by_group) > 0) {
-      tidypolis_io(io = "write", obj = missing_by_group, file_path = paste0(Sys.getenv("POLIS_DATA_CACHE"), "/Core_Ready_Files/es_missingness.rds"))
+
+      invisible(capture.output(
+        tidypolis_io(io = "write",
+                     obj = missing_by_group,
+                     file_path = paste0(Sys.getenv("POLIS_DATA_CACHE"),
+                                        "/Core_Ready_Files/es_missingness.rds"))
+      ))
+
+
     }
   }
 
@@ -5502,13 +5517,20 @@ s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
   afp_standardized <- s2_standardize_dates(data = afp_raw_new)
 
   # Step 2d: Write out epids with no dateonset
-  s2_export_missing_onsets(afp_standardized, polis_data_folder)
+  s2_export_missing_onsets(
+    data = afp_standardized,
+    polis_data_folder = polis_data_folder)
 
   # Step 2e: Check for missingness
-  s2_check_missingness(data = afp_standardized, type = "AFP", polis_data_folder)
+  s2_check_missingness(
+    data = afp_standardized,
+    type = "AFP",
+    polis_data_folder)
 
   # Step 2f: Classify cases
-  afp_classified <- s2_classify_afp_cases(afp_standardized, startyr = 2020)
+  afp_classified <- s2_classify_afp_cases(
+    data = afp_standardized,
+    startyr = 2020)
 
   # Step 2g: Validate classifications
   afp_validated <- s2_validate_classifications(afp_classified)
@@ -5829,15 +5851,77 @@ s2_standardize_dates <- function(data) {
   return(data_processed)
 }
 
+#' Export EPIDs with missing onset dates
+#'
+#' Identifies AFP cases with missing date of onset and exports them to a CSV
+#' file for further review and investigation.
+#'
+#' @param data `tibble` A tibble containing AFP surveillance data
+#' @param polis_data_folder `str` String path to the POLIS data folder
+#'
+#' @return Invisibly returns the filtered data frame of records with missing
+#'    onset dates
+#' @export
+s2_export_missing_onsets <- function(data, polis_data_folder) {
+  missing_onsets <- data |>
+    dplyr::select(epid, dateonset) |>
+    dplyr::filter(is.na(dateonset))
+
+invisible(capture.output(
+    tidypolis_io(
+      io = "write",
+      obj = missing_onsets,
+      file_path = paste0(polis_data_folder, "/Core_Ready_Files/afp_no_onset.csv")
+    )
+))
+
+  cli::cli_alert_info(paste0(
+    "Exported ", nrow(missing_onsets), " records with missing onset dates"
+  ))
+
+  invisible(gc(full = TRUE))
+
+  invisible(missing_onsets)
+}
+
+#' Check missingness in key AFP variables
+#'
+#' Analyzes and exports information about missingness in key variables that are
+#' critical for AFP surveillance. This helps with data quality assessment.
+#'
+#' @param data A data frame containing AFP surveillance data
+#' @param type String indicating the type of data (e.g., "AFP")
+#' @param polis_data_folder String path to the POLIS data folder
+#'
+#' @return Invisibly returns the missingness summary
+#' @export
+s2_check_missingness <- function(data, type = "AFP", polis_data_folder) {
+  cli::cli_process_start("Checking for missingness in key variables")
+
+  # Call the existing check_missingness function
+  result <- check_missingness(data = data, type = type)
+
+  cli::cli_process_done(
+    paste0(
+      "Check ",
+      tolower(type), "_missingness.rds for missing key variables"
+    )
+  )
+
+  invisible(gc(full = TRUE))
+
+  invisible(result)
+}
+
 #' Classify AFP Cases Based on Lab Data
 #'
 #' This function takes AFP surveillance data and classifies cases based on
 #' poliovirus types and CDC classification criteria.
 #'
-#' @param data A data frame containing AFP surveillance data with columns:
+#' @param data `tibble` A tibble containing AFP surveillance data with columns:
 #'   poliovirustypes, vtype.fixed, classification, yronset
-#' @param startyr Integer. The start year for filtering cases (default: 2020)
-#' @param endyr Integer. The end year for filtering cases (default: current
+#' @param startyr `int` The start year for filtering cases (default: 2020)
+#' @param endyr `int` The end year for filtering cases (default: current
 #'    year)
 #'
 #' @return A data frame with additional classification columns:
@@ -6118,37 +6202,6 @@ s2_classify_afp_cases <- function(data, startyr = 2020,
   return(classified_data)
 }
 
-#' Export EPIDs with missing onset dates
-#'
-#' Identifies AFP cases with missing date of onset and exports them to a CSV
-#' file for further review and investigation.
-#'
-#' @param data A data frame containing AFP surveillance data
-#' @param polis_data_folder String path to the POLIS data folder
-#'
-#' @return Invisibly returns the filtered data frame of records with missing
-#'    onset dates
-#' @export
-s2_export_missing_onsets <- function(data, polis_data_folder) {
-  missing_onsets <- data |>
-    dplyr::select(epid, dateonset) |>
-    dplyr::filter(is.na(dateonset))
-
-  tidypolis_io(
-    io = "write",
-    obj = missing_onsets,
-    file_path = paste0(polis_data_folder, "/Core_Ready_Files/afp_no_onset.csv")
-  )
-
-  cli::cli_alert_info(paste0(
-    "Exported ", nrow(missing_onsets), " records with missing onset dates"
-  ))
-
-  invisible(gc(full = TRUE))
-
-  invisible(missing_onsets)
-}
-
 #' Validate case classifications in AFP data
 #'
 #' @description
@@ -6406,35 +6459,6 @@ s2_compare_with_archive <- function(data,
     modified_records = modified_records,
     modified_details = modified_details
   ))
-}
-
-#' Check missingness in key AFP variables
-#'
-#' Analyzes and exports information about missingness in key variables that are
-#' critical for AFP surveillance. This helps with data quality assessment.
-#'
-#' @param data A data frame containing AFP surveillance data
-#' @param type String indicating the type of data (e.g., "AFP")
-#' @param polis_data_folder String path to the POLIS data folder
-#'
-#' @return Invisibly returns the missingness summary
-#' @export
-s2_check_missingness <- function(data, type = "AFP", polis_data_folder) {
-  cli::cli_process_start("Checking for missingness in key variables")
-
-  # Call the existing check_missingness function
-  result <- check_missingness(data = data, type = type)
-
-  cli::cli_process_done(
-    paste0(
-      "Check ",
-      tolower(type), "_missingness.rds for missing key variables"
-    )
-  )
-
-  invisible(gc(full = TRUE))
-
-  invisible(result)
 }
 
 #' Fix administrative GUIDs in AFP data
