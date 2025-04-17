@@ -5378,7 +5378,7 @@ s1_export_final_core_ready_files <- function(polis_data_folder, ts, timestamp,
           timestamp,
           "_from_01_Dec_2019_to_",
           format(ts, "%d_%b_%Y"),
-          ".parquet"
+          ".rds"
         )
       )
     )
@@ -5396,7 +5396,7 @@ s1_export_final_core_ready_files <- function(polis_data_folder, ts, timestamp,
           timestamp,
           "_from_01_Jan_2020_to_",
           format(Sys.Date() + 365 / 2, "%d_%b_%Y"),
-          ".parquet"
+          ".rds"
         )
       )
     )
@@ -5414,7 +5414,7 @@ s1_export_final_core_ready_files <- function(polis_data_folder, ts, timestamp,
           timestamp,
           "_from_01_Jan_2000_to_",
           format(ts, "%d_%b_%Y"),
-          ".parquet"
+          ".rds"
         )
       )
     )
@@ -5432,7 +5432,7 @@ s1_export_final_core_ready_files <- function(polis_data_folder, ts, timestamp,
           timestamp,
           "_from_01_Dec_1999_to_",
           format(ts, "%d_%b_%Y"),
-          ".parquet"
+          ".rds"
         )
       )
     )
@@ -6856,7 +6856,6 @@ s2_create_afp_variables <- function(data) {
 
   return(afp_data)
 }
-
 #' Export AFP data and related outputs
 #'
 #' Creates and exports various AFP data files including the main AFP linelist,
@@ -6873,12 +6872,12 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
                                   col_afp_raw) {
 
   cli::cli_process_start("Exporting AFP outputs",
-                         msg_done = "Exported AFP outputs"
-  )
+                         msg_done = "Exported AFP outputs")
 
   # Separate AFP from other surveillance types
   afp_data <- data |>
-    dplyr::filter(surveillancetypename == "AFP")
+    dplyr::filter(surveillancetypename == "AFP") |>
+    dplyr::distinct()
 
   not_afp <- data |>
     dplyr::filter(surveillancetypename != "AFP")
@@ -6924,12 +6923,10 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
   # Prepare data for export
   afp_data <- afp_data |>
     dplyr::mutate(
-      stool1tostool2 = as.duration(stool1tostool2),
       polis.latitude = as.character(polis.latitude),
       polis.longitude = as.character(polis.longitude),
       doses.total = as.numeric(doses.total)
-    ) |>
-    dplyr::distinct()
+    )
 
   # Compare with archive using the dedicated comparison function
   comparison_results <- s2_compare_with_archive(
@@ -6946,7 +6943,7 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
     file_path = paste0(
       polis_data_folder, "/Core_Ready_Files/afp_linelist_",
       min(afp_data$dateonset, na.rm = TRUE), "_",
-      max(afp_data$dateonset, na.rm = TRUE), ".parquet"
+      max(afp_data$dateonset, na.rm = TRUE), ".rds"
     )
   )
 
@@ -6956,8 +6953,7 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
     dplyr::select(
       epid, dateonset, place.admin.0, place.admin.1, place.admin.2,
       adm0guid, adm1guid, adm2guid, cdc.classification.all, lat, lon
-    ) |>
-    dplyr::distinct()
+    )
 
   tidypolis_io(
     obj = afp_latlong,
@@ -6971,8 +6967,7 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
 
   # Create combined AFP dataset from multiple files
   cli::cli_process_start("Generating combined AFP dataset",
-                         msg_done = "Generated combined AFP dataset"
-  )
+                         msg_done = "Generated combined AFP dataset")
 
   # Find all AFP files in Core_Ready_Files and core_files_to_combine
   afp_files_main <- dplyr::tibble("name" = tidypolis_io(
@@ -6980,10 +6975,9 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
     file_path = paste0(polis_data_folder, "/Core_Ready_Files"),
     full_names = TRUE
   )) |>
-    dplyr::filter(grepl("^.*(afp_linelist).*(.parquet)$", name)) |>
+    dplyr::filter(grepl("^.*(afp_linelist).*(.rds)$", name)) |>
     dplyr::pull(name)
 
-  # Get RDS files to combine
   afp_files_combine <- dplyr::tibble("name" = tidypolis_io(
     io = "list",
     file_path = paste0(polis_data_folder, "/core_files_to_combine"),
@@ -6992,38 +6986,26 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
     dplyr::filter(grepl("^.*(afp_linelist).*(.rds)$", name)) |>
     dplyr::pull(name)
 
-  # Combine AFP files if there are RDS files to combine
+  # Combine AFP files
   if (length(afp_files_combine) > 0) {
-
-    afp_combined_rds <- dplyr::bind_rows(
-      lapply(afp_files_combine, function(x) {
-        tidypolis_io(io = "read", file_path = x)
-      })
-    ) |>
+    afp_to_combine <- purrr::map_df(afp_files_combine, ~ tidypolis_io(
+      io = "read",
+      file_path = .x
+    )) |>
       dplyr::mutate(
-        stool1tostool2 = as.duration(stool1tostool2)
-      )  |>
-      dplyr::distinct()
+        stool1tostool2 = as.numeric(stool1tostool2),
+        datenotificationtohq = lubridate::parse_date_time(
+          datenotificationtohq,
+          c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S")
+        )
+      )
 
-    afp_combined_par <- dplyr::bind_rows(
-      lapply(afp_files_main, function(x) {
-        tidypolis_io(io = "read", file_path = x)
-      })
-    ) |>
-      dplyr::mutate(
-        stool1tostool2 = as.duration(stool1tostool2)
-      )  |>
-      dplyr::distinct()
+    afp_new <- purrr::map_df(
+      afp_files_main,
+      ~ tidypolis_io(io = "read", file_path = .x)
+    )
 
-    data.table::setDTthreads(parallel::detectCores() -1)
-    options(datatable.optimize = Inf)
-    options(datatable.alloccol = 1000)
-    afp_combined <- data.table::rbindlist(
-      list(
-        data.table::as.data.table(afp_combined_rds),
-        data.table::as.data.table(afp_combined_par)),
-      use.names = TRUE,
-      fill = TRUE)
+    afp_combined <- dplyr::bind_rows(afp_new, afp_to_combine)
 
     # Export combined AFP dataset
     tidypolis_io(
@@ -7036,7 +7018,7 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
         min(afp_combined$dateonset, na.rm = TRUE),
         "_",
         max(afp_combined$dateonset, na.rm = TRUE),
-        ".parquet"
+        ".rds"
       )
     )
 
@@ -7054,7 +7036,7 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
         min(afp_light$dateonset, na.rm = TRUE),
         "_",
         max(afp_light$dateonset, na.rm = TRUE),
-        ".parquet"
+        ".rds"
       )
     )
   }
@@ -7064,8 +7046,7 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
   # Process non-AFP data if needed
   if (nrow(not_afp) > 0 || nrow(unknown_afp) > 0) {
     cli::cli_process_start("Processing non-AFP surveillance data",
-                           msg_done = "Processed non-AFP surveillance data"
-    )
+                           msg_done = "Processed non-AFP surveillance data")
 
     other_surv <- dplyr::bind_rows(not_afp, unknown_afp) |>
       dplyr::mutate(
@@ -7082,7 +7063,7 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
         polis_data_folder,
         "/Core_Ready_Files/other_surveillance_type_linelist_",
         min(other_surv$yronset, na.rm = TRUE), "_",
-        max(other_surv$yronset, na.rm = TRUE), ".parquet"
+        max(other_surv$yronset, na.rm = TRUE), ".rds"
       )
     )
 
@@ -7154,19 +7135,16 @@ s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
   s2_export_missing_onsets(afp_standardized, polis_data_folder)
 
   # Step 2e: Check for missingness
-  s2_check_missingness(data = afp_standardized, type = "AFP",
-                       polis_data_folder)
+  s2_check_missingness(data = afp_standardized, type = "AFP", polis_data_folder)
 
   # Step 2f: Classify cases
-  afp_classified <- s2_classify_afp_cases(afp_standardized,
-                                          startyr = 2020)
+  afp_classified <- s2_classify_afp_cases(afp_standardized, startyr = 2020)
 
   # Step 2g: Validate classifications
   afp_validated <- s2_validate_classifications(afp_classified)
 
   # Step 2h: Validate and fix GUIDs
-  afp_with_guids <- s2_fix_admin_guids(afp_validated,
-                                       long.global.dist.01)
+  afp_with_guids <- s2_fix_admin_guids(afp_validated, long.global.dist.01)
 
   # Step 2i: Process coordinates
   afp_processed <- s2_process_coordinates(
