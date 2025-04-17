@@ -2347,9 +2347,10 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
 
   cli::cli_h1("Step 2/5 - Creating AFP and Epi analytic datasets")
 
-  s2_fully_process_afp_data(polis_data_folder,
-                            polis_folder,
-                            long.global.dist.01)
+  s2_fully_process_afp_data(
+    polis_data_folder = polis_data_folder,
+    polis_folder = polis_folder,
+    long.global.dist.01 = long.global.dist.01)
 
   # Step 3 - Creating SIA analytic datasets ====================================
 
@@ -5447,6 +5448,90 @@ s1_export_final_core_ready_files <- function(polis_data_folder, ts, timestamp,
 
 ###### Step 2 Private Functions ----
 
+#' Process AFP Data Pipeline
+#'
+#' This function processes AFP data through multiple standardization and
+#' validation steps, including checking for duplicates, standardizing dates,
+#' classifying cases, and processing coordinates.
+#'
+#' @param polis_data_folder Character. Path to the POLIS data folder containing
+#'   Core_Ready_Files.
+#' @param polis_folder Character. Path to the main POLIS folder.
+#' @param long.global.dist.01 Data frame. Global district lookup table for GUID
+#'   validation.
+#'
+#' @export
+s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
+                                      long.global.dist.01) {
+
+  # Step 2a: Read in "old" data file (System to find "Old" data file)
+  latest_folder_in_archive <- find_latest_archive(polis_data_folder)
+
+  # list archive files
+  x <- tidypolis_io(
+    io = "list",
+    file_path = file.path(
+      polis_data_folder, "Core_Ready_Files/Archive",
+      latest_folder_in_archive
+    ),
+    full_names = TRUE
+  )
+
+  # load new data files
+  y <- tidypolis_io(
+    io = "list",
+    file_path = file.path(polis_data_folder, "Core_Ready_Files"),
+    full_names = TRUE
+  )
+
+  # read and process AFP data
+  afp_raw_new <- read_afp_data(y[grepl("Human", y)])
+
+  # Step 2b: Check for duplicate EPIDs
+  has_duplicates <- s2_check_duplicated_epids(afp_raw_new, polis_data_folder)
+
+  if (has_duplicates) {
+    cli::cli_alert_warning("Please review duplicates before proceeding")
+  }
+
+  # Step 2c: Standardize dates and variable names
+  afp_standardized <- s2_standardize_dates(afp_raw_new)
+
+  # Step 2d: Write out epids with no dateonset
+  s2_export_missing_onsets(afp_standardized, polis_data_folder)
+
+  # Step 2e: Check for missingness
+  s2_check_missingness(data = afp_standardized, type = "AFP", polis_data_folder)
+
+  # Step 2f: Classify cases
+  afp_classified <- s2_classify_afp_cases(afp_standardized, startyr = 2020)
+
+  # Step 2g: Validate classifications
+  afp_validated <- s2_validate_classifications(afp_classified)
+
+  # Step 2h: Validate and fix GUIDs
+  afp_with_guids <- s2_fix_admin_guids(afp_validated, long.global.dist.01)
+
+  # Step 2i: Process coordinates
+  afp_processed <- s2_process_coordinates(
+    afp_with_guids,
+    polis_data_folder,
+    polis_folder
+  )
+
+  # Step 2j: Create key AFP variables
+  afp_final <- s2_create_afp_variables(afp_processed)
+
+  # Step 2k: Compare archives and generate outputs
+  s2_export_afp_outputs(
+    afp_final,
+    latest_folder_in_archive,
+    polis_data_folder,
+    colnames(afp_raw_new)
+  )
+}
+
+
 #' Find Latest Archive in Core Ready Files
 #'
 #' @description
@@ -7083,87 +7168,4 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
   gc(full = TRUE)
 
   invisible(NULL)
-}
-
-#' Process AFP Data Pipeline
-#'
-#' This function processes AFP data through multiple standardization and
-#' validation steps, including checking for duplicates, standardizing dates,
-#' classifying cases, and processing coordinates.
-#'
-#' @param polis_data_folder Character. Path to the POLIS data folder containing
-#'   Core_Ready_Files.
-#' @param polis_folder Character. Path to the main POLIS folder.
-#' @param long.global.dist.01 Data frame. Global district lookup table for GUID
-#'   validation.
-#'
-#' @export
-s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
-                                      long.global.dist.01) {
-
-  # Step 2a: Read in "old" data file (System to find "Old" data file)
-  latest_folder_in_archive <- find_latest_archive(polis_data_folder)
-
-  # list archive files
-  x <- tidypolis_io(
-    io = "list",
-    file_path = file.path(
-      polis_data_folder, "Core_Ready_Files/Archive",
-      latest_folder_in_archive
-    ),
-    full_names = TRUE
-  )
-
-  # load new data files
-  y <- tidypolis_io(
-    io = "list",
-    file_path = file.path(polis_data_folder, "Core_Ready_Files"),
-    full_names = TRUE
-  )
-
-  # read and process AFP data
-  afp_raw_new <- read_afp_data(y[grepl("Human", y)])
-
-  # Step 2b: Check for duplicate EPIDs
-  has_duplicates <- s2_check_duplicated_epids(afp_raw_new, polis_data_folder)
-
-  if (has_duplicates) {
-    cli::cli_alert_warning("Please review duplicates before proceeding")
-  }
-
-  # Step 2c: Standardize dates and variable names
-  afp_standardized <- s2_standardize_dates(afp_raw_new)
-
-  # Step 2d: Write out epids with no dateonset
-  s2_export_missing_onsets(afp_standardized, polis_data_folder)
-
-  # Step 2e: Check for missingness
-  s2_check_missingness(data = afp_standardized, type = "AFP", polis_data_folder)
-
-  # Step 2f: Classify cases
-  afp_classified <- s2_classify_afp_cases(afp_standardized, startyr = 2020)
-
-  # Step 2g: Validate classifications
-  afp_validated <- s2_validate_classifications(afp_classified)
-
-  # Step 2h: Validate and fix GUIDs
-  afp_with_guids <- s2_fix_admin_guids(afp_validated, long.global.dist.01)
-
-  # Step 2i: Process coordinates
-  afp_processed <- s2_process_coordinates(
-    afp_with_guids,
-    polis_data_folder,
-    polis_folder
-  )
-
-  # Step 2j: Create key AFP variables
-  afp_final <- s2_create_afp_variables(afp_processed)
-
-  # Step 2k: Compare archives and generate outputs
-  s2_export_afp_outputs(
-    afp_final,
-    latest_folder_in_archive,
-    polis_data_folder,
-    colnames(afp_raw_new)
-  )
 }
