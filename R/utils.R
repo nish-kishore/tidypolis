@@ -2322,14 +2322,17 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
   invisible(capture.output(gc()))
 
   # Export files (as csv) to be used as pre-processing starting points
-  s1_export_final_core_ready_files(polis_data_folder, ts, timestamp,
-                                   api_case_data,
-                                   api_subactivity_data,
-                                   api_es_data,
-                                   api_virus_data)
+  s1_export_final_core_ready_files(
+    polis_data_folder = polis_data_folder,
+    ts = ts,
+    timestamp = timestamp,
+    api_case_data = api_case_data,
+    api_subactivity_data = api_subactivity_data,
+    api_es_data = api_es_data,
+    api_virus_data = api_virus_data)
 
   rm(api_case_data, api_es_data, api_virus_data, api_activity_data,
-     api_subactivity_data)
+     api_subactivity_data, i)
 
   invisible(capture.output(gc()))
 
