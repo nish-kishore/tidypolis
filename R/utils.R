@@ -3897,7 +3897,7 @@ process_spatial <- function(gdb_folder,
   }
 
   empty.ctry <- global.ctry.01 |>
-    dplyr::mutate(empty = sf::st_is_empty(Shape)) |>
+    dplyr::mutate(empty = sf::st_is_empty(!!dplyr::sym(sf_var_ctry))) |>
     dplyr::filter(empty == TRUE)
 
   sf::st_geometry(empty.ctry) <- NULL
@@ -4007,7 +4007,7 @@ process_spatial <- function(gdb_folder,
   }
 
   empty.prov <- global.prov.01 |>
-    dplyr::mutate(empty = sf::st_is_empty(Shape)) |>
+    dplyr::mutate(empty = sf::st_is_empty(!!dplyr::sym(sf_var_prov))) |>
     dplyr::filter(empty == TRUE)
 
   if(nrow(empty.prov) > 0) {
@@ -4110,7 +4110,7 @@ process_spatial <- function(gdb_folder,
   }
 
   empty.dist <- global.dist.01 |>
-    dplyr::mutate(empty = sf::st_is_empty(Shape)) |>
+    dplyr::mutate(empty = sf::st_is_empty(!!dplyr::sym(sf_var_dist))) |>
     dplyr::filter(empty == TRUE)
 
   if(nrow(empty.dist) > 0) {
