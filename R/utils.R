@@ -5490,10 +5490,12 @@ s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
   invisible(gc())
 
   # Step 2b: Check for duplicate EPIDs
-  has_duplicates <- s2_check_duplicated_epids(afp_raw_new, polis_data_folder)
+  has_duplicates <- s2_check_duplicated_epids(
+    data = afp_raw_new,
+    polis_data_folder = polis_data_folder)
 
   if (has_duplicates) {
-    cli::cli_alert_warning("Please review duplicates before proceeding")
+    cli::cli_alert_warning("Please review duplicates!")
   }
 
   # Step 2c: Standardize dates and variable names
@@ -5664,25 +5666,39 @@ s2_check_duplicated_epids <- function(data, polis_data_folder) {
 
   if (nrow(afp_dup) >= 1) {
     # Export duplicate afp cases in the CSV file:
-    tidypolis_io(
-      io = "write",
-      obj = afp_dup,
-      paste0(
-        polis_data_folder,
-        "/Core_Ready_Files/",
-        paste(
-          "duplicate_AFPcases_Polis",
-          min(afp_dup$yronset, na.rm = TRUE),
-          max(afp_dup$yronset, na.rm = TRUE),
-          sep = "_"
-        ),
-        ".csv"
-      )
-    )
+    invisible(capture.output(
+          tidypolis_io(
+            io = "write",
+            obj = afp_dup,
+            paste0(
+              polis_data_folder,
+              "/Core_Ready_Files/",
+              paste(
+                "duplicate_AFPcases_Polis",
+                min(afp_dup$yronset, na.rm = TRUE),
+                max(afp_dup$yronset, na.rm = TRUE),
+                sep = "_"
+              ),
+              ".csv"
+            )
+          )
+    ))
+
     cli::cli_alert_info(
       paste0(
-        "Duplicate AFP case. Check the data for duplicate records. ",
-        "If they are exact same, then contact Ashley"
+        "Duplicate AFP case. Check the data for duplicate records located at:\n",
+                    paste0(
+              polis_data_folder,
+              "/Core_Ready_Files/",
+              paste(
+                "duplicate_AFPcases_Polis",
+                min(afp_dup$yronset, na.rm = TRUE),
+                max(afp_dup$yronset, na.rm = TRUE),
+                sep = "_"
+              ),
+              ".csv"
+            ), "\n",
+        "If they are exact same, then contact POLIS"
       )
     )
 
