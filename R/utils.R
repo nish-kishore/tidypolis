@@ -5533,7 +5533,8 @@ s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
     startyr = 2020)
 
   # Step 2g: Validate classifications
-  afp_validated <- s2_validate_classifications(afp_classified)
+  afp_validated <- s2_validate_classifications(data = afp_classified)
+  invisible(gc())
 
   # Step 2h: Validate and fix GUIDs
   afp_with_guids <- s2_fix_admin_guids(afp_validated, long.global.dist.01)
@@ -6209,9 +6210,9 @@ s2_classify_afp_cases <- function(data, startyr = 2020,
 #' If found, flags them for investigation and stops processing unless the EPIDs
 #' are in a predefined list of cases that have been manually reviewed.
 #'
-#' @param data A data frame containing AFP data with classification columns
+#' @param data `tibble` A tibble containing AFP data with classification columns
 #'
-#' @return The filtered data frame with invalid classifications removed
+#' @return The filtered tibble with invalid classifications removed
 #'
 #' @details
 #' The function checks for the following issues:
@@ -6283,7 +6284,8 @@ s2_validate_classifications <- function(data) {
 
   # Filter out any remaining "none" classifications
   data_filtered <- data |>
-    dplyr::filter(cdc.classification.all != "none")
+    dplyr::filter(cdc.classification.all != "none") |>
+    dplyr::distinct()
 
   invisible(gc(full = TRUE))
 
