@@ -595,12 +595,9 @@ call_urls <- function(urls) {
               dplyr::add_row(time = Sys.time(),
                              call = urls[x],
                              event = "FINISHED CALL")
-
-            return <- dplyr::tibble(response = list(response),
-                                    log = list(log))
           },
           error = \(e) {
-            response <- NULL
+            response <- NA
             log <- log |>
               dplyr::add_row(time = Sys.time(),
                              call = urls[x],
@@ -615,6 +612,7 @@ call_urls <- function(urls) {
   })
 
   resp <- dplyr::bind_rows(y) |>
+    dplyr::filter(!is.na(response)) |>
     dplyr::pull(response) |>
     dplyr::bind_rows()
 
