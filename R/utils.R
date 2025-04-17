@@ -5537,13 +5537,16 @@ s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
   invisible(gc())
 
   # Step 2h: Validate and fix GUIDs
-  afp_with_guids <- s2_fix_admin_guids(afp_validated, long.global.dist.01)
+  afp_with_guids <- s2_fix_admin_guids(data = afp_validated,
+                                       shape_data = long.global.dist.01)
+
+  invisible(gc())
 
   # Step 2i: Process coordinates
   afp_processed <- s2_process_coordinates(
-    afp_with_guids,
-    polis_data_folder,
-    polis_folder
+    data = afp_with_guids,
+    polis_data_folder = polis_data_folder,
+    polis_folder = polis_folder
   )
 
   # Step 2j: Create key AFP variables
@@ -6292,185 +6295,14 @@ s2_validate_classifications <- function(data) {
   return(data_filtered)
 }
 
-#' Compare AFP data with archived version
-#'
-#' @description
-#' Compares the new AFP dataset with the previous version from the archive,
-#' identifying structural differences, new records, and modified records.
-#'
-#' @param data A data frame containing new AFP data
-#' @param polis_data_folder String path to the POLIS data folder
-#' @param latest_archive String name of the most recent archive folder
-#' @param col_afp_raw Names of columns in the original raw AFP data
-#' @param start_year Integer. Start year for filtering (default: 2020)
-#' @param end_year Integer. End year for filtering (default: current year)
-#'
-#' @return A list containing comparison results:
-#'   - metadata_comparison: Structural differences between datasets
-#'   - new_records: Records in new data not in old data
-#'   - removed_records: Records in old data not in new data
-#'   - modified_records: Records that exist in both but were changed
-#'
-#' @details
-#' This function performs a comprehensive comparison by:
-#' 1. Loading the most recent archived AFP dataset
-#' 2. Comparing metadata (variable names, types, values)
-#' 3. Identifying added, removed, and modified records
-#' 4. Generating a detailed report of differences
-#'
-#' @export
-s2_compare_with_archive <- function(data,
-                                    polis_data_folder,
-                                    latest_archive,
-                                    col_afp_raw,
-                                    start_year = 2020,
-                                    end_year = lubridate::year(Sys.Date())) {
-  cli::cli_process_start("Comparing data with last AFP dataset")
-
-  # Prepare data for comparison by standardizing types
-  data_prepared <- data |>
-    dplyr::mutate(
-      polis.latitude = as.character(polis.latitude),
-      polis.longitude = as.character(polis.longitude),
-      doses.total = as.numeric(doses.total)
-    )
-
-  # Find old AFP file in the archive
-  archive_files <- tidypolis_io(
-    io = "list",
-    file_path = paste0(
-      polis_data_folder, "/Core_Ready_Files/Archive/",
-      latest_archive
-    ),
-    full_names = TRUE
-  )
-
-  old_file <- archive_files[grepl("afp_linelist_2020", archive_files)]
-
-  if (length(old_file) == 0) {
-    cli::cli_alert_info("No previous AFP dataset found for comparison")
-    cli::cli_process_done()
-    return(NULL)
-  }
-
-  # Read old data and standardize format for comparison
-  cli::cli_alert_info("Loading archived AFP dataset for comparison")
-  old_data <- tidypolis_io(io = "read", file_path = old_file) |>
-    dplyr::mutate(epid = stringr::str_squish(epid)) |>
-    dplyr::mutate_all(as.character) |>
-    dplyr::mutate(yronset = as.numeric(yronset)) |>
-    dplyr::filter(dplyr::between(yronset, start_year, end_year)) |>
-    dplyr::mutate_all(as.character)
-
-  # Harmonize column selections
-  data_prepared <- data_prepared |>
-    dplyr::ungroup() |>
-    dplyr::select(-c(setdiff(
-      setdiff(colnames(data_prepared), col_afp_raw),
-      colnames(old_data)
-    )))
-
-  # Compare metadata (structure, variables, values)
-  new_table_metadata <- f.summarise.metadata(head(data_prepared, 1000))
-  old_table_metadata <- f.summarise.metadata(head(old_data, 1000))
-  metadata_comparison <- f.compare.metadata(
-    new_table_metadata,
-    old_table_metadata,
-    "AFP"
-  )
-
-  # Compare individual records
-  new_for_comparison <- data_prepared |>
-    dplyr::mutate(epid = stringr::str_squish(epid)) |>
-    dplyr::mutate_all(as.character)
-
-  # Find new records
-  in_new_not_old <- new_for_comparison[
-    !(new_for_comparison$epid %in% old_data$epid),
-  ]
-
-  # Find removed records
-  in_old_not_new <- old_data[
-    !(old_data$epid %in% new_for_comparison$epid),
-  ]
-
-  # Find modified records
-  potential_modifications <- new_for_comparison |>
-    dplyr::filter(epid %in% old_data$epid) |>
-    dplyr::select(-c(setdiff(colnames(new_for_comparison), colnames(old_data))))
-
-  unchanged_records <- intersect(
-    potential_modifications,
-    old_data |> dplyr::select(-c(setdiff(
-      colnames(old_data),
-      colnames(potential_modifications)
-    )))
-  )
-
-  modified_records <- setdiff(potential_modifications, unchanged_records)
-
-  if (nrow(modified_records) > 0) {
-    modified_details <- modified_records |>
-      dplyr::inner_join(
-        old_data |>
-          dplyr::filter(epid %in% modified_records$epid) |>
-          dplyr::select(-c(setdiff(
-            colnames(old_data),
-            colnames(modified_records)
-          ))) |>
-          setdiff(new_for_comparison |>
-                    dplyr::select(-c(setdiff(
-                      colnames(new_for_comparison),
-                      colnames(old_data)
-                    )))),
-        by = "epid"
-      ) |>
-      # Convert wide to long for comparing differences
-      tidyr::pivot_longer(cols = -epid) |>
-      dplyr::mutate(source = dplyr::if_else(
-        stringr::str_sub(name, -2) == ".x", "new", "old"
-      )) |>
-      dplyr::mutate(name = stringr::str_sub(name, 1, -3)) |>
-      # Convert back to wide for display
-      tidyr::pivot_wider(names_from = source, values_from = value) |>
-      dplyr::filter(new != old & !name %in% c("lat", "lon"))
-  } else {
-    modified_details <- data.frame()
-  }
-
-  # Log summary of changes
-  update_polis_log(
-    .event = paste0(
-      "AFP New Records: ", nrow(in_new_not_old), "; ",
-      "AFP Removed Records: ", nrow(in_old_not_new), "; ",
-      "AFP Modified Records: ",
-      length(unique(modified_records$epid))
-    ),
-    .event_type = "INFO"
-  )
-
-  cli::cli_process_done()
-
-  invisible(gc(full = FALSE))
-
-  # Return comparison results
-  return(list(
-    metadata_comparison = metadata_comparison,
-    new_records = in_new_not_old,
-    removed_records = in_old_not_new,
-    modified_records = modified_records,
-    modified_details = modified_details
-  ))
-}
-
 #' Fix administrative GUIDs in AFP data
 #'
 #' Corrects incorrect or missing GUIDs for administrative boundaries by
 #' matching on administrative names when possible. This improves the spatial
 #' accuracy of AFP data.
 #'
-#' @param data A data frame containing AFP surveillance data with admin GUIDs
-#' @param shape_data Spatial data containing administrative boundary info
+#' @param data `tibble` A data frame containing AFP surveillance data with admin GUIDs
+#' @param shape_data `sp` Spatial data containing administrative boundary info
 #'
 #' @return A data frame with corrected admin GUIDs and added validation columns
 #' @export
@@ -6658,12 +6490,12 @@ s2_fix_admin_guids <- function(data, shape_data) {
 #' AFP cases have accurate geographic coordinates for mapping and spatial
 #' analysis.
 #'
-#' @param data A data frame containing AFP data with admin GUIDs
-#' @param polis_data_folder Character. Path to the POLIS data folder containing
+#' @param data `tibble` A data frame containing AFP data with admin GUIDs
+#' @param polis_data_folder `str` Path to the POLIS data folder containing
 #'   Core_Ready_Files.
-#' @param polis_folder Character. Path to the main POLIS folder.
+#' @param polis_folder `str` Path to the main POLIS folder.
 #'
-#' @return A data frame with processed coordinate data
+#' @return A tibble with processed coordinate data
 #' @export
 s2_process_coordinates <- function(data, polis_data_folder, polis_folder) {
 
@@ -6671,14 +6503,16 @@ s2_process_coordinates <- function(data, polis_data_folder, polis_folder) {
                          msg_done = "Processed GPS coordinates for AFP cases"
   )
 
-  shape_data <- tidypolis_io(
-    io = "read",
-    file_path = file.path(
-      polis_folder,
-      "misc",
-      "global.dist.rds"
+  invisible(capture.output(
+    shape_data <- tidypolis_io(
+      io = "read",
+      file_path = file.path(
+        polis_folder,
+        "misc",
+        "global.dist.rds"
+      )
     )
-  )
+  ))
 
   # Rename latitude and longitude columns
   data_renamed <- data |>
@@ -6687,6 +6521,8 @@ s2_process_coordinates <- function(data, polis_data_folder, polis_folder) {
       polis.longitude = y
     ) |>
     dplyr::distinct()
+
+  cli::cli_process_done()
 
   cli::cli_process_start("Checking for duplicate EPIDs",
                          msg_done = "Checked for duplicate EPIDs")
@@ -6707,19 +6543,21 @@ s2_process_coordinates <- function(data, polis_data_folder, polis_folder) {
 
   if (nrow(dup_epid) > 0) {
     # Export duplicates
-    tidypolis_io(
-      obj = dup_epid,
-      io = "write",
-      file_path = paste0(
-        polis_data_folder,
-        "/Core_Ready_Files/",
-        "duplicate_AFP_epids_Polis_",
-        min(dup_epid$yronset, na.rm = TRUE),
-        "_",
-        max(dup_epid$yronset, na.rm = TRUE),
-        ".csv"
-      )
-    )
+    invisible(capture.output(
+          tidypolis_io(
+            obj = dup_epid,
+            io = "write",
+            file_path = paste0(
+              polis_data_folder,
+              "/Core_Ready_Files/",
+              "duplicate_AFP_epids_Polis_",
+              min(dup_epid$yronset, na.rm = TRUE),
+              "_",
+              max(dup_epid$yronset, na.rm = TRUE),
+              ".csv"
+            )
+          )
+    ))
 
     # Remove duplicates
     data_deduped <- data_renamed[!duplicated(data_renamed$epid), ]
@@ -6743,14 +6581,18 @@ s2_process_coordinates <- function(data, polis_data_folder, polis_folder) {
   )
 
   if (nrow(afp_noshape) > 0) {
-    tidypolis_io(
-      obj = afp_noshape,
-      io = "write",
-      file_path = paste0(
-        polis_data_folder,
-        "/Core_Ready_Files/AFP_epids_bad_guid.csv"
-      )
-    )
+
+    invisible(capture.output(
+          tidypolis_io(
+            obj = afp_noshape,
+            io = "write",
+            file_path = paste0(
+              polis_data_folder,
+              "/Core_Ready_Files/AFP_epids_bad_guid.csv"
+            )
+          )
+    ))
+
     cli::cli_alert_warning(paste0(
       "Found ", nrow(afp_noshape), " cases with bad GUIDs"
     ))
@@ -6768,15 +6610,19 @@ s2_process_coordinates <- function(data, polis_data_folder, polis_folder) {
                     (polis.latitude == 0 & polis.longitude == 0))
 
   if (nrow(empty_coord_check) > 0) {
-    tidypolis_io(
-      io = "write",
-      file_path = paste0(polis_data_folder,
-                         "/Core_Ready_Files/afp_empty_coords.csv"),
-      obj = empty_coord_check |>
-        dplyr::select(polis.case.id, epid, date.onset,
-                      place.admin.0, polis.latitude,
-                      polis.longitude)
-    )
+
+    invisible(capture.output(
+          tidypolis_io(
+            io = "write",
+            file_path = paste0(polis_data_folder,
+                              "/Core_Ready_Files/afp_empty_coords.csv"),
+            obj = empty_coord_check |>
+              dplyr::select(polis.case.id, epid, date.onset,
+                            place.admin.0, polis.latitude,
+                            polis.longitude)
+          )
+    ))
+
     cli::cli_alert_warning(
       paste0(
         "Found ", nrow(empty_coord_check),
@@ -6788,8 +6634,8 @@ s2_process_coordinates <- function(data, polis_data_folder, polis_folder) {
 
   # Process spatial coordinates using the existing function
   processed_data <- f.pre.stsample.01(
-    data_deduped,
-    shape_data
+    df01 = data_deduped,
+    global.dist.01 = shape_data
   )
 
   cli::cli_process_done()
@@ -6797,6 +6643,177 @@ s2_process_coordinates <- function(data, polis_data_folder, polis_folder) {
   invisible(gc(full = TRUE))
 
   return(processed_data)
+}
+
+#' Compare AFP data with archived version
+#'
+#' @description
+#' Compares the new AFP dataset with the previous version from the archive,
+#' identifying structural differences, new records, and modified records.
+#'
+#' @param data A data frame containing new AFP data
+#' @param polis_data_folder String path to the POLIS data folder
+#' @param latest_archive String name of the most recent archive folder
+#' @param col_afp_raw Names of columns in the original raw AFP data
+#' @param start_year Integer. Start year for filtering (default: 2020)
+#' @param end_year Integer. End year for filtering (default: current year)
+#'
+#' @return A list containing comparison results:
+#'   - metadata_comparison: Structural differences between datasets
+#'   - new_records: Records in new data not in old data
+#'   - removed_records: Records in old data not in new data
+#'   - modified_records: Records that exist in both but were changed
+#'
+#' @details
+#' This function performs a comprehensive comparison by:
+#' 1. Loading the most recent archived AFP dataset
+#' 2. Comparing metadata (variable names, types, values)
+#' 3. Identifying added, removed, and modified records
+#' 4. Generating a detailed report of differences
+#'
+#' @export
+s2_compare_with_archive <- function(data,
+                                    polis_data_folder,
+                                    latest_archive,
+                                    col_afp_raw,
+                                    start_year = 2020,
+                                    end_year = lubridate::year(Sys.Date())) {
+  cli::cli_process_start("Comparing data with last AFP dataset")
+
+  # Prepare data for comparison by standardizing types
+  data_prepared <- data |>
+    dplyr::mutate(
+      polis.latitude = as.character(polis.latitude),
+      polis.longitude = as.character(polis.longitude),
+      doses.total = as.numeric(doses.total)
+    )
+
+  # Find old AFP file in the archive
+  archive_files <- tidypolis_io(
+    io = "list",
+    file_path = paste0(
+      polis_data_folder, "/Core_Ready_Files/Archive/",
+      latest_archive
+    ),
+    full_names = TRUE
+  )
+
+  old_file <- archive_files[grepl("afp_linelist_2020", archive_files)]
+
+  if (length(old_file) == 0) {
+    cli::cli_alert_info("No previous AFP dataset found for comparison")
+    cli::cli_process_done()
+    return(NULL)
+  }
+
+  # Read old data and standardize format for comparison
+  cli::cli_alert_info("Loading archived AFP dataset for comparison")
+  old_data <- tidypolis_io(io = "read", file_path = old_file) |>
+    dplyr::mutate(epid = stringr::str_squish(epid)) |>
+    dplyr::mutate_all(as.character) |>
+    dplyr::mutate(yronset = as.numeric(yronset)) |>
+    dplyr::filter(dplyr::between(yronset, start_year, end_year)) |>
+    dplyr::mutate_all(as.character)
+
+  # Harmonize column selections
+  data_prepared <- data_prepared |>
+    dplyr::ungroup() |>
+    dplyr::select(-c(setdiff(
+      setdiff(colnames(data_prepared), col_afp_raw),
+      colnames(old_data)
+    )))
+
+  # Compare metadata (structure, variables, values)
+  new_table_metadata <- f.summarise.metadata(head(data_prepared, 1000))
+  old_table_metadata <- f.summarise.metadata(head(old_data, 1000))
+  metadata_comparison <- f.compare.metadata(
+    new_table_metadata,
+    old_table_metadata,
+    "AFP"
+  )
+
+  # Compare individual records
+  new_for_comparison <- data_prepared |>
+    dplyr::mutate(epid = stringr::str_squish(epid)) |>
+    dplyr::mutate_all(as.character)
+
+  # Find new records
+  in_new_not_old <- new_for_comparison[
+    !(new_for_comparison$epid %in% old_data$epid),
+  ]
+
+  # Find removed records
+  in_old_not_new <- old_data[
+    !(old_data$epid %in% new_for_comparison$epid),
+  ]
+
+  # Find modified records
+  potential_modifications <- new_for_comparison |>
+    dplyr::filter(epid %in% old_data$epid) |>
+    dplyr::select(-c(setdiff(colnames(new_for_comparison), colnames(old_data))))
+
+  unchanged_records <- intersect(
+    potential_modifications,
+    old_data |> dplyr::select(-c(setdiff(
+      colnames(old_data),
+      colnames(potential_modifications)
+    )))
+  )
+
+  modified_records <- setdiff(potential_modifications, unchanged_records)
+
+  if (nrow(modified_records) > 0) {
+    modified_details <- modified_records |>
+      dplyr::inner_join(
+        old_data |>
+          dplyr::filter(epid %in% modified_records$epid) |>
+          dplyr::select(-c(setdiff(
+            colnames(old_data),
+            colnames(modified_records)
+          ))) |>
+          setdiff(new_for_comparison |>
+                    dplyr::select(-c(setdiff(
+                      colnames(new_for_comparison),
+                      colnames(old_data)
+                    )))),
+        by = "epid"
+      ) |>
+      # Convert wide to long for comparing differences
+      tidyr::pivot_longer(cols = -epid) |>
+      dplyr::mutate(source = dplyr::if_else(
+        stringr::str_sub(name, -2) == ".x", "new", "old"
+      )) |>
+      dplyr::mutate(name = stringr::str_sub(name, 1, -3)) |>
+      # Convert back to wide for display
+      tidyr::pivot_wider(names_from = source, values_from = value) |>
+      dplyr::filter(new != old & !name %in% c("lat", "lon"))
+  } else {
+    modified_details <- data.frame()
+  }
+
+  # Log summary of changes
+  update_polis_log(
+    .event = paste0(
+      "AFP New Records: ", nrow(in_new_not_old), "; ",
+      "AFP Removed Records: ", nrow(in_old_not_new), "; ",
+      "AFP Modified Records: ",
+      length(unique(modified_records$epid))
+    ),
+    .event_type = "INFO"
+  )
+
+  cli::cli_process_done()
+
+  invisible(gc(full = FALSE))
+
+  # Return comparison results
+  return(list(
+    metadata_comparison = metadata_comparison,
+    new_records = in_new_not_old,
+    removed_records = in_old_not_new,
+    modified_records = modified_records,
+    modified_details = modified_details
+  ))
 }
 
 #" Create key AFP variables
