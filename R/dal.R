@@ -1,11 +1,11 @@
-# DATA ACCESS LAYER
+#DATA ACCESS LAYER
 
 #' Tiypolis input and output
 #'
 #' @description
 #' Manages read/write/list/create/delete functions for tidypolis
 #'
-#' @import sirfunctions dplyr AzureStor readr stringr cli arrow
+#' @import sirfunctions dplyr AzureStor readr stringr cli
 #' @param obj `str` Object to be loaded into EDAV.
 #' @param io `str` read/write/list/exists/create/delete
 #' @param file_path `str` Absolute path of file.
@@ -116,8 +116,8 @@ tidypolis_io <- function(
         return(x)
       }
     } else {
-      if (!grepl("\\.rds$|\\.rda$|\\.csv$|\\.parquet$", file_path)) {
-        stop("At the moment only 'rds' 'rda' 'csv' and 'parquet' are supported for reading.")
+      if (!grepl("\\.rds$|\\.rda$|\\.csv$", file_path)) {
+        stop("At the moment only 'rds' 'rda' and 'csv' are supported for reading.")
       }
 
       if (grepl("\\.rds$", file_path)) {
@@ -130,10 +130,6 @@ tidypolis_io <- function(
 
       if (grepl("\\.csv$", file_path)) {
         return(readr::read_csv(file_path))
-      }
-
-      if (grepl("\\.parquet$", file_path)) {
-        return(arrow::read_parquet(file_path))
       }
     }
   }
@@ -151,8 +147,8 @@ tidypolis_io <- function(
         azcontainer = azcontainer
       )
     } else {
-      if (!grepl("\\.rds$|\\.rda$|\\.csv$|\\.parquet$", file_path)) {
-        stop("At the moment only 'rds' 'rda' 'csv' and 'parquet' are supported for reading.")
+      if (!grepl("\\.rds$|\\.rda$|\\.csv$", file_path)) {
+        stop("At the moment only 'rds' 'rda' and 'csv' are supported for reading.")
       }
 
       if (grepl("\\.rds$", file_path)) {
@@ -165,10 +161,6 @@ tidypolis_io <- function(
 
       if (grepl("\\.csv$", file_path)) {
         readr::write_csv(x = obj, file = file_path)
-      }
-
-      if (grepl("\\.parquet$", file_path)) {
-        arrow::write_parquet(x = obj, sink = file_path)
       }
     }
   }
