@@ -580,30 +580,57 @@ call_urls <- function(urls) {
         .packages = c("tidypolis", "tibble", "jsonlite", "httr")
       ), {
 
-
-        #capture API calls
-        capture_calls <- Sys.getenv("API_DEBUG") |> as.logical()
-
-        if(capture_calls){
-          update_polis_api_call_log(.call = urls[x], .event = "MADE CALL")
-        }
-
         # signal a progression update
         p()
         # jitter the parallel calls to not overwhelm the server
         #Sys.sleep(1 + stats::rpois(1, 10)/100)
-        call_single_url(urls[x])
+        log <- dplyr::tibble(time = Sys.time(),
+                             call = urls[x],
+                             event = "MADE CALL")
 
+        tryCatch(
+          {
+            response <- call_single_url(urls[x])
+            log <- log |>
+              dplyr::add_row(time = Sys.time(),
+                             call = urls[x],
+                             event = "FINISHED CALL")
 
-        if(capture_calls){
-          update_polis_api_call_log(.call = urls[x], .event = "FINISHED CALL")
-        }
+            return <- dplyr::tibble(response = list(response),
+                                    log = list(log))
+          },
+          error = \(e) {
+            response <- NULL
+            log <- log |>
+              dplyr::add_row(time = Sys.time(),
+                             call = urls[x],
+                             event = "CALL FAILED")
+          }
+        )
+
+        dplyr::tibble(response = list(response),
+                      log = list(log))
+
       })
   })
 
-  y <- dplyr::bind_rows(y)
+  resp <- dplyr::bind_rows(y) |>
+    dplyr::pull(response) |>
+    dplyr::bind_rows()
+
+  log <- dplyr::bind_rows(y) |>
+    dplyr::pull(log) |>
+    dplyr::bind_rows()
+
+  if (as.logical(Sys.getenv("API_DEBUG"))) {
+    api_log <- tidypolis_io(io = "read", file_path = Sys.getenv("POLIS_API_LOG_FILE"))
+    api_log <- dplyr::bind_rows(api_log, log)
+    tidypolis_io(api_log,
+                 io = "write", file_path = Sys.getenv("POLIS_API_LOG_FILE"))
+  }
+
   gc()
-  return(y)
+  return(resp)
 
 }
 

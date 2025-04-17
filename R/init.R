@@ -250,7 +250,7 @@ init_tidypolis <- function(
   if(!log_exists){
     cli::cli_alert_success("No API call log located, creating log file.")
     tibble::tibble(
-      time = .time,
+      time = Sys.time(),
       call = "INIT",
       event = "INIT"
     ) |>
