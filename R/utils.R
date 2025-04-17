@@ -5550,7 +5550,7 @@ s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
   )
 
   # Step 2j: Create key AFP variables
-  afp_final <- s2_create_afp_variables(afp_processed)
+  afp_final <- s2_create_afp_variables(data = afp_processed)
 
   # Step 2k: Compare archives and generate outputs
   s2_export_afp_outputs(
@@ -6645,183 +6645,12 @@ s2_process_coordinates <- function(data, polis_data_folder, polis_folder) {
   return(processed_data)
 }
 
-#' Compare AFP data with archived version
-#'
-#' @description
-#' Compares the new AFP dataset with the previous version from the archive,
-#' identifying structural differences, new records, and modified records.
-#'
-#' @param data A data frame containing new AFP data
-#' @param polis_data_folder String path to the POLIS data folder
-#' @param latest_archive String name of the most recent archive folder
-#' @param col_afp_raw Names of columns in the original raw AFP data
-#' @param start_year Integer. Start year for filtering (default: 2020)
-#' @param end_year Integer. End year for filtering (default: current year)
-#'
-#' @return A list containing comparison results:
-#'   - metadata_comparison: Structural differences between datasets
-#'   - new_records: Records in new data not in old data
-#'   - removed_records: Records in old data not in new data
-#'   - modified_records: Records that exist in both but were changed
-#'
-#' @details
-#' This function performs a comprehensive comparison by:
-#' 1. Loading the most recent archived AFP dataset
-#' 2. Comparing metadata (variable names, types, values)
-#' 3. Identifying added, removed, and modified records
-#' 4. Generating a detailed report of differences
-#'
-#' @export
-s2_compare_with_archive <- function(data,
-                                    polis_data_folder,
-                                    latest_archive,
-                                    col_afp_raw,
-                                    start_year = 2020,
-                                    end_year = lubridate::year(Sys.Date())) {
-  cli::cli_process_start("Comparing data with last AFP dataset")
-
-  # Prepare data for comparison by standardizing types
-  data_prepared <- data |>
-    dplyr::mutate(
-      polis.latitude = as.character(polis.latitude),
-      polis.longitude = as.character(polis.longitude),
-      doses.total = as.numeric(doses.total)
-    )
-
-  # Find old AFP file in the archive
-  archive_files <- tidypolis_io(
-    io = "list",
-    file_path = paste0(
-      polis_data_folder, "/Core_Ready_Files/Archive/",
-      latest_archive
-    ),
-    full_names = TRUE
-  )
-
-  old_file <- archive_files[grepl("afp_linelist_2020", archive_files)]
-
-  if (length(old_file) == 0) {
-    cli::cli_alert_info("No previous AFP dataset found for comparison")
-    cli::cli_process_done()
-    return(NULL)
-  }
-
-  # Read old data and standardize format for comparison
-  cli::cli_alert_info("Loading archived AFP dataset for comparison")
-  old_data <- tidypolis_io(io = "read", file_path = old_file) |>
-    dplyr::mutate(epid = stringr::str_squish(epid)) |>
-    dplyr::mutate_all(as.character) |>
-    dplyr::mutate(yronset = as.numeric(yronset)) |>
-    dplyr::filter(dplyr::between(yronset, start_year, end_year)) |>
-    dplyr::mutate_all(as.character)
-
-  # Harmonize column selections
-  data_prepared <- data_prepared |>
-    dplyr::ungroup() |>
-    dplyr::select(-c(setdiff(
-      setdiff(colnames(data_prepared), col_afp_raw),
-      colnames(old_data)
-    )))
-
-  # Compare metadata (structure, variables, values)
-  new_table_metadata <- f.summarise.metadata(head(data_prepared, 1000))
-  old_table_metadata <- f.summarise.metadata(head(old_data, 1000))
-  metadata_comparison <- f.compare.metadata(
-    new_table_metadata,
-    old_table_metadata,
-    "AFP"
-  )
-
-  # Compare individual records
-  new_for_comparison <- data_prepared |>
-    dplyr::mutate(epid = stringr::str_squish(epid)) |>
-    dplyr::mutate_all(as.character)
-
-  # Find new records
-  in_new_not_old <- new_for_comparison[
-    !(new_for_comparison$epid %in% old_data$epid),
-  ]
-
-  # Find removed records
-  in_old_not_new <- old_data[
-    !(old_data$epid %in% new_for_comparison$epid),
-  ]
-
-  # Find modified records
-  potential_modifications <- new_for_comparison |>
-    dplyr::filter(epid %in% old_data$epid) |>
-    dplyr::select(-c(setdiff(colnames(new_for_comparison), colnames(old_data))))
-
-  unchanged_records <- intersect(
-    potential_modifications,
-    old_data |> dplyr::select(-c(setdiff(
-      colnames(old_data),
-      colnames(potential_modifications)
-    )))
-  )
-
-  modified_records <- setdiff(potential_modifications, unchanged_records)
-
-  if (nrow(modified_records) > 0) {
-    modified_details <- modified_records |>
-      dplyr::inner_join(
-        old_data |>
-          dplyr::filter(epid %in% modified_records$epid) |>
-          dplyr::select(-c(setdiff(
-            colnames(old_data),
-            colnames(modified_records)
-          ))) |>
-          setdiff(new_for_comparison |>
-                    dplyr::select(-c(setdiff(
-                      colnames(new_for_comparison),
-                      colnames(old_data)
-                    )))),
-        by = "epid"
-      ) |>
-      # Convert wide to long for comparing differences
-      tidyr::pivot_longer(cols = -epid) |>
-      dplyr::mutate(source = dplyr::if_else(
-        stringr::str_sub(name, -2) == ".x", "new", "old"
-      )) |>
-      dplyr::mutate(name = stringr::str_sub(name, 1, -3)) |>
-      # Convert back to wide for display
-      tidyr::pivot_wider(names_from = source, values_from = value) |>
-      dplyr::filter(new != old & !name %in% c("lat", "lon"))
-  } else {
-    modified_details <- data.frame()
-  }
-
-  # Log summary of changes
-  update_polis_log(
-    .event = paste0(
-      "AFP New Records: ", nrow(in_new_not_old), "; ",
-      "AFP Removed Records: ", nrow(in_old_not_new), "; ",
-      "AFP Modified Records: ",
-      length(unique(modified_records$epid))
-    ),
-    .event_type = "INFO"
-  )
-
-  cli::cli_process_done()
-
-  invisible(gc(full = FALSE))
-
-  # Return comparison results
-  return(list(
-    metadata_comparison = metadata_comparison,
-    new_records = in_new_not_old,
-    removed_records = in_old_not_new,
-    modified_records = modified_records,
-    modified_details = modified_details
-  ))
-}
-
 #" Create key AFP variables
 #"
 #' Creates and processes key variables used in AFP surveillance analysis, including
 #' data quality flags, stool adequacy measures, and follow-up indicators.
 #'
-#' @param data A data frame containing AFP data with spatial coordinates
+#' @param data `tibble` A data frame containing AFP data with spatial coordinates
 #'
 #' @return A data frame with additional AFP analysis variables
 #' @export
@@ -6996,6 +6825,178 @@ s2_create_afp_variables <- function(data) {
 
   return(afp_data)
 }
+
+#' Compare AFP data with archived version
+#'
+#' @description
+#' Compares the new AFP dataset with the previous version from the archive,
+#' identifying structural differences, new records, and modified records.
+#'
+#' @param data A data frame containing new AFP data
+#' @param polis_data_folder String path to the POLIS data folder
+#' @param latest_archive String name of the most recent archive folder
+#' @param col_afp_raw Names of columns in the original raw AFP data
+#' @param start_year Integer. Start year for filtering (default: 2020)
+#' @param end_year Integer. End year for filtering (default: current year)
+#'
+#' @return A list containing comparison results:
+#'   - metadata_comparison: Structural differences between datasets
+#'   - new_records: Records in new data not in old data
+#'   - removed_records: Records in old data not in new data
+#'   - modified_records: Records that exist in both but were changed
+#'
+#' @details
+#' This function performs a comprehensive comparison by:
+#' 1. Loading the most recent archived AFP dataset
+#' 2. Comparing metadata (variable names, types, values)
+#' 3. Identifying added, removed, and modified records
+#' 4. Generating a detailed report of differences
+#'
+#' @export
+s2_compare_with_archive <- function(data,
+                                    polis_data_folder,
+                                    latest_archive,
+                                    col_afp_raw,
+                                    start_year = 2020,
+                                    end_year = lubridate::year(Sys.Date())) {
+  cli::cli_process_start("Comparing data with last AFP dataset")
+
+  # Prepare data for comparison by standardizing types
+  data_prepared <- data |>
+    dplyr::mutate(
+      polis.latitude = as.character(polis.latitude),
+      polis.longitude = as.character(polis.longitude),
+      doses.total = as.numeric(doses.total)
+    )
+
+  # Find old AFP file in the archive
+  archive_files <- tidypolis_io(
+    io = "list",
+    file_path = paste0(
+      polis_data_folder, "/Core_Ready_Files/Archive/",
+      latest_archive
+    ),
+    full_names = TRUE
+  )
+
+  old_file <- archive_files[grepl("afp_linelist_2020", archive_files)]
+
+  if (length(old_file) == 0) {
+    cli::cli_alert_info("No previous AFP dataset found for comparison")
+    cli::cli_process_done()
+    return(NULL)
+  }
+
+  # Read old data and standardize format for comparison
+  cli::cli_alert_info("Loading archived AFP dataset for comparison")
+  old_data <- tidypolis_io(io = "read", file_path = old_file) |>
+    dplyr::mutate(epid = stringr::str_squish(epid)) |>
+    dplyr::mutate_all(as.character) |>
+    dplyr::mutate(yronset = as.numeric(yronset)) |>
+    dplyr::filter(dplyr::between(yronset, start_year, end_year)) |>
+    dplyr::mutate_all(as.character)
+
+  # Harmonize column selections
+  data_prepared <- data_prepared |>
+    dplyr::ungroup() |>
+    dplyr::select(-c(setdiff(
+      setdiff(colnames(data_prepared), col_afp_raw),
+      colnames(old_data)
+    )))
+
+  # Compare metadata (structure, variables, values)
+  new_table_metadata <- f.summarise.metadata(head(data_prepared, 1000))
+  old_table_metadata <- f.summarise.metadata(head(old_data, 1000))
+  metadata_comparison <- f.compare.metadata(
+    new_table_metadata,
+    old_table_metadata,
+    "AFP"
+  )
+
+  # Compare individual records
+  new_for_comparison <- data_prepared |>
+    dplyr::mutate(epid = stringr::str_squish(epid)) |>
+    dplyr::mutate_all(as.character)
+
+  # Find new records
+  in_new_not_old <- new_for_comparison[
+    !(new_for_comparison$epid %in% old_data$epid),
+  ]
+
+  # Find removed records
+  in_old_not_new <- old_data[
+    !(old_data$epid %in% new_for_comparison$epid),
+  ]
+
+  # Find modified records
+  potential_modifications <- new_for_comparison |>
+    dplyr::filter(epid %in% old_data$epid) |>
+    dplyr::select(-c(setdiff(colnames(new_for_comparison), colnames(old_data))))
+
+  unchanged_records <- intersect(
+    potential_modifications,
+    old_data |> dplyr::select(-c(setdiff(
+      colnames(old_data),
+      colnames(potential_modifications)
+    )))
+  )
+
+  modified_records <- setdiff(potential_modifications, unchanged_records)
+
+  if (nrow(modified_records) > 0) {
+    modified_details <- modified_records |>
+      dplyr::inner_join(
+        old_data |>
+          dplyr::filter(epid %in% modified_records$epid) |>
+          dplyr::select(-c(setdiff(
+            colnames(old_data),
+            colnames(modified_records)
+          ))) |>
+          setdiff(new_for_comparison |>
+                    dplyr::select(-c(setdiff(
+                      colnames(new_for_comparison),
+                      colnames(old_data)
+                    )))),
+        by = "epid"
+      ) |>
+      # Convert wide to long for comparing differences
+      tidyr::pivot_longer(cols = -epid) |>
+      dplyr::mutate(source = dplyr::if_else(
+        stringr::str_sub(name, -2) == ".x", "new", "old"
+      )) |>
+      dplyr::mutate(name = stringr::str_sub(name, 1, -3)) |>
+      # Convert back to wide for display
+      tidyr::pivot_wider(names_from = source, values_from = value) |>
+      dplyr::filter(new != old & !name %in% c("lat", "lon"))
+  } else {
+    modified_details <- data.frame()
+  }
+
+  # Log summary of changes
+  update_polis_log(
+    .event = paste0(
+      "AFP New Records: ", nrow(in_new_not_old), "; ",
+      "AFP Removed Records: ", nrow(in_old_not_new), "; ",
+      "AFP Modified Records: ",
+      length(unique(modified_records$epid))
+    ),
+    .event_type = "INFO"
+  )
+
+  cli::cli_process_done()
+
+  invisible(gc(full = FALSE))
+
+  # Return comparison results
+  return(list(
+    metadata_comparison = metadata_comparison,
+    new_records = in_new_not_old,
+    removed_records = in_old_not_new,
+    modified_records = modified_records,
+    modified_details = modified_details
+  ))
+}
+
 #' Export AFP data and related outputs
 #'
 #' Creates and exports various AFP data files including the main AFP linelist,
