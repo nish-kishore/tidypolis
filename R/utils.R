@@ -5454,10 +5454,10 @@ s1_export_final_core_ready_files <- function(polis_data_folder, ts, timestamp,
 #' validation steps, including checking for duplicates, standardizing dates,
 #' classifying cases, and processing coordinates.
 #'
-#' @param polis_data_folder Character. Path to the POLIS data folder containing
+#' @param polis_data_folder `str` Path to the POLIS data folder containing
 #'   Core_Ready_Files.
-#' @param polis_folder Character. Path to the main POLIS folder.
-#' @param long.global.dist.01 Data frame. Global district lookup table for GUID
+#' @param polis_folder `str` Path to the main POLIS folder.
+#' @param long.global.dist.01 `sf` Global district lookup table for GUID
 #'   validation.
 #'
 #' @export
@@ -5465,7 +5465,8 @@ s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
                                       long.global.dist.01) {
 
   # Step 2a: Read in "old" data file (System to find "Old" data file)
-  latest_folder_in_archive <- find_latest_archive(polis_data_folder)
+  latest_folder_in_archive <- s2_find_latest_archive(
+    polis_data_folder = polis_data_folder)
 
   # list archive files
   x <- tidypolis_io(
@@ -5539,10 +5540,11 @@ s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
 #' folder in the Core Ready Files directory. If no archive is found, it returns
 #' the current timestamp based on prespecfied time format.
 #'
-#' @param polis_data_folder Character string specifying the path to the main
-#'   data folder containing Core Ready Files
+#' @param polis_data_folder `str` specifying the path to the main
+#' data folder containing Core Ready Files
+#' @param timestamp `str` Time stamp
 #'
-#' @return Character string containing either the name of the most recent
+#' @return `str` containing either the name of the most recent
 #'   archive folder or the current timestamp if no archives exist
 #'
 #' @details
@@ -5557,7 +5559,7 @@ s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
 #' latest_archive <- find_latest_archive("path/to/polis/data")
 #' }
 #' @keywords internal
-find_latest_archive <- function(polis_data_folder) {
+s2_find_latest_archive <- function(polis_data_folder, timestamp) {
   latest_folder_in_archive <- tidypolis_io(
     io = "list",
     file_path = paste0(polis_data_folder, "/Core_Ready_Files/Archive")
@@ -5575,15 +5577,6 @@ find_latest_archive <- function(polis_data_folder) {
   } else {
     cli::cli_alert_info(
       "No previous archive identified, will not perform any comparisons"
-    )
-
-    # Create timestamp
-    ts <- Sys.time()
-    timestamp <- paste0(
-      lubridate::date(ts), "_",
-      lubridate::hour(ts), "-",
-      lubridate::minute(ts), "-",
-      round(lubridate::second(ts), 0)
     )
 
     latest_folder_in_archive <- timestamp
