@@ -7,9 +7,9 @@
 init_tidypolis(polis_folder = "POLIS", edav = F)
 }
 \arguments{
-\item{polis_folder}{`str` Location of folder where to store all information from POLIS.}
+\item{polis_folder}{\code{str} Location of folder where to store all information from POLIS.}
 
-\item{edav}{`bool` Should the system use EDAV as it's cache; default `FALSE`.}
+\item{edav}{\code{bool} Should the system use EDAV as it's cache; default \code{FALSE}.}
 }
 \value{
 Messages on process.
