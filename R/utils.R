@@ -5486,7 +5486,8 @@ s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
   )
 
   # read and process AFP data
-  afp_raw_new <- read_afp_data(y[grepl("Human", y)])
+  afp_raw_new <- s2_read_afp_data(file_path = y[grepl("Human", y)])
+  invisible(gc())
 
   # Step 2b: Check for duplicate EPIDs
   has_duplicates <- s2_check_duplicated_epids(afp_raw_new, polis_data_folder)
@@ -5595,18 +5596,20 @@ s2_find_latest_archive <- function(polis_data_folder, timestamp) {
 #'      3. Converting empty strings to NA
 #'      4. Converting column names to lowercase
 #'
-#' @param file_path Character string specifying path to AFP data file
-#' @return A data frame containing processed AFP data
+#' @param file_path `str` specifying path to AFP data file
+#' @return `tibble` containing processed AFP data
 #' @keywords internal
-read_afp_data <- function(file_path) {
+s2_read_afp_data <- function(file_path) {
   cli::cli_process_start("Loading human dataset",
                          msg_done = "Loaded human dataset"
   )
 
-  afp_raw <- tidypolis_io(io = "read", file_path = file_path) |>
-    dplyr::mutate_all(as.character) |>
-    dplyr::rename_all(function(x) gsub(" ", ".", x)) |>
-    dplyr::mutate_all(list(~ dplyr::na_if(., "")))
+  invisible(capture.output(
+    afp_raw <- tidypolis_io(io = "read", file_path = file_path) |>
+      dplyr::mutate_all(as.character) |>
+      dplyr::rename_all(function(x) gsub(" ", ".", x)) |>
+      dplyr::mutate_all(list(~ dplyr::na_if(., "")))
+  ))
 
   names(afp_raw) <- stringr::str_to_lower(names(afp_raw))
   cli::cli_process_done()
