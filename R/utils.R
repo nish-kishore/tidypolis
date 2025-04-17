@@ -5554,10 +5554,10 @@ s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
 
   # Step 2k: Compare archives and generate outputs
   s2_export_afp_outputs(
-    afp_final,
-    latest_folder_in_archive,
-    polis_data_folder,
-    colnames(afp_raw_new)
+    data = afp_final,
+    latest_archive = latest_folder_in_archive,
+    polis_data_folder = polis_data_folder,
+    col_afp_raw = colnames(afp_raw_new)
   )
 }
 
@@ -6826,6 +6826,251 @@ s2_create_afp_variables <- function(data) {
   return(afp_data)
 }
 
+#' Export AFP data and related outputs
+#'
+#' Creates and exports various AFP data files including the main AFP linelist,
+#' spatial data files, and comparison with previous datasets.
+#'
+#' @param data A data frame containing processed AFP data
+#' @param latest_archive String containing the name of the latest archive folder
+#' @param polis_data_folder String path to the POLIS data folder
+#' @param col_afp_raw Names of original columns for comparison
+#'
+#' @return Invisibly returns NULL
+#' @export
+s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
+                                  col_afp_raw) {
+
+  cli::cli_process_start("Exporting AFP outputs",
+                         msg_done = "Exported AFP outputs")
+
+  # Separate AFP from other surveillance types
+  afp_data <- data |>
+    dplyr::filter(surveillancetypename == "AFP") |>
+    dplyr::distinct()
+
+  not_afp <- data |>
+    dplyr::filter(surveillancetypename != "AFP")
+
+  unknown_afp <- data |>
+    dplyr::filter(is.na(surveillancetypename))
+
+  # Export missing GUIDs summary
+  afp_missing_count <- afp_data |>
+    dplyr::filter(is.na(admin1guid) | is.na(admin2guid)) |>
+    dplyr::group_by(place.admin.0, yronset) |>
+    dplyr::summarise(case.miss.guid = dplyr::n(), .groups = "drop") |>
+    tidyr::pivot_wider(names_from = yronset, values_from = case.miss.guid)
+
+  afp_missing_epids <- afp_data |>
+    dplyr::filter(is.na(admin1guid) | is.na(admin2guid)) |>
+    dplyr::select(
+      polis.case.id, epid, place.admin.0, place.admin.1, place.admin.2,
+      date.onset, yronset, adm0guid, adm1guid, admin2guid
+    )
+
+  # Export missing guid files
+  invisible(capture.output(
+      tidypolis_io(
+        obj = afp_missing_count,
+        io = "write",
+        file_path = paste0(
+          polis_data_folder, "/Core_Ready_Files/afp_missing_guid_count_",
+          min(data$dateonset, na.rm = TRUE), "_",
+          max(data$dateonset, na.rm = TRUE), ".csv"
+        )
+      )
+  ))
+
+  invisible(capture.output(
+      tidypolis_io(
+        obj = afp_missing_epids,
+        io = "write",
+        file_path = paste0(
+          polis_data_folder, "/Core_Ready_Files/afp_missing_guid_epids_",
+          min(data$dateonset, na.rm = TRUE), "_",
+          max(data$dateonset, na.rm = TRUE), ".csv"
+        )
+      )
+  ))
+
+  # Prepare data for export
+  afp_data <- afp_data |>
+    dplyr::mutate(
+      polis.latitude = as.character(polis.latitude),
+      polis.longitude = as.character(polis.longitude),
+      doses.total = as.numeric(doses.total)
+    )
+
+  # Compare with archive using the dedicated comparison function
+  comparison_results <- s2_compare_with_archive(
+    data = afp_data,
+    polis_data_folder = polis_data_folder,
+    latest_archive = latest_archive,
+    col_afp_raw = col_afp_raw
+  )
+
+  # Export AFP linelist
+  invisible(capture.output(
+      tidypolis_io(
+        obj = afp_data,
+        io = "write",
+        file_path = paste0(
+          polis_data_folder, "/Core_Ready_Files/afp_linelist_",
+          min(afp_data$dateonset, na.rm = TRUE), "_",
+          max(afp_data$dateonset, na.rm = TRUE), ".rds"
+        )
+      )
+  ))
+
+
+  # Export spatial data
+  afp_latlong <- data |>
+    dplyr::ungroup() |>
+    dplyr::select(
+      epid, dateonset, place.admin.0, place.admin.1, place.admin.2,
+      adm0guid, adm1guid, adm2guid, cdc.classification.all, lat, lon
+    )
+
+  invisible(capture.output(
+      tidypolis_io(
+        obj = afp_latlong,
+        io = "write",
+        file_path = paste0(
+          polis_data_folder, "/Core_Ready_Files/afp_lat_long_",
+          min(afp_latlong$dateonset, na.rm = TRUE), "_",
+          max(afp_latlong$dateonset, na.rm = TRUE), ".csv"
+        )
+      )
+  ))
+
+
+  # Create combined AFP dataset from multiple files
+  cli::cli_process_start("Generating combined AFP dataset",
+                         msg_done = "Generated combined AFP dataset")
+
+  # Find all AFP files in Core_Ready_Files and core_files_to_combine
+  afp_files_main <- dplyr::tibble("name" = tidypolis_io(
+    io = "list",
+    file_path = paste0(polis_data_folder, "/Core_Ready_Files"),
+    full_names = TRUE
+  )) |>
+    dplyr::filter(grepl("^.*(afp_linelist).*(.rds)$", name)) |>
+    dplyr::pull(name)
+
+  afp_files_combine <- dplyr::tibble("name" = tidypolis_io(
+    io = "list",
+    file_path = paste0(polis_data_folder, "/core_files_to_combine"),
+    full_names = TRUE
+  )) |>
+    dplyr::filter(grepl("^.*(afp_linelist).*(.rds)$", name)) |>
+    dplyr::pull(name)
+
+  # Combine AFP files
+  if (length(afp_files_combine) > 0) {
+    afp_to_combine <- purrr::map_df(afp_files_combine, ~ tidypolis_io(
+      io = "read",
+      file_path = .x
+    )) |>
+      dplyr::mutate(
+        stool1tostool2 = as.numeric(stool1tostool2),
+        datenotificationtohq = lubridate::parse_date_time(
+          datenotificationtohq,
+          c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S")
+        )
+      )
+
+    afp_new <- purrr::map_df(
+      afp_files_main,
+      ~ tidypolis_io(io = "read", file_path = .x)
+    )
+
+    afp_combined <- dplyr::bind_rows(afp_new, afp_to_combine)
+
+    # Export combined AFP dataset
+    invisible(capture.output(
+      tidypolis_io(
+        obj = afp_combined,
+        io = "write",
+        file_path = paste0(
+          polis_data_folder,
+          "/Core_Ready_Files/",
+          "afp_linelist_",
+          min(afp_combined$dateonset, na.rm = TRUE),
+          "_",
+          max(afp_combined$dateonset, na.rm = TRUE),
+          ".rds"
+        )
+      )
+    ))
+
+
+    # Create light AFP dataset for WHO (filtered to recent years)
+    afp_light <- afp_combined |>
+      dplyr::filter(yronset >= 2019)
+    
+    invisible(capture.output(
+      tidypolis_io(
+        obj = afp_light,
+        io = "write",
+        file_path = paste0(
+          polis_data_folder,
+          "/Core_Ready_Files/",
+          "afp_linelist_light_",
+          min(afp_light$dateonset, na.rm = TRUE),
+          "_",
+          max(afp_light$dateonset, na.rm = TRUE),
+          ".rds"
+        )
+      )
+    ))
+
+  }
+
+  cli::cli_process_done()
+
+  # Process non-AFP data if needed
+  if (nrow(not_afp) > 0 || nrow(unknown_afp) > 0) {
+    cli::cli_process_start("Processing non-AFP surveillance data",
+                           msg_done = "Processed non-AFP surveillance data")
+
+    other_surv <- dplyr::bind_rows(not_afp, unknown_afp) |>
+      dplyr::mutate(
+        polis.latitude = as.character(polis.latitude),
+        polis.longitude = as.character(polis.longitude),
+        doses.total = as.numeric(doses.total)
+      )
+
+    # Export non-AFP data
+    invisible(capture.output(
+      tidypolis_io(
+        obj = other_surv,
+        io = "write",
+        file_path = paste0(
+          polis_data_folder,
+          "/Core_Ready_Files/other_surveillance_type_linelist_",
+          min(other_surv$yronset, na.rm = TRUE), "_",
+          max(other_surv$yronset, na.rm = TRUE), ".rds"
+        )
+      )
+    ))
+
+
+    cli::cli_process_done()
+  }
+
+  update_polis_log(
+    .event = "AFP and Other Surveillance Linelists Finished",
+    .event_type = "PROCESS"
+  )
+
+  cli::cli_process_done()
+
+  gc(full = TRUE)
+
+  invisible(NULL)
+}
+
 #' Compare AFP data with archived version
 #'
 #' @description
@@ -6997,228 +7242,3 @@ s2_compare_with_archive <- function(data,
   ))
 }
 
-#' Export AFP data and related outputs
-#'
-#' Creates and exports various AFP data files including the main AFP linelist,
-#' spatial data files, and comparison with previous datasets.
-#'
-#' @param data A data frame containing processed AFP data
-#' @param latest_archive String containing the name of the latest archive folder
-#' @param polis_data_folder String path to the POLIS data folder
-#' @param col_afp_raw Names of original columns for comparison
-#'
-#' @return Invisibly returns NULL
-#' @export
-s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
-                                  col_afp_raw) {
-
-  cli::cli_process_start("Exporting AFP outputs",
-                         msg_done = "Exported AFP outputs")
-
-  # Separate AFP from other surveillance types
-  afp_data <- data |>
-    dplyr::filter(surveillancetypename == "AFP") |>
-    dplyr::distinct()
-
-  not_afp <- data |>
-    dplyr::filter(surveillancetypename != "AFP")
-
-  unknown_afp <- data |>
-    dplyr::filter(is.na(surveillancetypename))
-
-  # Export missing GUIDs summary
-  afp_missing_count <- afp_data |>
-    dplyr::filter(is.na(admin1guid) | is.na(admin2guid)) |>
-    dplyr::group_by(place.admin.0, yronset) |>
-    dplyr::summarise(case.miss.guid = dplyr::n(), .groups = "drop") |>
-    tidyr::pivot_wider(names_from = yronset, values_from = case.miss.guid)
-
-  afp_missing_epids <- afp_data |>
-    dplyr::filter(is.na(admin1guid) | is.na(admin2guid)) |>
-    dplyr::select(
-      polis.case.id, epid, place.admin.0, place.admin.1, place.admin.2,
-      date.onset, yronset, adm0guid, adm1guid, admin2guid
-    )
-
-  # Export missing guid files
-  tidypolis_io(
-    obj = afp_missing_count,
-    io = "write",
-    file_path = paste0(
-      polis_data_folder, "/Core_Ready_Files/afp_missing_guid_count_",
-      min(data$dateonset, na.rm = TRUE), "_",
-      max(data$dateonset, na.rm = TRUE), ".csv"
-    )
-  )
-
-  tidypolis_io(
-    obj = afp_missing_epids,
-    io = "write",
-    file_path = paste0(
-      polis_data_folder, "/Core_Ready_Files/afp_missing_guid_epids_",
-      min(data$dateonset, na.rm = TRUE), "_",
-      max(data$dateonset, na.rm = TRUE), ".csv"
-    )
-  )
-
-  # Prepare data for export
-  afp_data <- afp_data |>
-    dplyr::mutate(
-      polis.latitude = as.character(polis.latitude),
-      polis.longitude = as.character(polis.longitude),
-      doses.total = as.numeric(doses.total)
-    )
-
-  # Compare with archive using the dedicated comparison function
-  comparison_results <- s2_compare_with_archive(
-    data = afp_data,
-    polis_data_folder = polis_data_folder,
-    latest_archive = latest_archive,
-    col_afp_raw = col_afp_raw
-  )
-
-  # Export AFP linelist
-  tidypolis_io(
-    obj = afp_data,
-    io = "write",
-    file_path = paste0(
-      polis_data_folder, "/Core_Ready_Files/afp_linelist_",
-      min(afp_data$dateonset, na.rm = TRUE), "_",
-      max(afp_data$dateonset, na.rm = TRUE), ".rds"
-    )
-  )
-
-  # Export spatial data
-  afp_latlong <- data |>
-    dplyr::ungroup() |>
-    dplyr::select(
-      epid, dateonset, place.admin.0, place.admin.1, place.admin.2,
-      adm0guid, adm1guid, adm2guid, cdc.classification.all, lat, lon
-    )
-
-  tidypolis_io(
-    obj = afp_latlong,
-    io = "write",
-    file_path = paste0(
-      polis_data_folder, "/Core_Ready_Files/afp_lat_long_",
-      min(afp_latlong$dateonset, na.rm = TRUE), "_",
-      max(afp_latlong$dateonset, na.rm = TRUE), ".csv"
-    )
-  )
-
-  # Create combined AFP dataset from multiple files
-  cli::cli_process_start("Generating combined AFP dataset",
-                         msg_done = "Generated combined AFP dataset")
-
-  # Find all AFP files in Core_Ready_Files and core_files_to_combine
-  afp_files_main <- dplyr::tibble("name" = tidypolis_io(
-    io = "list",
-    file_path = paste0(polis_data_folder, "/Core_Ready_Files"),
-    full_names = TRUE
-  )) |>
-    dplyr::filter(grepl("^.*(afp_linelist).*(.rds)$", name)) |>
-    dplyr::pull(name)
-
-  afp_files_combine <- dplyr::tibble("name" = tidypolis_io(
-    io = "list",
-    file_path = paste0(polis_data_folder, "/core_files_to_combine"),
-    full_names = TRUE
-  )) |>
-    dplyr::filter(grepl("^.*(afp_linelist).*(.rds)$", name)) |>
-    dplyr::pull(name)
-
-  # Combine AFP files
-  if (length(afp_files_combine) > 0) {
-    afp_to_combine <- purrr::map_df(afp_files_combine, ~ tidypolis_io(
-      io = "read",
-      file_path = .x
-    )) |>
-      dplyr::mutate(
-        stool1tostool2 = as.numeric(stool1tostool2),
-        datenotificationtohq = lubridate::parse_date_time(
-          datenotificationtohq,
-          c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S")
-        )
-      )
-
-    afp_new <- purrr::map_df(
-      afp_files_main,
-      ~ tidypolis_io(io = "read", file_path = .x)
-    )
-
-    afp_combined <- dplyr::bind_rows(afp_new, afp_to_combine)
-
-    # Export combined AFP dataset
-    tidypolis_io(
-      obj = afp_combined,
-      io = "write",
-      file_path = paste0(
-        polis_data_folder,
-        "/Core_Ready_Files/",
-        "afp_linelist_",
-        min(afp_combined$dateonset, na.rm = TRUE),
-        "_",
-        max(afp_combined$dateonset, na.rm = TRUE),
-        ".rds"
-      )
-    )
-
-    # Create light AFP dataset for WHO (filtered to recent years)
-    afp_light <- afp_combined |>
-      dplyr::filter(yronset >= 2019)
-
-    tidypolis_io(
-      obj = afp_light,
-      io = "write",
-      file_path = paste0(
-        polis_data_folder,
-        "/Core_Ready_Files/",
-        "afp_linelist_light_",
-        min(afp_light$dateonset, na.rm = TRUE),
-        "_",
-        max(afp_light$dateonset, na.rm = TRUE),
-        ".rds"
-      )
-    )
-  }
-
-  cli::cli_process_done()
-
-  # Process non-AFP data if needed
-  if (nrow(not_afp) > 0 || nrow(unknown_afp) > 0) {
-    cli::cli_process_start("Processing non-AFP surveillance data",
-                           msg_done = "Processed non-AFP surveillance data")
-
-    other_surv <- dplyr::bind_rows(not_afp, unknown_afp) |>
-      dplyr::mutate(
-        polis.latitude = as.character(polis.latitude),
-        polis.longitude = as.character(polis.longitude),
-        doses.total = as.numeric(doses.total)
-      )
-
-    # Export non-AFP data
-    tidypolis_io(
-      obj = other_surv,
-      io = "write",
-      file_path = paste0(
-        polis_data_folder,
-        "/Core_Ready_Files/other_surveillance_type_linelist_",
-        min(other_surv$yronset, na.rm = TRUE), "_",
-        max(other_surv$yronset, na.rm = TRUE), ".rds"
-      )
-    )
-
-    cli::cli_process_done()
-  }
-
-  update_polis_log(
-    .event = "AFP and Other Surveillance Linelists Finished",
-    .event_type = "PROCESS"
-  )
-
-  cli::cli_process_done()
-
-  gc(full = TRUE)
-
-  invisible(NULL)
-}
