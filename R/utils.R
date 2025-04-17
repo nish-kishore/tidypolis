@@ -5499,7 +5499,7 @@ s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
   }
 
   # Step 2c: Standardize dates and variable names
-  afp_standardized <- s2_standardize_dates(afp_raw_new)
+  afp_standardized <- s2_standardize_dates(data = afp_raw_new)
 
   # Step 2d: Write out epids with no dateonset
   s2_export_missing_onsets(afp_standardized, polis_data_folder)
@@ -5753,10 +5753,7 @@ s2_check_duplicated_epids <- function(data, polis_data_folder) {
 #' @importFrom cli cli_process_start cli_process_done
 s2_standardize_dates <- function(data) {
   cli::cli_process_start(
-    glue::glue(
-      "Fixing all dates from character to ymd ",
-      "format and fixing character variables"
-    ),
+    "Fixing all dates from character to ymd format and fixing character variables",
     msg_done = "Fixed dates and character variables"
   )
 
