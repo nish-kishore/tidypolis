@@ -574,7 +574,7 @@ call_urls <- function(urls) {
     y <-
       foreach::`%dopar%`(foreach::foreach(
         x = xs,
-        .packages = c("tidypolis", "tibble", "jsonlite", "httr")
+        .packages = c("tidypolis", "tibble", "jsonlite", "httr", "dplyr")
       ), {
         # signal a progression update
         p()
@@ -593,7 +593,7 @@ call_urls <- function(urls) {
 
 #' Call single URL
 #' @description Call a return the formatted output frome one URL
-#' @import tibble jsonlite httr
+#' @import tibble jsonlite httr dplyr
 #' @param url str: single url
 #' @param api_key str: validated API key
 #' @param times int: number of times to attempt connection with API
@@ -618,7 +618,9 @@ call_single_url <- function(url,
 
   out <- jsonlite::fromJSON(rawToChar(response$content))
 
-  tibble::as_tibble(out$value)
+  out <- out$value |> dplyr::mutate_all(as.character)
+
+  tibble::as_tibble(out)
 
   #Sys.sleep(1.25)
 
