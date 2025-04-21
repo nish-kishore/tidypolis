@@ -2377,6 +2377,16 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
     polis_data_folder = polis_data_folder,
     latest_folder_in_archive = latest_folder_in_archive)
 
+
+  #' Export the final Core Ready files
+  #'
+  #' @param polis_data_folder `str` Path to the POLIS data folder.
+  #' @param latest_folder_in_archive `str` Time stamp of latest folder in archive
+  #'
+  #' @returns `NULL`
+  #' @keywords internal
+  #'
+
   # Get the date from 'Mon-year' format of parent start date as a first day of the month.
   # this would insert first of month if date is missing from the activity date. This
   # leads to errors if one is trying to guess duration of activity. For negative duration ignore it.
@@ -7173,12 +7183,13 @@ s2_compare_with_archive <- function(data,
 ###### Step 3 Private Functions ----
 
 
-#' Export the final Core Ready files
+#' Load SIA Data
 #'
 #' @param polis_data_folder `str` Path to the POLIS data folder.
 #' @param latest_folder_in_archive `str` Time stamp of latest folder in archive
 #'
-#' @returns `NULL`
+#' @returns `tiblle` sia.01.new - the latest SIA data quality checked for variable
+#' stability against the last download if it exists
 #' @keywords internal
 #'
 s3_load_sia_data <- function(polis_data_folder,
