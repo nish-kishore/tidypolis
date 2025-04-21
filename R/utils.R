@@ -2377,87 +2377,7 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
     polis_data_folder = polis_data_folder,
     latest_folder_in_archive = latest_folder_in_archive)
 
-
-  #' Export the final Core Ready files
-  #'
-  #' @param polis_data_folder `str` Path to the POLIS data folder.
-  #' @param latest_folder_in_archive `str` Time stamp of latest folder in archive
-  #'
-  #' @returns `NULL`
-  #' @keywords internal
-  #'
-
-  # Get the date from 'Mon-year' format of parent start date as a first day of the month.
-  # this would insert first of month if date is missing from the activity date. This
-  # leads to errors if one is trying to guess duration of activity. For negative duration ignore it.
-  # Active year at country level is start yr of activity
-  # active year at prov and district level is start yr of sub-activity
-
-  cli::cli_process_start("Create CDC variables")
-  endyr <- year(format(Sys.time()))
-  startyr <- 2020
-  sia.02 <- sia.01.new |>
-    dplyr::rename(linked.obx=`linked.outbreak(s)`,
-                  sia.sub.activity.code = `sia.sub-activity.code`,
-                  sub.activity.end.date = `sub-activity.end.date`,
-                  sub.activity.start.date = `sub-activity.start.date`,
-                  sub.activity.last.updated.date = `sub-activity.last.updated.date`,
-                  sub.activity.initial.planned.date = `sub-activity.initial.planned.date`
-                  #`country.population.%` = `country.population.%`,
-                  #`area.targeted.%` = `area.targeted.%`,
-                  #`age.group.%`=`age.group.%`,
-                  #`admin.coverage.%` = `admin.coverage.%`
-    ) |>
-    dplyr::mutate(
-      # Checked with Valentina at WHO. lqas and im loaded variables are not correctly populated in the POLIS. Valentina will fix this issue.
-      #status = ifelse((im.loaded == "yes" & is.na(status == T)) | (lqas.loaded == "yes" & is.na(status == T)),
-      #                "Done", status),
-      status = tidyr::replace_na(status, "Missing"),
-      vaccine.type = tidyr::replace_na(vaccine.type, "Missing")
-    ) |>
-
-    dplyr::mutate_at(
-      dplyr::vars(sub.activity.end.date), ~ dplyr::na_if(., "undefined")
-    ) |>
-    dplyr::mutate_at(
-      dplyr::vars(
-        sub.activity.initial.planned.date, sub.activity.last.updated.date,
-        activity.start.date, activity.end.date,
-        sub.activity.start.date, sub.activity.end.date,
-        last.updated.date
-      ), ~ lubridate::parse_date_time(., c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S"))
-    ) |>
-    dplyr::mutate(
-      yr.sia = lubridate::year(activity.start.date),
-      yr.subsia = lubridate::year(sub.activity.start.date),
-      month.sia = lubridate::month(activity.start.date),
-      month.subsia = lubridate::month(activity.start.date),
-      `admin.coverage.%` = as.numeric(`admin.coverage.%`)
-    ) |>
-    dplyr::rename(
-      place.admin.0 = country,
-      place.admin.1 = admin1,
-      place.admin.2 = admin2
-    ) |>
-    dplyr::filter(dplyr::between(yr.sia, startyr, endyr)) |>
-    # Pakistan does not match to shape file for 2008 and 2009 for
-    # KP and FATA as name change. They were called NWFP then
-    dplyr::mutate(
-      place.admin.1 = dplyr::case_when(
-        (yr.sia == 2009 | yr.sia == 2008) & (place.admin.1 == "KHYBER PAKHTOON" | place.admin.1 == "FATA") ~ "NWFP",
-        TRUE ~ as.character(place.admin.1)
-      ),
-      place.admin.0 = ifelse(stringr::str_detect(place.admin.0, "IVOIRE"),"COTE D IVOIRE",place.admin.0)
-    ) |>
-    dplyr::mutate(
-      adm2guid  = paste0("{", toupper(admin.2.guid), "}"),
-      adm1guid  = paste0("{", toupper(admin.1.guid), "}"),
-      adm0guid  = paste0("{", toupper(admin.0.guid), "}")
-    ) |>
-    dplyr::select(-admin.0.guid, -admin.1.guid, -admin.2.guid) |>
-    dplyr::distinct()
-
-  cli::cli_process_done()
+  sia.02 <- s3_create_sia_cdc_vars(sia.01.new = sia.01.new)
 
   cli::cli_process_start("Checking GUIDs")
   # SIA file with GUID
@@ -7338,3 +7258,99 @@ s3_load_sia_data <- function(polis_data_folder,
   return(sia.01.new)
 
 }
+
+#' Convert variables in POLIS download to CDC specific variables
+#'
+#' @param sia.01.new `tibble` The latest SIA download with variables checked
+#' against the last download
+#' @param startyr `int` The subset of years for which to process SIA data
+#' @param endyr `int` The subset of years for which to process SIA data
+#'
+#' @returns `tibble` sia.02 SIA data with CDC variables enforced
+#' @keywords internal
+#'
+s3_create_sia_cdc_vars <- function(sia.01.new,
+                               startyr = 2020,
+                               endyr = lubridate::year(format(Sys.time()))){
+
+  # Get the date from 'Mon-year' format of parent start date as a first day of the month.
+  # this would insert first of month if date is missing from the activity date. This
+  # leads to errors if one is trying to guess duration of activity. For negative duration ignore it.
+  # Active year at country level is start yr of activity
+  # active year at prov and district level is start yr of sub-activity
+
+  cli::cli_process_start("Create CDC variables")
+  sia.02 <- sia.01.new |>
+    #rename key variables to remove hyphens and standardize naming convention
+    dplyr::rename(linked.obx=`linked.outbreak(s)`,
+                  sia.sub.activity.code = `sia.sub-activity.code`,
+                  sub.activity.end.date = `sub-activity.end.date`,
+                  sub.activity.start.date = `sub-activity.start.date`,
+                  sub.activity.last.updated.date = `sub-activity.last.updated.date`,
+                  sub.activity.initial.planned.date = `sub-activity.initial.planned.date`
+                  #`country.population.%` = `country.population.%`,
+                  #`area.targeted.%` = `area.targeted.%`,
+                  #`age.group.%`=`age.group.%`,
+                  #`admin.coverage.%` = `admin.coverage.%`
+    ) |>
+    dplyr::mutate(
+      # Checked with Valentina at WHO. lqas and im loaded variables are not
+      # correctly populated in the POLIS. Valentina will fix this issue.
+      #status = ifelse((im.loaded == "yes" & is.na(status == T)) | (lqas.loaded == "yes" & is.na(status == T)),
+      #                "Done", status),
+      # Replacing NA with "Missing"
+      status = tidyr::replace_na(status, "Missing"),
+      vaccine.type = tidyr::replace_na(vaccine.type, "Missing")
+    ) |>
+    #Replace "undefined" with NA
+    dplyr::mutate_at(
+      dplyr::vars(sub.activity.end.date), ~ dplyr::na_if(., "undefined")
+    ) |>
+    #convert dates into standard format
+    dplyr::mutate_at(
+      dplyr::vars(
+        sub.activity.initial.planned.date, sub.activity.last.updated.date,
+        activity.start.date, activity.end.date,
+        sub.activity.start.date, sub.activity.end.date,
+        last.updated.date
+      ), ~ lubridate::parse_date_time(., c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S"))
+    ) |>
+    #convert years and months into standard format
+    dplyr::mutate(
+      yr.sia = lubridate::year(activity.start.date),
+      yr.subsia = lubridate::year(sub.activity.start.date),
+      month.sia = lubridate::month(activity.start.date),
+      month.subsia = lubridate::month(activity.start.date),
+      `admin.coverage.%` = as.numeric(`admin.coverage.%`)
+    ) |>
+    #rename geographies into standard format
+    dplyr::rename(
+      place.admin.0 = country,
+      place.admin.1 = admin1,
+      place.admin.2 = admin2
+    ) |>
+    dplyr::filter(dplyr::between(yr.sia, startyr, endyr)) |>
+    # Pakistan does not match to shape file for 2008 and 2009 for
+    # KP and FATA as name change. They were called NWFP then
+    dplyr::mutate(
+      place.admin.1 = dplyr::case_when(
+        (yr.sia == 2009 | yr.sia == 2008) & (place.admin.1 == "KHYBER PAKHTOON" | place.admin.1 == "FATA") ~ "NWFP",
+        TRUE ~ as.character(place.admin.1)
+      ),
+      place.admin.0 = ifelse(stringr::str_detect(place.admin.0, "IVOIRE"),"COTE D IVOIRE",place.admin.0)
+    ) |>
+    #adjust GUIDS to be more easily searchable based on standard formats
+    dplyr::mutate(
+      adm2guid  = paste0("{", toupper(admin.2.guid), "}"),
+      adm1guid  = paste0("{", toupper(admin.1.guid), "}"),
+      adm0guid  = paste0("{", toupper(admin.0.guid), "}")
+    ) |>
+    dplyr::select(-admin.0.guid, -admin.1.guid, -admin.2.guid) |>
+    dplyr::distinct()
+
+  cli::cli_process_done()
+
+  return(sia.02)
+
+}
+
