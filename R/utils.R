@@ -2362,103 +2362,20 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
 
   cli::cli_h1("Step 2/5 - Creating AFP and Epi analytic datasets")
 
-  s2_fully_process_afp_data(
+  latest_folder_in_archive <- s2_fully_process_afp_data(
     polis_data_folder = polis_data_folder,
     polis_folder = polis_folder,
     long.global.dist.01 = long.global.dist.01)
+
+  invisible(gc())
 
   # Step 3 - Creating SIA analytic datasets ====================================
 
   cli::cli_h1("Step 3/5 - Creating SIA analytic datasets")
 
-  # Step 1: Read in "old" data file (System to find "Old" data file)
-  x <- tidypolis_io(io = "list", file_path = file.path(polis_data_folder, "Core_Ready_Files/Archive", latest_folder_in_archive), full_names = T)
-
-  y <- tidypolis_io(io = "list", file_path = file.path(polis_data_folder, "Core_Ready_Files"), full_names = T)
-
-
-  old.file <- x[grepl("Activity",x)]
-
-  new.file <- y[grepl("Activity", y)]
-
-
-  cli::cli_process_start("Loading new SIA data")
-  # Step 1: Read in "new" data file
-  # Newest downloaded activity file, will be .rds located in Core Ready Files
-  sia.01.new <- tidypolis_io(io = "read", file_path = new.file) |>
-    dplyr::mutate_all(as.character) |>
-    dplyr::rename_all(function(x) gsub(" ", ".", x)) |>
-    dplyr::mutate_all(list(~dplyr::na_if(.,"")))
-
-  # Make the names small case and remove space bar from names
-  names(sia.01.new) <- stringr::str_to_lower(names(sia.01.new))
-  cli::cli_process_done()
-
-  # QC CHECK
-  # This is for checking data across different download options
-
-  if(length(x) > 0){
-
-    cli::cli_process_start("Loading old SIA data")
-    # Old pre-existing download
-    # This is previous Activity .rds that was preprocessed last week, it has been moved to the archive, change archive subfolder and specify last weeks Activity .rds
-    sia.01.old <- tidypolis_io(io = "read", file_path = old.file) |>
-      dplyr::mutate_all(as.character) |>
-      dplyr::rename_all(function(x) gsub(" ", ".", x)) |>
-      dplyr::mutate_all(list(~dplyr::na_if(.,"")))
-
-    names(sia.01.old) <- stringr::str_to_lower(names(sia.01.old))
-    cli::cli_process_done()
-
-    # Are there differences in the names of the columns between two downloads?
-    f.compare.dataframe.cols(sia.01.old, sia.01.new)
-
-    # If okay with above then proceed to next step
-    # First determine the variables that would be excluded from the comparison
-    # this includes variables such as EPID numbers which would invariably change in values
-
-    var.list.01 <- c(
-      "sia.code", "sia.sub-activity.code", "country", "country.iso3", "who.region", "ist", "activity.start.date", "activity.end.date",
-      "last.updated.date", "sub-activity.start.date", "sub-activity.end.date", "admin1",
-      "admin2", "delay.reason", "priority", "country.population.%", "unpd.country.population", "targeted.population",
-      "immunized.population", "admin.coverage.%", "area.targeted.%", "area.population", "age.group.%", "wastage.factor",
-      "number.of.doses", "number.of.doses.approved", "im.loaded", "lqas.loaded", "sub-activity.last.updated.date", "admin.2.targeted.population",
-      "admin.2.immunized.population", "admin.2.accessibility.status", "admin.2.comments", "sub-activity.initial.planned.date",
-      "activity.parent.children.inaccessible", "children.inaccessible", "admin2.children.inaccessible", "linked.outbreak(s)",
-      "admin.0.guid", "admin.1.guid", "admin.2.guid"
-    )
-
-    cli::cli_process_start("Comparing downloaded variables")
-    # Exclude the variables from
-    sia.01.old.compare <- sia.01.old |>
-      dplyr::select(-var.list.01)
-
-    sia.01.new.compare <- sia.01.new |>
-      dplyr::select(-var.list.01)
-
-    new.var.sia.01 <- f.download.compare.01(sia.01.old.compare, sia.01.new.compare)
-
-    new.df <- new.var.sia.01 |>
-      dplyr::filter(is.na(old.distinct.01) | diff.distinct.01 >= 1) |>
-      dplyr::filter(!variable %in% c("parentid", "id"))
-
-    if (nrow(new.df) >= 1) {
-      cli::cli_alert_danger("There is either a new variable in the SIA data or new value of an existing variable.
-       Please run f.download.compare.02 to see what it is. Preprocessing can not continue until this is adressed.")
-
-      sia.new.value <- f.download.compare.02(new.var.sia.01, sia.01.old.compare, sia.01.new.compare, type = "SIA")
-
-    } else {
-
-      cli::cli_alert_info("New SIA download is comparable to old SIA download")
-
-    }
-
-  }else{
-    cli::cli_alert_info("No old SIA data found, will not perform comparisons")
-  }
-
-  cli::cli_process_done()
+  sia.01.new <- s3_load_sia_data(
+    polis_data_folder = polis_data_folder,
+    latest_folder_in_archive = latest_folder_in_archive)
 
   # Get the date from 'Mon-year' format of parent start date as a first day of the month.
   # this would insert first of month if date is missing from the activity date. This
@@ -5674,6 +5591,8 @@ s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
     polis_data_folder = polis_data_folder,
     col_afp_raw = colnames(afp_raw_new)
   )
+
+  return(latest_folder_in_archive)
 }
 
 
@@ -7427,4 +7346,162 @@ s2_compare_with_archive <- function(data,
     modified_records = modified_records,
     modified_details = modified_details
   ))
+}
+
+###### Step 3 Private Functions ----
+
+
+#' Export the final Core Ready files
+#'
+#' @param polis_data_folder `str` Path to the POLIS data folder.
+#' @param latest_folder_in_archive `str` Time stamp of latest folder in archive
+#'
+#' @returns `NULL`
+#' @keywords internal
+#'
+s3_load_sia_data <- function(polis_data_folder,
+                             latest_folder_in_archive){
+
+  # Step 1: Read in "old" data file (System to find "Old" data file)
+  x <- tidypolis_io(io = "list",
+                    file_path = file.path(polis_data_folder,
+                                          "Core_Ready_Files/Archive",
+                                          latest_folder_in_archive),
+                    full_names = T)
+
+  y <- tidypolis_io(io = "list",
+                    file_path = file.path(polis_data_folder,
+                                          "Core_Ready_Files"),
+                    full_names = T)
+
+
+  old.file <- x[grepl("Activity",x)]
+
+  new.file <- y[grepl("Activity", y)]
+
+
+  cli::cli_process_start("Loading new SIA data")
+  # Step 2: Read in "new" data file
+  # Newest downloaded activity file, will be .rds located in Core Ready Files
+  invisible(capture.output(
+    sia.01.new <- tidypolis_io(io = "read", file_path = new.file) |>
+      dplyr::mutate_all(as.character) |>
+      dplyr::rename_all(function(x) gsub(" ", ".", x)) |>
+      dplyr::mutate_all(list(~dplyr::na_if(.,"")))
+  ))
+
+  # Make the names small case and remove space bar from names
+  names(sia.01.new) <- stringr::str_to_lower(names(sia.01.new))
+  cli::cli_process_done()
+
+  # QC CHECK
+  # This is for checking data across different download options
+
+  if(length(x) > 0){
+
+    cli::cli_process_start("Loading old SIA data")
+    # Old pre-existing download
+    # This is previous Activity .rds that was preprocessed last week, it has
+    # been moved to the archive, change archive subfolder and specify last weeks
+    # Activity .rds
+    invisible(capture.output(
+      sia.01.old <- tidypolis_io(io = "read", file_path = old.file) |>
+        dplyr::mutate_all(as.character) |>
+        dplyr::rename_all(function(x) gsub(" ", ".", x)) |>
+        dplyr::mutate_all(list(~dplyr::na_if(.,"")))
+    ))
+
+    names(sia.01.old) <- stringr::str_to_lower(names(sia.01.old))
+    cli::cli_process_done()
+
+    # Are there differences in the names of the columns between two downloads?
+    f.compare.dataframe.cols(sia.01.old, sia.01.new)
+
+    # If okay with above then proceed to next step
+    # First determine the variables that would be excluded from the comparison
+    # this includes variables such as EPID numbers which would invariably change
+    # in values
+
+    var.list.01 <- c(
+      "sia.code",
+      "sia.sub-activity.code",
+      "country",
+      "country.iso3",
+      "who.region",
+      "ist",
+      "activity.start.date",
+      "activity.end.date",
+      "last.updated.date",
+      "sub-activity.start.date",
+      "sub-activity.end.date",
+      "admin1",
+      "admin2",
+      "delay.reason",
+      "priority",
+      "country.population.%",
+      "unpd.country.population",
+      "targeted.population",
+      "immunized.population",
+      "admin.coverage.%",
+      "area.targeted.%",
+      "area.population",
+      "age.group.%",
+      "wastage.factor",
+      "number.of.doses",
+      "number.of.doses.approved",
+      "im.loaded",
+      "lqas.loaded",
+      "sub-activity.last.updated.date",
+      "admin.2.targeted.population",
+      "admin.2.immunized.population",
+      "admin.2.accessibility.status",
+      "admin.2.comments",
+      "sub-activity.initial.planned.date",
+      "activity.parent.children.inaccessible",
+      "children.inaccessible",
+      "admin2.children.inaccessible",
+      "linked.outbreak(s)",
+      "admin.0.guid",
+      "admin.1.guid",
+      "admin.2.guid"
+    )
+
+    cli::cli_process_start("Comparing downloaded variables")
+    # Exclude the variables from
+    sia.01.old.compare <- sia.01.old |>
+      dplyr::select(-var.list.01)
+
+    sia.01.new.compare <- sia.01.new |>
+      dplyr::select(-var.list.01)
+
+    new.var.sia.01 <- f.download.compare.01(sia.01.old.compare, sia.01.new.compare)
+
+    new.df <- new.var.sia.01 |>
+      dplyr::filter(is.na(old.distinct.01) | diff.distinct.01 >= 1) |>
+      dplyr::filter(!variable %in% c("parentid", "id"))
+
+    if (nrow(new.df) >= 1) {
+      cli::cli_alert_danger("There is either a new variable in the SIA data or new value of an existing variable.
+       Please run f.download.compare.02 to see what it is. Preprocessing can not continue until this is adressed.")
+
+      sia.new.value <- f.download.compare.02(new.var.sia.01, sia.01.old.compare, sia.01.new.compare, type = "SIA")
+
+      return(sia.new.value)
+
+      stop()
+
+    } else {
+
+      cli::cli_alert_info("New SIA download is comparable to old SIA download")
+
+    }
+
+  }else{
+    cli::cli_alert_info("No old SIA data found, will not perform comparisons")
+  }
+
+  cli::cli_process_done()
+
+  return(sia.01.new)
+
 }
