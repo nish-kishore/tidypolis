@@ -1536,7 +1536,7 @@ f.compare.metadata <- function(new_table_metadata, old_table_metadata, table){
 
   if(nrow(class_changed_vars) != 0){
     class_changed_vars <- class_changed_vars
-    warning(print("There are variables in the POLIS table with different classes\ncompared to when it was last retrieved\nReview in 'class_changed_vars'"))
+    warning(print("There are variables in the POLIS table with different classes compared to when it was last retrieved Review in 'class_changed_vars'"))
 
     update_polis_log(.event = paste0(table, " - ", "Variables changed class: ", class_changed_vars))
   }
@@ -2163,7 +2163,7 @@ check_missingness <- function(data,
 #'
 preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
 
-  polis_data_folder = file.path(polis_folder, "data")
+  polis_data_folder <- file.path(polis_folder, "data")
 
   if (!requireNamespace("purrr", quietly = TRUE)) {
     stop('Package "purrr" must be installed to use this function.',
@@ -6968,22 +6968,26 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
 
   # Combine AFP files
   if (length(afp_files_combine) > 0) {
-    afp_to_combine <- purrr::map_df(afp_files_combine, ~ tidypolis_io(
-      io = "read",
-      file_path = .x
-    )) |>
-      dplyr::mutate(
-        stool1tostool2 = as.numeric(stool1tostool2),
-        datenotificationtohq = lubridate::parse_date_time(
-          datenotificationtohq,
-          c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S")
+    invisible(capture.output(
+      afp_to_combine <- purrr::map_df(afp_files_combine, ~ tidypolis_io(
+        io = "read",
+        file_path = .x
+      )) |>
+        dplyr::mutate(
+          stool1tostool2 = as.numeric(stool1tostool2),
+          datenotificationtohq = lubridate::parse_date_time(
+            datenotificationtohq,
+            c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S")
+          )
         )
-      )
+    ))
 
-    afp_new <- purrr::map_df(
-      afp_files_main,
-      ~ tidypolis_io(io = "read", file_path = .x)
-    )
+    invisible(capture.output(
+      afp_new <- purrr::map_df(
+        afp_files_main,
+        ~ tidypolis_io(io = "read", file_path = .x)
+      )
+    ))
 
     afp_combined <- dplyr::bind_rows(afp_new, afp_to_combine)
 
@@ -7008,7 +7012,7 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
     # Create light AFP dataset for WHO (filtered to recent years)
     afp_light <- afp_combined |>
       dplyr::filter(yronset >= 2019)
-    
+
     invisible(capture.output(
       tidypolis_io(
         obj = afp_light,
@@ -7115,14 +7119,17 @@ s2_compare_with_archive <- function(data,
     )
 
   # Find old AFP file in the archive
-  archive_files <- tidypolis_io(
-    io = "list",
-    file_path = paste0(
-      polis_data_folder, "/Core_Ready_Files/Archive/",
-      latest_archive
-    ),
-    full_names = TRUE
-  )
+  invisible(capture.output(
+    archive_files <- tidypolis_io(
+      io = "list",
+      file_path = paste0(
+        polis_data_folder, "/Core_Ready_Files/Archive/",
+        latest_archive
+      ),
+      full_names = TRUE
+    )
+  ))
+
 
   old_file <- archive_files[grepl("afp_linelist_2020", archive_files)]
 
@@ -7134,12 +7141,14 @@ s2_compare_with_archive <- function(data,
 
   # Read old data and standardize format for comparison
   cli::cli_alert_info("Loading archived AFP dataset for comparison")
-  old_data <- tidypolis_io(io = "read", file_path = old_file) |>
-    dplyr::mutate(epid = stringr::str_squish(epid)) |>
-    dplyr::mutate_all(as.character) |>
-    dplyr::mutate(yronset = as.numeric(yronset)) |>
-    dplyr::filter(dplyr::between(yronset, start_year, end_year)) |>
-    dplyr::mutate_all(as.character)
+  invisible(capture.output(
+    old_data <- tidypolis_io(io = "read", file_path = old_file) |>
+      dplyr::mutate(epid = stringr::str_squish(epid)) |>
+      dplyr::mutate_all(as.character) |>
+      dplyr::mutate(yronset = as.numeric(yronset)) |>
+      dplyr::filter(dplyr::between(yronset, start_year, end_year)) |>
+      dplyr::mutate_all(as.character)
+  ))
 
   # Harmonize column selections
   data_prepared <- data_prepared |>
