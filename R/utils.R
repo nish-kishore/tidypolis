@@ -3787,14 +3787,16 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
 #' @description
 #' a function to process WHO spatial datasets
 #' @import dplyr sf lubridate stringr readr tibble cli
-#' @param gdb_folder str the folder location of spatial datasets, should end with .gdb,
-#' if on edav the gdb will need to be zipped, ensure that the gdb and the zipped file name are the same
-#' @param output_folder str folder location to write outputs to
-#' @param edav boolean T or F, whether gdb is on EDAV or local
+#' @param gdb_folder `str` The folder location of spatial datasets, should end with .gdb,
+#' if on edav the gdb will need to be zipped, ensure that the gdb and the zipped file name are the same.
+#' @param output_folder `str` Folder location to write outputs to.
+#' @param edav `bool` Whether gdb is on EDAV or local.
+#' @param azcontainer `Azure container` Azure storage container.
 #' @export
 process_spatial <- function(gdb_folder,
                             output_folder,
-                            edav) {
+                            edav,
+                            azcontainer = suppressMessages(sirfunctions::get_azure_storage_connection())) {
 
   if (!requireNamespace("utils", quietly = TRUE)) {
     stop('Package "utils" must be installed to use this function.',
@@ -3807,7 +3809,6 @@ process_spatial <- function(gdb_folder,
   }
 
   if(edav) {
-    azcontainer = suppressMessages(get_azure_storage_connection())
     dest <- tempdir()
     AzureStor::storage_download(container = azcontainer, gdb_folder, paste0(dest, "/gdb.zip"), overwrite = T)
 
