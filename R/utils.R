@@ -4026,11 +4026,13 @@ process_spatial <- function(gdb_folder,
     if(edav) {
       tidypolis_io(io = "write", edav = T,
                    file_path = paste0(output_folder, "/empty_prov_shapes.csv"),
-                   obj = empty.prov)
+                   obj = empty.prov,
+                   azcontainer = azcontainer)
     } else {
       tidypolis_io(io = "write", edav = F,
                    file_path = paste0(output_folder, "/empty_prov_shapes.csv"),
-                   obj = empty.prov)
+                   obj = empty.prov,
+                   azcontainer = azcontainer)
     }
   }
 
