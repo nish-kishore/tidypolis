@@ -3808,7 +3808,7 @@ process_spatial <- function(gdb_folder,
     output_folder <- stringr::str_replace(output_folder, paste0("GID/PEB/SIR/"), "")
   }
 
-  if(edav) {
+  if (edav) {
     dest <- tempdir()
     AzureStor::storage_download(container = azcontainer, gdb_folder, paste0(dest, "/gdb.zip"), overwrite = T)
 
@@ -3887,14 +3887,14 @@ process_spatial <- function(gdb_folder,
 
   sf::st_geometry(invalid.ctry.shapes) <- NULL
 
-  if(edav) {
+  if (edav) {
     tidypolis_io(io = "write", edav = T,
                  file_path = paste0(output_folder, "/invalid_ctry_shapes.csv"),
-                 obj = invalid.ctry.shapes)
+                 obj = invalid.ctry.shapes, azcontainer = azcontainer)
   } else {
     tidypolis_io(io = "write", edav = F,
                  file_path = paste0(output_folder, "/invalid_ctry_shapes.csv"),
-                 obj = invalid.ctry.shapes)
+                 obj = invalid.ctry.shapes, azcontainer = azcontainer)
   }
 
   empty.ctry <- global.ctry.01 |>
@@ -3904,14 +3904,16 @@ process_spatial <- function(gdb_folder,
   sf::st_geometry(empty.ctry) <- NULL
 
   if(nrow(empty.ctry) > 0) {
-    if(edav) {
+    if (edav) {
       tidypolis_io(io = "write", edav = T,
                    file_path = paste0(output_folder, "/empty_ctry_shapes.csv"),
-                   obj = empty.ctry)
+                   obj = empty.ctry,
+                   azcontainer = azcontainer)
     } else {
       tidypolis_io(io = "write", edav = F,
                    file_path = paste0(output_folder, "/empty_ctry_shapes.csv"),
-                   obj = empty.ctry)
+                   obj = empty.ctry,
+                   azcontainer = azcontainer)
     }
   }
 
@@ -3920,13 +3922,13 @@ process_spatial <- function(gdb_folder,
   #identify potential duplicates
   dupe.guid.ctry <- global.ctry.01 |>
     dplyr::group_by(GUID) |>
-    dplyr::mutate(n = n()) |>
+    dplyr::mutate(n = dplyr::n()) |>
     dplyr::ungroup() |>
     dplyr::filter(n > 1)
 
   dupe.name.ctry <- global.ctry.01 |>
     dplyr::group_by(ADM0_NAME, yr.st, yr.end) |>
-    dplyr::mutate(n = n()) |>
+    dplyr::mutate(n = dplyr::n()) |>
     dplyr::ungroup() |>
     dplyr::filter(n > 1)
 
@@ -3939,11 +3941,13 @@ process_spatial <- function(gdb_folder,
     if(edav) {
       tidypolis_io(io = "write", edav = T,
                    file_path = paste0(output_folder, "/duplicate_ctry_guid.csv"),
-                   obj = dupe.guid.ctry)
+                   obj = dupe.guid.ctry,
+                   azcontainer = azcontainer)
     } else {
       tidypolis_io(io = "write", edav = F,
                    file_path = paste0(output_folder, "/duplicate_ctry_guid.csv"),
-                   obj = dupe.guid.ctry)
+                   obj = dupe.guid.ctry,
+                   azcontainer = azcontainer)
     }
   }
 
@@ -3952,11 +3956,13 @@ process_spatial <- function(gdb_folder,
     if(edav) {
       tidypolis_io(io = "write", edav = T,
                    file_path = paste0(output_folder, "/duplicate_ctry_name.csv"),
-                   obj = dupe.name.ctry)
+                   obj = dupe.name.ctry,
+                   azcontainer = azcontainer)
     } else {
       tidypolis_io(io = "write", edav = F,
                    file_path = paste0(output_folder, "/duplicate_ctry_name.csv"),
-                   obj = dupe.name.ctry)
+                   obj = dupe.name.ctry,
+                   azcontainer = azcontainer)
     }
   }
 
@@ -3969,11 +3975,13 @@ process_spatial <- function(gdb_folder,
   if(edav) {
     tidypolis_io(io = "write", edav = T,
                  file_path = paste0(output_folder, "/global.ctry.rds"),
-                 obj = global.ctry.01)
+                 obj = global.ctry.01,
+                 azcontainer = azcontainer)
   } else {
     tidypolis_io(io = "write", edav = F,
                  file_path = paste0(output_folder, "/global.ctry.rds"),
-                 obj = global.ctry.01)
+                 obj = global.ctry.01,
+                 azcontainer = azcontainer)
   }
 
   sf::st_geometry(global.ctry.01) <- NULL
@@ -4000,11 +4008,13 @@ process_spatial <- function(gdb_folder,
   if(edav) {
     tidypolis_io(io = "write", edav = T,
                  file_path = paste0(output_folder, "/invalid_prov_shapes.csv"),
-                 obj = invalid.prov.shapes)
+                 obj = invalid.prov.shapes,
+                 azcontainer = azcontainer)
   } else {
     tidypolis_io(io = "write", edav = F,
                  file_path = paste0(output_folder, "/invalid_prov_shapes.csv"),
-                 obj = invalid.prov.shapes)
+                 obj = invalid.prov.shapes,
+                 azcontainer = azcontainer)
   }
 
   empty.prov <- global.prov.01 |>
@@ -4048,11 +4058,13 @@ process_spatial <- function(gdb_folder,
     if(edav) {
       tidypolis_io(io = "write", edav = T,
                    file_path = paste0(output_folder, "/duplicate_prov_guid.csv"),
-                   obj = dupe.guid.prov)
+                   obj = dupe.guid.prov,
+                   azcontainer = azcontainer)
     } else {
       tidypolis_io(io = "write", edav = F,
                    file_path = paste0(output_folder, "/duplicate_prov_guid.csv"),
-                   obj = dupe.guid.prov)
+                   obj = dupe.guid.prov,
+                   azcontainer = azcontainer)
     }
   }
 
@@ -4061,11 +4073,13 @@ process_spatial <- function(gdb_folder,
     if(edav) {
       tidypolis_io(io = "write", edav = T,
                    file_path = paste0(output_folder, "/duplicate_prov_name.csv"),
-                   obj = dupe.name.prov)
+                   obj = dupe.name.prov,
+                   azcontainer = azcontainer)
     } else {
       tidypolis_io(io = "write", edav = F,
                    file_path = paste0(output_folder, "/duplicate_prov_name.csv"),
-                   obj = dupe.name.prov)
+                   obj = dupe.name.prov,
+                   azcontainer = azcontainer)
     }
   }
 
@@ -4077,11 +4091,13 @@ process_spatial <- function(gdb_folder,
   if(edav) {
     tidypolis_io(io = "write", edav = T,
                  file_path = paste0(output_folder, "/global.prov.rds"),
-                 obj = global.prov.01)
+                 obj = global.prov.01,
+                 azcontainer = azcontainer)
   } else {
     tidypolis_io(io = "write", edav = F,
                  file_path = paste0(output_folder, "/global.prov.rds"),
-                 obj = global.prov.01)
+                 obj = global.prov.01,
+                 azcontainer = azcontainer)
   }
 
   sf::st_geometry(global.prov.01) <- NULL
@@ -4103,11 +4119,13 @@ process_spatial <- function(gdb_folder,
   if(edav) {
     tidypolis_io(io = "write", edav = T,
                  file_path = paste0(output_folder, "/invalid_dist_shapes.csv"),
-                 obj = invalid.dist.shapes)
+                 obj = invalid.dist.shapes,
+                 azcontainer = azcontainer)
   } else {
     tidypolis_io(io = "write", edav = F,
                  file_path = paste0(output_folder, "/invalid_dist_shapes.csv"),
-                 obj = invalid.dist.shapes)
+                 obj = invalid.dist.shapes,
+                 azcontainer = azcontainer)
   }
 
   empty.dist <- global.dist.01 |>
@@ -4119,11 +4137,13 @@ process_spatial <- function(gdb_folder,
     if(edav) {
       tidypolis_io(io = "write", edav = T,
                    file_path = paste0(output_folder, "/empty_dist_shapes.csv"),
-                   obj = empty.dist)
+                   obj = empty.dist,
+                   azcontainer = azcontainer)
     } else {
       tidypolis_io(io = "write", edav = F,
                    file_path = paste0(output_folder, "/empty_dist_shapes.csv"),
-                   obj = empty.dist)
+                   obj = empty.dist,
+                   azcontainer = azcontainer)
     }
   }
 
@@ -4152,11 +4172,13 @@ process_spatial <- function(gdb_folder,
     if(edav) {
       tidypolis_io(io = "write", edav = T,
                    file_path = paste0(output_folder, "/duplicate_dist_guid.csv"),
-                   obj = dupe.guid.dist)
+                   obj = dupe.guid.dist,
+                   azcontainer = azcontainer)
     } else {
       tidypolis_io(io = "write", edav = F,
                    file_path = paste0(output_folder, "/duplicate_dist_guid.csv"),
-                   obj = dupe.guid.dist)
+                   obj = dupe.guid.dist,
+                   azcontainer = azcontainer)
     }
   }
 
@@ -4165,11 +4187,13 @@ process_spatial <- function(gdb_folder,
     if(edav) {
       tidypolis_io(io = "write", edav = T,
                    file_path = paste0(output_folder, "/duplicate_dist_name.csv"),
-                   obj = dupe.name.dist)
+                   obj = dupe.name.dist,
+                   azcontainer = azcontainer)
     } else {
       tidypolis_io(io = "write", edav = F,
                    file_path = paste0(output_folder, "/duplicate_dist_name.csv"),
-                   obj = dupe.name.dist)
+                   obj = dupe.name.dist,
+                   azcontainer = azcontainer)
     }
   }
 
@@ -4181,11 +4205,13 @@ process_spatial <- function(gdb_folder,
   if(edav) {
     tidypolis_io(io = "write", edav = T,
                  file_path = paste0(output_folder, "/global.dist.rds"),
-                 obj = global.dist.01)
+                 obj = global.dist.01,
+                 azcontainer = azcontainer)
   } else {
     tidypolis_io(io = "write", edav = F,
                  file_path = paste0(output_folder, "/global.dist.rds"),
-                 obj = global.dist.01)
+                 obj = global.dist.01,
+                 azcontainer = azcontainer)
   }
 
   sf::st_geometry(global.dist.01) <- NULL
@@ -4217,14 +4243,16 @@ process_spatial <- function(gdb_folder,
                                       paste(min(prov.shape.issue.01$active.year.01, na.rm = T),
                                             max(prov.shape.issue.01$active.year.01, na.rm = T),
                                             sep = "_"), ".csv"),
-                   obj = prov.shape.issue.01)
+                   obj = prov.shape.issue.01,
+                   azcontainer = azcontainer)
     } else {
       tidypolis_io(io = "write", edav = F,
                    file_path = paste0(output_folder, "/prov_shape_multiple_",
                                       paste(min(prov.shape.issue.01$active.year.01, na.rm = T),
                                             max(prov.shape.issue.01$active.year.01, na.rm = T),
                                             sep = "_"), ".csv"),
-                   obj = prov.shape.issue.01)
+                   obj = prov.shape.issue.01,
+                   azcontainer = azcontainer)
     }
   }
 
@@ -4252,14 +4280,16 @@ process_spatial <- function(gdb_folder,
                                       paste(min(dist.shape.issue.01$active.year.01, na.rm = T),
                                             max(dist.shape.issue.01$active.year.01, na.rm = T),
                                             sep = "_"), ".csv"),
-                   obj = dist.shape.issue.01)
+                   obj = dist.shape.issue.01,
+                   azcontainer = azcontainer)
     } else {
       tidypolis_io(io = "write", edav = F,
                    file_path = paste0(output_folder, "/dist_shape_multiple_",
                                       paste(min(dist.shape.issue.01$active.year.01, na.rm = T),
                                             max(dist.shape.issue.01$active.year.01, na.rm = T),
                                             sep = "_"), ".csv"),
-                   obj = dist.shape.issue.01)
+                   obj = dist.shape.issue.01,
+                   azcontainer = azcontainer)
     }
   }
 
