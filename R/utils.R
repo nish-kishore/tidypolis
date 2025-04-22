@@ -2379,35 +2379,7 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
 
   sia.02 <- s3_create_sia_cdc_vars(sia.01.new = sia.01.new)
 
-  cli::cli_process_start("Checking GUIDs")
-  # SIA file with GUID
-  # SIAs match with GUIDs in shapes
-  sia.03 <- sia.02 |>
-    dplyr::left_join(long.global.dist.01 |> dplyr::select(GUID, ADM0_NAME, ADM1_NAME, ADM2_NAME, active.year.01), by=c("adm2guid"="GUID", "yr.sia"="active.year.01"))|>
-    dplyr::mutate(no_match=ifelse(is.na(ADM2_NAME)==T, 1, 0))
-
-  # SIAs did not match with GUIDs in shapes.
-  tofix <- sia.03 |>
-    dplyr::select(-ADM0_NAME, -ADM1_NAME, -ADM2_NAME) |>
-    dplyr::filter(no_match==1) |>
-    dplyr::left_join(long.global.dist.01 |> dplyr::select(ADM0_NAME, ADM1_NAME, ADM2_NAME, active.year.01, GUID),
-                     by = c("place.admin.0" = "ADM0_NAME", "place.admin.1" = "ADM1_NAME", "place.admin.2" = "ADM2_NAME", "yr.sia" = "active.year.01")) |>
-    dplyr::mutate(missing.guid = ifelse(is.na(GUID)==T, 1, 0),
-                  adm2guid = ifelse(missing.guid==0, GUID, adm2guid)) |>
-    dplyr::select(-GUID, -no_match)
-
-  # Combine SIAs matched with prov, dist with shapes
-  sia.04 <- sia.03 |>
-    dplyr::filter(no_match==0)|>
-    dplyr::bind_rows(tofix)|>
-    dplyr::mutate(place.admin.1=ifelse(is.na(place.admin.1)==T, ADM1_NAME, place.admin.1),
-                  place.admin.2=ifelse(is.na(place.admin.2)==T, ADM2_NAME, place.admin.2)) |>
-    dplyr::select(-no_match)
-
-  # Next step is to remove duplicates:
-  sia.05 <- dplyr::distinct(sia.04, adm2guid, sub.activity.start.date, vaccine.type, age.group, status, lqas.loaded, im.loaded, .keep_all= TRUE)
-
-  cli::cli_process_done()
+  sia.03 <- s3_check_sia_guids(sia.02 = sia.02, long.global.dist.01 = long.global.dist.01)
 
   cli::cli_process_start("Checking for duplicates")
   # Another step to check duplicates:
@@ -7532,3 +7504,64 @@ s3_create_sia_cdc_vars <- function(sia.01.new,
 
 }
 
+#' Check SIA GUIDS to ensure they match the standard spatial dataset
+#'
+#' @param sia.02 `tibble` The latest SIA download with variables checked and
+#' against the last download and CDC variables created
+#' @param long.global.dist.01 `sf` a cleaned global spatial dataset of districts
+#' in "long" format for years meaning a district spatial object that is valid
+#' from 2000-2005 will be represented 6 times, once for each year it is valid
+#'
+#' @returns `tibble` sia.03 SIA data with CDC variables enforced and GUIDs validated
+#' @keywords internal
+#'
+s3_check_sia_guids <- function(sia.02, long.global.dist.01){
+
+  cli::cli_process_start("Checking GUIDs")
+  # SIA file with GUID
+  # SIAs match with GUIDs in shapes
+  sia.03 <- sia.02 |>
+    #only keep variables of interest from spatial file
+    dplyr::left_join(long.global.dist.01 |>
+                       dplyr::select(GUID, ADM0_NAME, ADM1_NAME,
+                                     ADM2_NAME, active.year.01),
+                     by = c("adm2guid" = "GUID",
+                            "yr.sia" = "active.year.01")) |>
+    #flag if spatial files do not match
+    dplyr::mutate(no_match=ifelse(is.na(ADM2_NAME), 1, 0))
+
+  # SIAs did not match with GUIDs in shapes.
+  tofix <- sia.03 |>
+    dplyr::select(-ADM0_NAME, -ADM1_NAME, -ADM2_NAME) |>
+    #keep only districts that didn't match
+    dplyr::filter(no_match==1) |>
+    #left join based on location names and year
+    dplyr::left_join(long.global.dist.01 |>
+                       dplyr::select(GUID, ADM0_NAME, ADM1_NAME,
+                                     ADM2_NAME, active.year.01),
+                     by = c("place.admin.0" = "ADM0_NAME",
+                            "place.admin.1" = "ADM1_NAME",
+                            "place.admin.2" = "ADM2_NAME",
+                            "yr.sia" = "active.year.01")) |>
+    #flag if guids still missing and merge in reference GUID
+    dplyr::mutate(missing.guid = ifelse(is.na(GUID), 1, 0),
+                  adm2guid = ifelse(missing.guid==0, GUID, adm2guid)) |>
+    dplyr::select(-GUID, -no_match)
+
+  # Combine SIAs matched with prov, dist with shapes
+  sia.04 <- sia.03 |>
+    dplyr::filter(no_match==0)|>
+    dplyr::bind_rows(tofix)|>
+    dplyr::mutate(place.admin.1=ifelse(is.na(place.admin.1), ADM1_NAME, place.admin.1),
+                  place.admin.2=ifelse(is.na(place.admin.2), ADM2_NAME, place.admin.2)) |>
+    dplyr::select(-no_match)
+
+  # Next step is to remove duplicates:
+  sia.05 <- dplyr::distinct(sia.04, adm2guid, sub.activity.start.date,
+                            vaccine.type, age.group, status, lqas.loaded,
+                            im.loaded, .keep_all= TRUE)
+
+  cli::cli_process_done()
+
+  return(sia.05)
+}
