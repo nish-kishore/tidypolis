@@ -2259,6 +2259,8 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
     long.global.dist.01 = long.global.dist.01
   )
 
+  invisible(gc())
+
   #Step 4 - Creating ES datasets====
   update_polis_log(.event = "Creating ES analytic datasets",
                    .event_type = "PROCESS")
