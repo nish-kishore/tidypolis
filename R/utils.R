@@ -2387,17 +2387,9 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
                         polis_data_folder = polis_data_folder,
                         latest_folder_in_archive = latest_folder_in_archive)
 
+  s3_sia_write_precluster_data(sia.06 = sia.06,
+                               polis_data_folder = polis_data_folder)
 
-  cli::cli_process_start("Writing out SIA file")
-  # Write final SIA file to RDS file
-  sia.file.path <- paste(polis_data_folder, "/Core_Ready_Files/", sep = "")
-
-  tidypolis_io(obj = sia.06, io = "write", file_path = paste(sia.file.path,
-                                                             paste("sia", min(sia.06$yr.sia, na.rm = T), max(sia.06$yr.sia, na.rm = T), sep = "_"),
-                                                             ".rds",
-                                                             sep = ""
-  ))
-  cli::cli_process_done()
 
   #combine SIA pre-2020 with the current rds
   # read SIA and combine to make one SIA dataset
@@ -7626,3 +7618,31 @@ s3_sia_check_metadata <- function(sia.06, polis_data_folder, latest_folder_in_ar
 
 }
 
+#' Write out SIA data
+#'
+#' @param sia.06 `tibble` The latest SIA download with variables checked and
+#' against the last download, CDC variables created, GUIDs validated and
+#' deduplicated
+#' @param polis_data_folder `str` Path to the POLIS data folder.
+#'
+#' @returns NULL
+#' @keywords internal
+#'
+s3_sia_write_precluster_data <- function(sia.06, polis_data_folder){
+  cli::cli_process_start("Writing out SIA file")
+  # Write final SIA file to RDS file
+  sia.file.path <- paste(polis_data_folder, "/Core_Ready_Files/", sep = "")
+
+  invisible(capture.output(
+    tidypolis_io(obj = sia.06, io = "write",
+                 file_path = paste(
+                   sia.file.path,
+                   paste("sia", min(sia.06$yr.sia, na.rm = T),
+                         max(sia.06$yr.sia, na.rm = T), sep = "_"),
+                   ".rds",
+                   sep = ""
+                 ))
+  ))
+
+  cli::cli_process_done()
+}
