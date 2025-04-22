@@ -2379,51 +2379,9 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
 
   sia.02 <- s3_create_sia_cdc_vars(sia.01.new = sia.01.new)
 
-  sia.03 <- s3_check_sia_guids(sia.02 = sia.02, long.global.dist.01 = long.global.dist.01)
+  sia.05 <- s3_check_sia_guids(sia.02 = sia.02, long.global.dist.01 = long.global.dist.01)
 
-  cli::cli_process_start("Checking for duplicates")
-  # Another step to check duplicates:
-  savescipen <- getOption("scipen")
-  options(scipen = 999)
-  sia.06 <- sia.05 |>
-    dplyr::mutate(sub.activity.start.date = lubridate::as_date(sub.activity.start.date)) |>
-    dplyr::arrange(sub.activity.start.date) |>
-    dplyr::group_by(adm2guid, vaccine.type) |>
-    dplyr::mutate(camp.diff.days = as.numeric(sub.activity.start.date - dplyr::lag(sub.activity.start.date))) |>
-    #this creates variable that is days from last campaign of that vaccine
-    dplyr::mutate(dup=dplyr::case_when(camp.diff.days==0 & !is.na(place.admin.2)~ 1,
-                                       camp.diff.days>0 | is.na(place.admin.2)==T | is.na(camp.diff.days)==T ~ 0)) |>
-
-    #manually removing extra duplicates
-    dplyr::filter(sia.sub.activity.code!="PAK-2021-006-1") |>
-    dplyr::filter(sia.sub.activity.code!="SOM-2000-002-2") |>
-    dplyr::select(-missing.guid, -ADM0_NAME, -ADM1_NAME, -ADM2_NAME) |>
-    dplyr::select(-c(camp.diff.days, dup)) |>
-    #change class of vars to match old file
-    dplyr::mutate(`country.population.%` = as.character(`country.population.%`),
-                  `area.targeted.%` = as.character(`area.targeted.%`),
-                  `age.group.%` = as.character(`age.group.%`),
-                  `wastage.factor` = as.character(`wastage.factor`),
-                  sub.activity.start.date = as.POSIXct(round(as.POSIXct(sub.activity.start.date)), format="%Y-%m-%d %H:%M:%S")
-    ) |>
-    dplyr::ungroup() |>
-    dplyr::mutate_at(c("admin.1.id",
-                       "admin.2.id",
-                       "unpd.country.population",
-                       "immunized.population",
-                       "targeted.population",
-                       "number.of.doses",
-                       "admin.2.targeted.population",
-                       "admin.2.immunized.population",
-                       "admin2.children.inaccessible",
-                       "number.of.doses.approved",
-                       "children.inaccessible",
-                       "activity.parent.children.inaccessible",
-                       "admin.0.id" ),
-                     as.numeric)
-  options(scipen = savescipen)
-
-  cli::cli_process_done()
+  sia.06 <- s3_sia_check_duplicates(sia.05 = sia.05)
 
   cli::cli_process_start("Checking metadata")
   # This is the final SIA file which would be used for analysis.
@@ -7564,4 +7522,68 @@ s3_check_sia_guids <- function(sia.02, long.global.dist.01){
   cli::cli_process_done()
 
   return(sia.05)
+}
+
+#' Check SIA dataset for duplicates
+#'
+#' @param sia.05 `tibble` The latest SIA download with variables checked and
+#' against the last download, CDC variables created and GUIDs validated
+#'
+#' @returns `tibble` sia.06 SIA data with CDC variables enforced, GUIDs validated
+#' and duplicates removed
+#' @keywords internal
+#'
+s3_sia_check_duplicates <- function(sia.05){
+
+  cli::cli_process_start("Checking for duplicates")
+  # Another step to check duplicates:
+  savescipen <- getOption("scipen")
+  options(scipen = 999)
+
+  sia.06 <- sia.05 |>
+    dplyr::mutate(sub.activity.start.date = lubridate::as_date(sub.activity.start.date)) |>
+    dplyr::arrange(sub.activity.start.date) |>
+    dplyr::group_by(adm2guid, vaccine.type) |>
+    dplyr::mutate(camp.diff.days = as.numeric(sub.activity.start.date - dplyr::lag(sub.activity.start.date))) |>
+
+    #this creates variable that is days from last campaign of that vaccine
+    dplyr::mutate(dup = dplyr::case_when(
+      camp.diff.days == 0 & !is.na(place.admin.2) ~ 1,
+      camp.diff.days > 0 | is.na(place.admin.2) | is.na(camp.diff.days) ~ 0)) |>
+
+    dplyr::ungroup() |>
+
+    #manually removing extra duplicates
+    dplyr::filter(sia.sub.activity.code!="PAK-2021-006-1") |>
+    dplyr::filter(sia.sub.activity.code!="SOM-2000-002-2") |>
+    dplyr::select(-missing.guid, -ADM0_NAME, -ADM1_NAME, -ADM2_NAME) |>
+    dplyr::select(-c(camp.diff.days, dup)) |>
+
+    #change class of vars to match old file
+    dplyr::mutate(`country.population.%` = as.character(`country.population.%`),
+                  `area.targeted.%` = as.character(`area.targeted.%`),
+                  `age.group.%` = as.character(`age.group.%`),
+                  `wastage.factor` = as.character(`wastage.factor`),
+                  sub.activity.start.date = as.POSIXct(round(as.POSIXct(sub.activity.start.date)),
+                                                       format="%Y-%m-%d %H:%M:%S")) |>
+    dplyr::mutate_at(c("admin.1.id",
+                       "admin.2.id",
+                       "unpd.country.population",
+                       "immunized.population",
+                       "targeted.population",
+                       "number.of.doses",
+                       "admin.2.targeted.population",
+                       "admin.2.immunized.population",
+                       "admin2.children.inaccessible",
+                       "number.of.doses.approved",
+                       "children.inaccessible",
+                       "activity.parent.children.inaccessible",
+                       "admin.0.id" ),
+                     as.numeric)
+  options(scipen = savescipen)
+
+  cli::cli_process_done()
+
+  return(sia.06)
+
 }
