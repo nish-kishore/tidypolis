@@ -2373,13 +2373,13 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
 
   cli::cli_h1("Step 3/5 - Creating SIA analytic datasets")
 
-  sia.01.new <- s3_load_sia_data(
+  sia.01.new <- s3_sia_load_data(
     polis_data_folder = polis_data_folder,
     latest_folder_in_archive = latest_folder_in_archive)
 
-  sia.02 <- s3_create_sia_cdc_vars(sia.01.new = sia.01.new)
+  sia.02 <- s3_sia_create_cdc_vars(sia.01.new = sia.01.new)
 
-  sia.05 <- s3_check_sia_guids(sia.02 = sia.02, long.global.dist.01 = long.global.dist.01)
+  sia.05 <- s3_sia_check_guids(sia.02 = sia.02, long.global.dist.01 = long.global.dist.01)
 
   sia.06 <- s3_sia_check_duplicates(sia.05 = sia.05)
 
@@ -7220,7 +7220,7 @@ s2_compare_with_archive <- function(data,
 #' stability against the last download if it exists
 #' @keywords internal
 #'
-s3_load_sia_data <- function(polis_data_folder,
+s3_sia_load_data <- function(polis_data_folder,
                              latest_folder_in_archive){
 
   # Step 1: Read in "old" data file (System to find "Old" data file)
@@ -7377,7 +7377,7 @@ s3_load_sia_data <- function(polis_data_folder,
 #' @returns `tibble` sia.02 SIA data with CDC variables enforced
 #' @keywords internal
 #'
-s3_create_sia_cdc_vars <- function(sia.01.new,
+s3_sia_create_cdc_vars <- function(sia.01.new,
                                startyr = 2020,
                                endyr = lubridate::year(format(Sys.time()))){
 
@@ -7473,7 +7473,7 @@ s3_create_sia_cdc_vars <- function(sia.01.new,
 #' @returns `tibble` sia.03 SIA data with CDC variables enforced and GUIDs validated
 #' @keywords internal
 #'
-s3_check_sia_guids <- function(sia.02, long.global.dist.01){
+s3_sia_check_guids <- function(sia.02, long.global.dist.01){
 
   cli::cli_process_start("Checking GUIDs")
   # SIA file with GUID
