@@ -2390,26 +2390,7 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
   s3_sia_write_precluster_data(sia.06 = sia.06,
                                polis_data_folder = polis_data_folder)
 
-
-  #combine SIA pre-2020 with the current rds
-  # read SIA and combine to make one SIA dataset
-
-  sia.files.01 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path=paste0(polis_data_folder, "/Core_Ready_Files"), full_names=TRUE)) |>
-    dplyr::filter(grepl("^.*(sia).*(.rds)$", name)) |>
-    dplyr::pull(name)
-  sia.files.02 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path=paste0(polis_data_folder, "/core_files_to_combine"), full_names=TRUE)) |>
-    dplyr::filter(grepl("^.*(sia).*(.rds)$", name)) |>
-    dplyr::pull(name)
-  sia.to.combine <- purrr::map_df(sia.files.02, ~tidypolis_io(io = "read", file_path = .x)) |>
-    dplyr::mutate(sub.activity.initial.planned.date = lubridate::parse_date_time(sub.activity.initial.planned.date, c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S")),
-                  last.updated.date = lubridate::parse_date_time(last.updated.date, c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S")),
-                  sub.activity.last.updated.date = as.Date(lubridate::parse_date_time(sub.activity.last.updated.date, c("dmY", "bY", "Ymd", "%d-%m-%Y %H:%M"))))
-  sia.new <- purrr::map_df(sia.files.01, ~tidypolis_io(io = "read", file_path = .x))
-
-  sia.clean.01 <- dplyr::bind_rows(sia.new, sia.to.combine) |>
-    mutate(sub.activity.last.updated.date = as.Date(sub.activity.last.updated.date),
-           last.updated.date = as.Date(last.updated.date)) |>
-    dplyr::select(sia.code, sia.sub.activity.code, everything())
+  sia.clean.01 <- s3_sia_combine_historical_data(sia.new = sia.06)
 
   cluster_dates_for_sias(sia.clean.01)
 
@@ -7646,3 +7627,60 @@ s3_sia_write_precluster_data <- function(sia.06, polis_data_folder){
 
   cli::cli_process_done()
 }
+
+#' Read in SIA data pre 2020 and combine with current SIA data
+#'
+#' @param sia.06 `tibble` The latest SIA download with variables checked and
+#' against the last download, CDC variables created, GUIDs validated and
+#' deduplicated
+#' @param polis_data_folder `str` Path to the POLIS data folder.
+#'
+#' @returns `tibble` sia.clean.01 All historical SIA data
+#' @keywords internal
+#'
+s3_sia_combine_historical_data <- function(sia.new){
+
+  #combine SIA pre-2020 with the current rds
+  # read SIA and combine to make one SIA dataset
+
+  sia.files.02 <- dplyr::tibble(
+    "name" = tidypolis_io(io = "list",
+                          file_path=paste0(polis_data_folder, "/core_files_to_combine"),
+                          full_names=TRUE)) |>
+    dplyr::filter(grepl("^.*(sia).*(.rds)$", name)) |>
+    dplyr::pull(name)
+
+  invisible(capture.output(
+    sia.to.combine <- purrr::map_df(sia.files.02, ~ tidypolis_io(io = "read", file_path = .x))
+
+  ))
+
+  sia.to.combine <- sia.to.combine |>
+
+    dplyr::mutate(
+
+      sub.activity.initial.planned.date = lubridate::parse_date_time(
+        sub.activity.initial.planned.date,
+        c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S")),
+
+      last.updated.date = lubridate::parse_date_time(
+        last.updated.date,
+        c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S")),
+
+      sub.activity.last.updated.date = as.Date(
+        lubridate::parse_date_time(
+          sub.activity.last.updated.date,
+          c("dmY", "bY", "Ymd", "%d-%m-%Y %H:%M"))))
+
+  sia.clean.01 <- dplyr::bind_rows(sia.new, sia.to.combine) |>
+
+    mutate(
+      sub.activity.last.updated.date = lubridate::as_date(sub.activity.last.updated.date),
+      last.updated.date = lubridate::as_date(last.updated.date)) |>
+
+    dplyr::select(sia.code, sia.sub.activity.code, everything())
+
+  return(sia.clean.01)
+
+}
+
