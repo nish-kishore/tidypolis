@@ -1922,33 +1922,37 @@ cluster_dates <- function(x,
 
     set.seed(seed)
     #calculate the optimal number of clusters using the "Gap" method so that
-    #researchers don't have to choose arbritrary cutoffs
-    optim_k <- y %>%
-      #calculate optimal number of clusters using the
-      #gap statistic
-      #see clusGap documentation for parameter specifications
-      {
-        cluster::clusGap(
-          x = .,
-          FUN = stats::kmeans,
-          nstart = 25,
-          K.max = max(min(nrow(.)-1, nrow(.)/2), 2),
-          B = 100)
+    #researchers don't have to choose arbitrary cutoffs
+    invisible(capture.output(
+      optim_k <- y %>%
+        #calculate optimal number of clusters using the
+        #gap statistic
+        #see clusGap documentation for parameter specifications
+        {
+          cluster::clusGap(
+            x = .,
+            FUN = stats::kmeans,
+            nstart = 25,
+            K.max = max(min(nrow(.)-1, nrow(.)/2), 2),
+            B = 100)
         } %>%
-      #extract gap statistic matrix
-      {.$Tab[,"gap"]} %>%
-      #calculate the max gap statistic, given the sparsity in the data
-      #am not limiting to the first max SE method
-      which.max()
+        #extract gap statistic matrix
+        {.$Tab[,"gap"]} %>%
+        #calculate the max gap statistic, given the sparsity in the data
+        #am not limiting to the first max SE method
+        which.max()
+    ))
 
     set.seed(seed)
     #calculate the clusters
-    x$cluster <- stats::kmeans(y, optim_k)$cluster %>%
-      #clusters don't always come out in the order we want them to
-      #so here we convert them into factors, relevel and then extract
-      #the numeric value to ensure that the cluster numbers are in order
-      {factor(., levels = unique(.))} |>
-      as.numeric()
+    invisible(capture.output(
+      x$cluster <- stats::kmeans(y, optim_k)$cluster %>%
+        #clusters don't always come out in the order we want them to
+        #so here we convert them into factors, relevel and then extract
+        #the numeric value to ensure that the cluster numbers are in order
+        {factor(., levels = unique(.))} |>
+        as.numeric()
+    ))
 
     #outputting the method used
     x$cluster_method <- method
@@ -2272,70 +2276,9 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
 
   s3_sia_cluster_dates(sia.clean.01)
 
-  sia.clusters <- dplyr::tibble(name = tidypolis_io(io = "list",
-                                                    file_path = file.path(Sys.getenv("POLIS_DATA_FOLDER"),
-                                                                          "misc",
-                                                                          "sia_cluster_cache"),
-                                                    full_names = TRUE)) |>
-    dplyr::filter(grepl("data_cluster_cache", name)) |>
-    dplyr::pull(name)
+  s3_sia_merge_cluster_dates_final_data(sia.clean.01 = sia.clean.01)
 
-  sia.cluster.data <- list()
-
-  for(i in 1:length(sia.clusters)){
-    sia.cluster.data[[length(sia.cluster.data) + 1]] <- tidypolis_io(io = "read", file_path = sia.clusters[i])
-  }
-
-  sia.rounds <- do.call(rbind.data.frame, sia.cluster.data) |>
-    dplyr::arrange(adm2guid, sub.activity.start.date) |>
-    dplyr::group_by(adm2guid, vaccine.type, cluster) |>
-    dplyr::mutate(cdc.round.num = row_number()) |>
-    dplyr::ungroup() |>
-    dplyr::group_by(adm2guid) |>
-    dplyr::mutate(cdc.max.round = max(sub.activity.start.date)) |>
-    dplyr::ungroup() |>
-    dplyr::mutate(cdc.last.camp = ifelse(cdc.max.round == sub.activity.start.date, 1, 0))
-
-  sia.clean.02 <- dplyr::left_join(sia.clean.01, sia.rounds |>
-                                     dplyr::select(sia.code, sia.sub.activity.code, adm2guid, cluster, cluster_method, cdc.round.num, cdc.max.round, cdc.last.camp),
-                                   by = c("sia.code", "sia.sub.activity.code", "adm2guid"))
-
-  tidypolis_io(obj = sia.clean.02, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/",
-                                                                   paste("sia", min(sia.clean.02$yr.sia, na.rm = T),
-                                                                         max(sia.clean.02$yr.sia, na.rm = T),
-                                                                         sep = "_"
-                                                                   ),".rds",
-                                                                   sep = ""
-  ))
-
-  cli::cli_process_start("Evaluating unmatched SIAs")
-
-  # Identify the SIAs did not match to shape file.
-  # Each SIA by district is a separate row
-
-  dist.sia.mismatch.01 <- sia.05 |>
-    dplyr::filter(missing.guid == 1)
-
-  # Summary list of non-matching SIA to shape file
-  # by country by year
-
-  cty.yr.mismatch <- dist.sia.mismatch.01 |>
-    dplyr::group_by(place.admin.0, yr.sia) |>
-    dplyr::summarise(no.of.mismatch.sia = n())
-
-  # excel file summarizing mismatch SIA by country
-
-  tidypolis_io(obj = cty.yr.mismatch, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/",
-                                                                      paste("ctry_sia_mismatch", min(cty.yr.mismatch$yr.sia, na.rm = T),
-                                                                            max(cty.yr.mismatch$yr.sia, na.rm = T),
-                                                                            sep = "_"
-                                                                      ),
-                                                                      ".csv",
-                                                                      sep = ""
-  ))
-
-  cli::cli_process_done()
-  # the curly brace below is closure of else statement. Do not delete
+  s3_sia_evaluate_unmatched_guids(sia.05 = sia.05)
 
   update_polis_log(.event = "SIA Finished",
                    .event_type = "PROCESS")
@@ -7579,12 +7522,17 @@ s3_sia_cluster_dates <- function(sia){
     dplyr::pull(vaccine.type) |>
     unique()
 
+  cli::cli_progress_bar("SIA clusters by vaccine type",
+                        total = length(vax.types),
+                        type = "tasks")
+
   for(i in vax.types) {
     sia.01 |>
-      s3_run_cluster_dates(type = i)
+      s3_sia_cluster_dates_by_vax_type(type = i)
+    cli::cli_progress_update()
   }
 
-  return(NULL)
+  cli::cli_progress_done()
 
 }
 
@@ -7601,7 +7549,7 @@ s3_sia_cluster_dates <- function(sia){
 #' @param type `str` vaccine type
 #' @returns NULL
 #'
-s3_run_cluster_dates <- function(data,
+s3_sia_cluster_dates_by_vax_type <- function(data,
                                  cache_folder = file.path(Sys.getenv("POLIS_DATA_FOLDER"),
                                                           "misc",
                                                           "sia_cluster_cache"),
@@ -7754,3 +7702,131 @@ s3_run_cluster_dates <- function(data,
 
   return(out)
 }
+
+#' Merge and add in all cached cluster data
+#' @description
+#' s3_sia_cluster_dates() writes out the output of previously cached
+#' clustered data into the local cache. This functions reads in all cached
+#' clustered data and merged it into the existing SIA data
+#'
+#' @param sia.clean.01 `tibble` all cleaned and historical SIA data without rounds
+#' @param polis_data_folder `str` Path to the POLIS data folder.
+#'
+#' @keywords internal
+#'
+s3_sia_merge_cluster_dates_final_data <- function(
+    sia.clean.01,
+    polis_data_folder = Sys.getenv("POLIS_DATA_FOLDER")
+){
+
+  cli::cli_process_start("Reading in cached SIA cluster data")
+  sia.clusters <- dplyr::tibble(name = tidypolis_io(io = "list",
+                                                    file_path = file.path(polis_data_folder,
+                                                                          "misc",
+                                                                          "sia_cluster_cache"),
+                                                    full_names = TRUE)) |>
+    dplyr::filter(grepl("data_cluster_cache", name)) |>
+    dplyr::pull(name)
+
+  invisible(capture.output(
+    sia.rounds <- lapply(
+      sia.clusters,
+      function(x){
+        tidypolis_io(io = "read", file_path = x)
+      }
+    )
+  ))
+
+  cli::cli_process_done()
+
+  cli::cli_process_start("Merging SIA clustered round data into primary SIA output")
+
+  sia.rounds <- sia.rounds |>
+    dplyr::bind_rows() |>
+    dplyr::arrange(adm2guid, sub.activity.start.date) |>
+    dplyr::group_by(adm2guid, vaccine.type, cluster) |>
+    dplyr::mutate(cdc.round.num = row_number()) |>
+    dplyr::ungroup() |>
+    dplyr::group_by(adm2guid) |>
+    dplyr::mutate(cdc.max.round = max(sub.activity.start.date)) |>
+    dplyr::ungroup() |>
+    dplyr::mutate(cdc.last.camp = ifelse(cdc.max.round == sub.activity.start.date, 1, 0))
+
+  sia.clean.02 <- dplyr::left_join(
+    sia.clean.01,
+    sia.rounds |>
+      dplyr::select(
+        sia.code, sia.sub.activity.code, adm2guid,
+        cluster, cluster_method, cdc.round.num,
+        cdc.max.round, cdc.last.camp),
+    by = c("sia.code", "sia.sub.activity.code", "adm2guid"))
+
+  cli::cli_process_done()
+
+  cli::cli_process_start("Writing out final SIA dataset")
+
+  invisible(capture.output(
+    tidypolis_io(obj = sia.clean.02,
+                 io = "write",
+                 file_path = paste(
+                   polis_data_folder,
+                   "/Core_Ready_Files/",
+                   paste("sia", min(sia.clean.02$yr.sia, na.rm = T),
+                         max(sia.clean.02$yr.sia, na.rm = T),
+                         sep = "_"),
+                   ".rds",
+                   sep = ""
+                 ))
+  ))
+  cli::cli_process_done()
+
+}
+
+#' Evaluate SIA data with unmatched spatial data
+#' @description
+#' Looks at the output from the GUID matching for SIAs and evalutes
+#' all the SIAs that did not have a matching GUID
+#'
+#' @param sia.05 `tibble` the output of s3_sia_check_guids()
+#'
+#' @keywords internal
+#'
+s3_sia_evaluate_unmatched_guids <- function(sia.05){
+
+  cli::cli_process_start("Evaluating unmatched SIAs")
+
+  # Identify the SIAs did not match to shape file.
+  # Each SIA by district is a separate row
+
+  dist.sia.mismatch.01 <- sia.05 |>
+    dplyr::filter(missing.guid == 1)
+
+  # Summary list of non-matching SIA to shape file
+  # by country by year
+
+  cty.yr.mismatch <- dist.sia.mismatch.01 |>
+    dplyr::group_by(place.admin.0, yr.sia) |>
+    dplyr::summarise(no.of.mismatch.sia = n())
+
+  # excel file summarizing mismatch SIA by country
+
+  invisible(capture.output(
+    tidypolis_io(obj = cty.yr.mismatch,
+                 io = "write",
+                 file_path = paste(
+                   polis_data_folder,
+                   "/Core_Ready_Files/",
+                   paste("ctry_sia_mismatch",
+                         min(cty.yr.mismatch$yr.sia, na.rm = T),
+                         max(cty.yr.mismatch$yr.sia, na.rm = T),
+                         sep = "_"),
+                   ".csv",
+                   sep = ""
+                 ))
+  ))
+
+  cli::cli_process_done()
+
+}
+
+
