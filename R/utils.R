@@ -2383,59 +2383,10 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
 
   sia.06 <- s3_sia_check_duplicates(sia.05 = sia.05)
 
-  cli::cli_process_start("Checking metadata")
-  # This is the final SIA file which would be used for analysis.
-  #Compare the final file to last week's final file to identify any differences in var_names, var_classes, or categorical responses
-  sia.06 <- sia.06 |>
-    dplyr::select(-dplyr::starts_with("Shape"))
+  s3_sia_check_metadata(sia.06 = sia.06,
+                        polis_data_folder = polis_data_folder,
+                        latest_folder_in_archive = latest_folder_in_archive)
 
-  old.file <- x[grepl("sia_2020", x)]
-
-  if(length(old.file) > 0){
-
-    new_table_metadata <- f.summarise.metadata(sia.06)
-    old <- tidypolis_io(io = "read", file_path = old.file)
-    old_table_metadata <- f.summarise.metadata(old)
-    sia_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata, "SIA")
-
-    #check obs in new and old
-    old <- old |>
-      dplyr::mutate_all(as.character)
-    new <- sia.06 |>
-      dplyr::mutate_all(as.character)
-    in_old_not_new <- old |>
-      dplyr::anti_join(new, by=c("sia.sub.activity.code", "adm2guid"))
-    in_new_not_old <- new |>
-      dplyr::anti_join(old, by=c("sia.sub.activity.code", "adm2guid"))
-    in_new_and_old_but_modified <- new |>
-      dplyr::group_by(sia.sub.activity.code, adm2guid) |>
-      dplyr::slice(1) |>
-      dplyr::ungroup() |>
-      dplyr::inner_join(old |>
-                          dplyr::group_by(sia.sub.activity.code, adm2guid) |>
-                          dplyr::slice(1) |>
-                          dplyr::ungroup(), by=c("sia.sub.activity.code", "adm2guid")) |>
-      dplyr::select(-c(setdiff(colnames(new), colnames(old)))) |>
-      # setdiff(., old |>
-      #           select(-c(setdiff(colnames(old), colnames(new))))) |>
-      # #wide_to_long
-      tidyr::pivot_longer(cols=-c("sia.sub.activity.code", "adm2guid")) |>
-      dplyr::mutate(source = ifelse(stringr::str_sub(name, -2) == ".x", "new", "old")) |>
-      dplyr::mutate(name = stringr::str_sub(name, 1, -3)) |>
-      #long_to_wide
-      tidyr::pivot_wider(names_from=source, values_from=value) |>
-      dplyr::filter(new != old)
-
-    update_polis_log(.event = paste0("SIA New Records: ", nrow(in_new_not_old), "; ",
-                                     "SIA Removed Records: ", nrow(in_old_not_new), "; ",
-                                     "SIA Modified Records: ", length(unique(in_new_and_old_but_modified$sia.sub.activity.code))),
-                     .event_type = "INFO")
-
-  }else{
-    cli::cli_alert_info("No old SIA file identified, will not perform comparisons")
-  }
-
-  cli::cli_process_done()
 
   cli::cli_process_start("Writing out SIA file")
   # Write final SIA file to RDS file
@@ -7409,3 +7360,91 @@ s3_sia_check_duplicates <- function(sia.05){
   return(sia.06)
 
 }
+
+#' Check SIA dataset metadata against the previous download for data type changes
+#' or new types of entries
+#'
+#' @param sia.06 `tibble` The latest SIA download with variables checked and
+#' against the last download, CDC variables created,  GUIDs validated and
+#' deduplicated
+#' @param polis_data_folder `str` Path to the POLIS data folder.
+#' @param latest_folder_in_archive `str` Time stamp of latest folder in archive
+#'
+#' @returns NULL
+#' @keywords internal
+#'
+s3_sia_check_metadata <- function(sia.06, polis_data_folder, latest_folder_in_archive){
+
+  cli::cli_process_start("Checking metadata")
+  # This is the final SIA file which would be used for analysis.
+  # Compare the final file to last week's final file to identify any
+  # differences in var_names, var_classes, or categorical responses
+
+  x <- tidypolis_io(io = "list",
+                    file_path = file.path(polis_data_folder,
+                                          "Core_Ready_Files/Archive",
+                                          latest_folder_in_archive),
+                    full_names = T)
+
+  y <- tidypolis_io(io = "list",
+                    file_path = file.path(polis_data_folder,
+                                          "Core_Ready_Files"),
+                    full_names = T)
+
+  sia.06 <- sia.06 |>
+    dplyr::select(-dplyr::starts_with("Shape"))
+
+  old.file <- x[grepl("sia_2020", x)]
+
+  if(length(old.file) > 0){
+
+    new_table_metadata <- f.summarise.metadata(dataframe = sia.06)
+
+    invisible(capture.output(
+      old <- tidypolis_io(io = "read", file_path = old.file)))
+    old_table_metadata <- f.summarise.metadata(dataframe = old)
+    sia_metadata_comparison <- f.compare.metadata(new_table_metadata = new_table_metadata,
+                                                  old_table_metadata = old_table_metadata,
+                                                  table = "SIA")
+
+    #check obs in new and old
+    old <- old |>
+      dplyr::mutate_all(as.character)
+    new <- sia.06 |>
+      dplyr::mutate_all(as.character)
+    in_old_not_new <- old |>
+      dplyr::anti_join(new, by=c("sia.sub.activity.code", "adm2guid"))
+    in_new_not_old <- new |>
+      dplyr::anti_join(old, by=c("sia.sub.activity.code", "adm2guid"))
+    in_new_and_old_but_modified <- new |>
+      dplyr::group_by(sia.sub.activity.code, adm2guid) |>
+      dplyr::slice(1) |>
+      dplyr::ungroup() |>
+      dplyr::inner_join(old |>
+                          dplyr::group_by(sia.sub.activity.code, adm2guid) |>
+                          dplyr::slice(1) |>
+                          dplyr::ungroup(),
+                        by=c("sia.sub.activity.code", "adm2guid")) |>
+      dplyr::select(-c(setdiff(colnames(new), colnames(old)))) |>
+      tidyr::pivot_longer(cols=-c("sia.sub.activity.code", "adm2guid")) |>
+      dplyr::mutate(source = ifelse(stringr::str_sub(name, -2) == ".x", "new", "old")) |>
+      dplyr::mutate(name = stringr::str_sub(name, 1, -3)) |>
+      #long_to_wide
+      tidyr::pivot_wider(names_from=source, values_from=value) |>
+      dplyr::filter(new != old)
+
+    update_polis_log(
+      .event = paste0("SIA New Records: ", nrow(in_new_not_old), "; ",
+                      "SIA Removed Records: ", nrow(in_old_not_new), "; ",
+                      "SIA Modified Records: ",
+                      length(unique(in_new_and_old_but_modified$sia.sub.activity.code))),
+      .event_type = "INFO")
+
+  }else{
+    cli::cli_alert_info("No old SIA file identified, will not perform comparisons")
+  }
+
+  cli::cli_process_done()
+
+}
+
