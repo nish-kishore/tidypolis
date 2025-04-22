@@ -2255,36 +2255,62 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
 
   cli::cli_h1("Step 3/5 - Creating SIA analytic datasets")
 
-  sia.01.new <- s3_sia_load_data(
+  s3_fully_process_sia_data(
     polis_data_folder = polis_data_folder,
-    latest_folder_in_archive = latest_folder_in_archive)
+    polis_folder = polis_folder,
+    long.global.dist.01 = long.global.dist.01
+  )
 
-  sia.02 <- s3_sia_create_cdc_vars(sia.01.new = sia.01.new)
+  #' Process SIA Data Pipeline
+  #'
+  #' This function processes SIA data through multiple standardization and
+  #' validation steps, including checking for duplicates, standardizing dates,
+  #' clustering dates, and processing coordinates.
+  #'
+  #' @param polis_data_folder `str` Path to the POLIS data folder containing
+  #'   Core_Ready_Files.
+  #' @param polis_folder `str` Path to the main POLIS folder.
+  #' @param long.global.dist.01 `sf` Global district lookup table for GUID
+  #'   validation.
+  #'
+  #' @export
 
-  sia.05 <- s3_sia_check_guids(sia.02 = sia.02, long.global.dist.01 = long.global.dist.01)
+  #dataset used to check mismatched guids and create sia.06
+  sia.05 <- s3_sia_load_data(
+    polis_data_folder = polis_data_folder,
+    latest_folder_in_archive = latest_folder_in_archive) |>
+    s3_sia_create_cdc_vars() |>
+    s3_sia_check_guids(long.global.dist.01 = long.global.dist.01)
 
+  #used to write pre cluster data and create final output data
   sia.06 <- s3_sia_check_duplicates(sia.05 = sia.05)
 
+  #checks metadata of near final output
   s3_sia_check_metadata(sia.06 = sia.06,
                         polis_data_folder = polis_data_folder,
                         latest_folder_in_archive = latest_folder_in_archive)
 
+  #writes our partially processed data into cache
   s3_sia_write_precluster_data(sia.06 = sia.06,
                                polis_data_folder = polis_data_folder)
 
+  #final clean dataset
   sia.clean.01 <- s3_sia_combine_historical_data(sia.new = sia.06)
 
+  #creates cache from clustered SIA dates
   s3_sia_cluster_dates(sia.clean.01)
 
+  #merged data with clustered data
   s3_sia_merge_cluster_dates_final_data(sia.clean.01 = sia.clean.01)
 
+  #evaluate unmatched GUIDs
   s3_sia_evaluate_unmatched_guids(sia.05 = sia.05)
 
   update_polis_log(.event = "SIA Finished",
                    .event_type = "PROCESS")
 
   cli::cli_process_done("Clearing memory")
-  rm(list = c("sia.01.new", "sia.02", "sia.05", "sia.06", "sia.clean.01"))
+  rm(list = c("sia.05", "sia.06", "sia.clean.01"))
   invisible(gc())
   cli::cli_process_done()
 
@@ -7697,18 +7723,18 @@ s3_sia_cluster_dates_by_vax_type <- function(data,
 #' clustered data and merged it into the existing SIA data
 #'
 #' @param sia.clean.01 `tibble` all cleaned and historical SIA data without rounds
-#' @param polis_data_folder `str` Path to the POLIS data folder.
+#' @param polis_folder `str` Path to the POLIS folder.
 #'
 #' @keywords internal
 #'
 s3_sia_merge_cluster_dates_final_data <- function(
     sia.clean.01,
-    polis_data_folder = Sys.getenv("POLIS_DATA_FOLDER")
+    polis_folder = Sys.getenv("POLIS_DATA_FOLDER")
 ){
 
   cli::cli_process_start("Reading in cached SIA cluster data")
   sia.clusters <- dplyr::tibble(name = tidypolis_io(io = "list",
-                                                    file_path = file.path(polis_data_folder,
+                                                    file_path = file.path(polis_folder,
                                                                           "misc",
                                                                           "sia_cluster_cache"),
                                                     full_names = TRUE)) |>
