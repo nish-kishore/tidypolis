@@ -2284,23 +2284,10 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
                    .event_type = "PROCESS")
 
   cli::cli_process_done("Clearing memory")
-  rm(
-    'cty.yr.mismatch',
-    'dist.sia.mismatch.01', 'endyr',
-    'in_new_and_old_but_modified', 'in_new_not_old',
-    'in_old_not_new', 'new', 'new.df', 'new.file',
-    'new.var.sia.01', 'new_table_metadata', 'old', 'old.file',
-    'old_table_metadata', 'savescipen',
-    'sia.01.new', 'sia.01.new.compare', 'sia.01.old',
-    'sia.01.old.compare', 'sia.02', 'sia.03', 'sia.04', 'sia.05',
-    'sia.06', 'sia.clean.01', 'sia.files.01', 'sia.files.02',
-    'sia_metadata_comparison', 'sia.file.path',
-    'startyr', 'tofix', 'var.list.01', "sia.new", "sia.to.combine",
-    "sia.clean.02", "sia.cluster.data", 'sia.new.value',
-    "sia.rounds", "sia.clusters"
-  )
-
+  rm(list = c("sia.01.new", "sia.02", "sia.05", "sia.06", "sia.clean.01"))
+  invisible(gc())
   cli::cli_process_done()
+
   #Step 4 - Creating ES datasets====
   update_polis_log(.event = "Creating ES analytic datasets",
                    .event_type = "PROCESS")
