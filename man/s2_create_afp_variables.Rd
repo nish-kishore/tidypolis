@@ -8,7 +8,7 @@ data quality flags, stool adequacy measures, and follow-up indicators.}
 s2_create_afp_variables(data)
 }
 \arguments{
-\item{data}{A data frame containing AFP data with spatial coordinates}
+\item{data}{\code{tibble} A data frame containing AFP data with spatial coordinates}
 }
 \value{
 A data frame with additional AFP analysis variables
