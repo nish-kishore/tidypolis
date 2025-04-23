@@ -7110,9 +7110,9 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
             polis_data_folder,
             "/Core_Ready_Files/",
             "other_surveillance_type_linelist_",
-            min(other_combined$dateonset, na.rm = TRUE),
+            min(other_combined$yronset, na.rm = TRUE),
             "_",
-            max(other_combined$dateonset, na.rm = TRUE),
+            max(other_combined$yronset, na.rm = TRUE),
             ".rds"
           )
         )
@@ -7131,6 +7131,7 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
   gc(full = TRUE)
 
   invisible(NULL)
+  }
 }
 
 #' Compare AFP data with archived version
@@ -7303,4 +7304,3 @@ s2_compare_with_archive <- function(data,
     modified_details = modified_details
   ))
 }
-
