@@ -4,11 +4,22 @@
 \alias{s3_fully_process_sia_data}
 \title{Process SIA Data Pipeline}
 \usage{
-s3_fully_process_sia_data(long.global.dist.01)
+s3_fully_process_sia_data(
+  long.global.dist.01,
+  polis_data_folder,
+  latest_folder_in_archive,
+  timestamp
+)
 }
 \arguments{
 \item{long.global.dist.01}{\code{sf} Global district lookup table for GUID
 validation.}
+
+\item{polis_data_folder}{\code{str} Path to the POLIS data folder.}
+
+\item{latest_folder_in_archive}{\code{str} Name of the latest folder in the archive.}
+
+\item{timestamp}{\code{str} The time stamp.}
 }
 \description{
 This function processes SIA data through multiple standardization and

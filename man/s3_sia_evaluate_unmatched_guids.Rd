@@ -4,10 +4,12 @@
 \alias{s3_sia_evaluate_unmatched_guids}
 \title{Evaluate SIA data with unmatched spatial data}
 \usage{
-s3_sia_evaluate_unmatched_guids(sia.05)
+s3_sia_evaluate_unmatched_guids(sia.05, polis_data_folder)
 }
 \arguments{
 \item{sia.05}{\code{tibble} the output of s3_sia_check_guids()}
+
+\item{polis_data_folder}{The POLIS data folder.}
 }
 \description{
 Looks at the output from the GUID matching for SIAs and evalutes

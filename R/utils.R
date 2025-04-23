@@ -2257,7 +2257,10 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
   cli::cli_h1("Step 3/5 - Creating SIA analytic datasets")
 
   s3_fully_process_sia_data(
-    long.global.dist.01 = long.global.dist.01
+    long.global.dist.01,
+    polis_data_folder,
+    latest_folder_in_archive,
+    timestamp
   )
 
   invisible(gc())
@@ -6926,9 +6929,14 @@ s2_compare_with_archive <- function(data,
 #'
 #' @param long.global.dist.01 `sf` Global district lookup table for GUID
 #'   validation.
+#' @param polis_data_folder `str` Path to the POLIS data folder.
+#' @param latest_folder_in_archive `str` Name of the latest folder in the archive.
+#' @param timestamp `str` The time stamp.
+#'
 #'
 #' @export
-s3_fully_process_sia_data <- function(long.global.dist.01){
+s3_fully_process_sia_data <- function(long.global.dist.01, polis_data_folder,
+                                      latest_folder_in_archive, timestamp){
   #dataset used to check mismatched guids and create sia.06
   sia.05 <- s3_sia_load_data(
     polis_data_folder = polis_data_folder,
@@ -6949,7 +6957,7 @@ s3_fully_process_sia_data <- function(long.global.dist.01){
                                polis_data_folder = polis_data_folder)
 
   #final clean dataset
-  sia.clean.01 <- s3_sia_combine_historical_data(sia.new = sia.06)
+  sia.clean.01 <- s3_sia_combine_historical_data(sia.new = sia.06, polis_data_folder)
 
   #creates cache from clustered SIA dates
   s3_sia_cluster_dates(sia.clean.01)
@@ -6958,7 +6966,7 @@ s3_fully_process_sia_data <- function(long.global.dist.01){
   s3_sia_merge_cluster_dates_final_data(sia.clean.01 = sia.clean.01)
 
   #evaluate unmatched GUIDs
-  s3_sia_evaluate_unmatched_guids(sia.05 = sia.05)
+  s3_sia_evaluate_unmatched_guids(sia.05 = sia.05, polis_data_folder)
 
   update_polis_log(.event = "SIA Finished",
                    .event_type = "PROCESS")
@@ -7472,7 +7480,7 @@ s3_sia_write_precluster_data <- function(sia.06, polis_data_folder){
 #' @returns `tibble` sia.clean.01 All historical SIA data
 #' @keywords internal
 #'
-s3_sia_combine_historical_data <- function(sia.new){
+s3_sia_combine_historical_data <- function(sia.new, polis_data_folder){
 
   #combine SIA pre-2020 with the current rds
   # read SIA and combine to make one SIA dataset
@@ -7724,12 +7732,14 @@ s3_sia_cluster_dates_by_vax_type <- function(data,
 #'
 #' @param sia.clean.01 `tibble` all cleaned and historical SIA data without rounds
 #' @param polis_folder `str` Path to the POLIS folder.
+#' @param polis_data_folder `str` Path to the POLIS data folder.
 #'
 #' @keywords internal
 #'
 s3_sia_merge_cluster_dates_final_data <- function(
     sia.clean.01,
-    polis_folder = Sys.getenv("POLIS_DATA_FOLDER")
+    polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
+    polis_data_folder = file.path(polis_folder, "data")
 ){
 
   cli::cli_process_start("Reading in cached SIA cluster data")
@@ -7801,10 +7811,11 @@ s3_sia_merge_cluster_dates_final_data <- function(
 #' all the SIAs that did not have a matching GUID
 #'
 #' @param sia.05 `tibble` the output of s3_sia_check_guids()
+#' @param polis_data_folder The POLIS data folder.
 #'
 #' @keywords internal
 #'
-s3_sia_evaluate_unmatched_guids <- function(sia.05){
+s3_sia_evaluate_unmatched_guids <- function(sia.05, polis_data_folder){
 
   cli::cli_process_start("Evaluating unmatched SIAs")
 

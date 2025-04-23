@@ -6,13 +6,16 @@
 \usage{
 s3_sia_merge_cluster_dates_final_data(
   sia.clean.01,
-  polis_folder = Sys.getenv("POLIS_DATA_FOLDER")
+  polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
+  polis_data_folder = file.path(polis_folder, "data")
 )
 }
 \arguments{
 \item{sia.clean.01}{\code{tibble} all cleaned and historical SIA data without rounds}
 
 \item{polis_folder}{\code{str} Path to the POLIS folder.}
+
+\item{polis_data_folder}{\code{str} Path to the POLIS data folder.}
 }
 \description{
 s3_sia_cluster_dates() writes out the output of previously cached

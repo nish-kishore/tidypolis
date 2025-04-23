@@ -4,14 +4,14 @@
 \alias{s3_sia_combine_historical_data}
 \title{Read in SIA data pre 2020 and combine with current SIA data}
 \usage{
-s3_sia_combine_historical_data(sia.new)
+s3_sia_combine_historical_data(sia.new, polis_data_folder)
 }
 \arguments{
+\item{polis_data_folder}{\code{str} Path to the POLIS data folder.}
+
 \item{sia.06}{\code{tibble} The latest SIA download with variables checked and
 against the last download, CDC variables created, GUIDs validated and
 deduplicated}
-
-\item{polis_data_folder}{\code{str} Path to the POLIS data folder.}
 }
 \value{
 \code{tibble} sia.clean.01 All historical SIA data
