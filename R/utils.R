@@ -7015,7 +7015,7 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
         file_path = paste0(
           polis_data_folder,
           "/Core_Ready_Files/",
-          "afp_linelist_light_",
+          "afp_linelist_",
           min(afp_light$dateonset, na.rm = TRUE),
           "_",
           max(afp_light$dateonset, na.rm = TRUE),
