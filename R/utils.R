@@ -5843,8 +5843,7 @@ s2_standardize_dates <- function(data) {
           "case.date", "stool.date.sent.to.lab",
           "clinical.admitted.date", "followup.date"
         )),
-        ~ lubridate::ymd(as.Date(., "%Y-%m-%dT%H:%M:%S"), quiet = TRUE),
-        .names = "date_{stringr::str_replace_all(.col, '[^a-z0-9]', '_')}"
+        ~ lubridate::ymd(as.Date(., "%Y-%m-%dT%H:%M:%S"), quiet = TRUE)
       )
     )
 
@@ -7008,7 +7007,7 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
     # Create light AFP dataset for WHO (filtered to recent years)
     afp_light <- afp_combined |>
       dplyr::filter(yronset >= 2019)
-    
+
     invisible(capture.output(
       tidypolis_io(
         obj = afp_light,
