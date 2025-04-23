@@ -5845,7 +5845,12 @@ s2_standardize_dates <- function(data) {
         )),
         ~ lubridate::ymd(as.Date(., "%Y-%m-%dT%H:%M:%S"), quiet = TRUE)
       )
-    )
+    ) |>
+    dplyr::mutate(datenotificationtohq = date.notification.to.hq,
+                  casedate = case.date,
+                  stooltolabdate = stool.date.sent.to.lab,
+                  stooltoiclabdate = stool.date.sent.to.ic.lab,
+                  clinicadmitdate = clinical.admitted.date)
 
   cli::cli_process_done()
 
