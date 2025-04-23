@@ -2247,7 +2247,8 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
   latest_folder_in_archive <- s2_fully_process_afp_data(
     polis_data_folder = polis_data_folder,
     polis_folder = polis_folder,
-    long.global.dist.01 = long.global.dist.01)
+    long.global.dist.01 = long.global.dist.01,
+    timestamp = timestamp)
 
   invisible(gc())
 
@@ -5071,14 +5072,15 @@ s1_export_final_core_ready_files <- function(polis_data_folder, ts, timestamp,
 #' @param polis_folder `str` Path to the main POLIS folder.
 #' @param long.global.dist.01 `sf` Global district lookup table for GUID
 #'   validation.
+#' @param timestamp `str` Time stamp
 #'
 #' @export
 s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
-                                      long.global.dist.01) {
+                                      long.global.dist.01, timestamp) {
 
   # Step 2a: Read in "old" data file (System to find "Old" data file)
   latest_folder_in_archive <- s2_find_latest_archive(
-    polis_data_folder = polis_data_folder)
+    polis_data_folder = polis_data_folder, timestamp = timestamp)
 
   # list archive files
   x <- tidypolis_io(
