@@ -8,7 +8,8 @@ s2_fully_process_afp_data(
   polis_data_folder,
   polis_folder,
   long.global.dist.01,
-  timestamp
+  timestamp,
+  latest_folder_in_archive_path
 )
 }
 \arguments{
@@ -21,6 +22,8 @@ Core_Ready_Files.}
 validation.}
 
 \item{timestamp}{\code{str} Time stamp}
+
+\item{latest_folder_in_archive_path}{\code{str} The path to the latest archive folder.}
 }
 \description{
 This function processes AFP data through multiple standardization and

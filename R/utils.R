@@ -2045,7 +2045,20 @@ check_missingness <- function(data,
 #'
 preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
 
+  # Static global variables used in some part of our code
   polis_data_folder <- file.path(polis_folder, "data")
+  ts <- Sys.time()
+  timestamp <- paste0(
+    lubridate::date(ts),
+    "_",
+    lubridate::hour(ts),
+    "-",
+    lubridate::minute(ts),
+    "-",
+    round(lubridate::second(ts), 0)
+  )
+  latest_folder_in_archive <- s2_find_latest_archive(
+    polis_data_folder = polis_data_folder, timestamp = timestamp)
 
   if (!requireNamespace("purrr", quietly = TRUE)) {
     stop('Package "purrr" must be installed to use this function.',
@@ -2175,16 +2188,6 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
 
   #13. Export csv files that match the web download, and create archive and change log
   cli::cli_h2("Creating change log and exporting data")
-  ts <- Sys.time()
-  timestamp <- paste0(
-    lubridate::date(ts),
-    "_",
-    lubridate::hour(ts),
-    "-",
-    lubridate::minute(ts),
-    "-",
-    round(lubridate::second(ts), 0)
-  )
 
   # create directory for the Archive and Changelogs
   s1_create_core_ready_dir(polis_data_folder, timestamp)
@@ -5076,14 +5079,14 @@ s1_export_final_core_ready_files <- function(polis_data_folder, ts, timestamp,
 #' @param long.global.dist.01 `sf` Global district lookup table for GUID
 #'   validation.
 #' @param timestamp `str` Time stamp
+#' @param latest_folder_in_archive_path `str` The path to the latest archive folder.
 #'
 #' @export
 s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
-                                      long.global.dist.01, timestamp) {
+                                      long.global.dist.01, timestamp,
+                                      latest_folder_in_archive_path) {
 
   # Step 2a: Read in "old" data file (System to find "Old" data file)
-  latest_folder_in_archive <- s2_find_latest_archive(
-    polis_data_folder = polis_data_folder, timestamp = timestamp)
 
   # list archive files
   x <- tidypolis_io(
