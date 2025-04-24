@@ -2247,11 +2247,12 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
 
   cli::cli_h1("Step 2/5 - Creating AFP and Epi analytic datasets")
 
-  latest_folder_in_archive <- s2_fully_process_afp_data(
+  s2_fully_process_afp_data(
     polis_data_folder = polis_data_folder,
     polis_folder = polis_folder,
     long.global.dist.01 = long.global.dist.01,
-    timestamp = timestamp)
+    timestamp = timestamp,
+    latest_folder_in_archive_path = latest_folder_in_archive)
 
   invisible(gc())
 
@@ -6978,6 +6979,7 @@ s3_fully_process_sia_data <- function(long.global.dist.01, polis_data_folder,
   rm(list = c("sia.05", "sia.06", "sia.clean.01"))
   invisible(gc())
   cli::cli_process_done()
+  invisible()
 }
 
 #' Load SIA Data
@@ -7441,7 +7443,7 @@ s3_sia_check_metadata <- function(sia.06, polis_data_folder, latest_folder_in_ar
   }
 
   cli::cli_process_done()
-
+  invisible()
 }
 
 #' Write out SIA data
@@ -7471,6 +7473,7 @@ s3_sia_write_precluster_data <- function(sia.06, polis_data_folder){
   ))
 
   cli::cli_process_done()
+  invisible()
 }
 
 #' Read in SIA data pre 2020 and combine with current SIA data
@@ -7557,6 +7560,7 @@ s3_sia_cluster_dates <- function(sia){
   }
 
   cli::cli_progress_done()
+  invisible()
 
 }
 
@@ -7805,6 +7809,7 @@ s3_sia_merge_cluster_dates_final_data <- function(
                  ))
   ))
   cli::cli_process_done()
+  invisible()
 
 }
 
@@ -7853,6 +7858,7 @@ s3_sia_evaluate_unmatched_guids <- function(sia.05, polis_data_folder){
   ))
 
   cli::cli_process_done()
+  invisible()
 
 }
 
