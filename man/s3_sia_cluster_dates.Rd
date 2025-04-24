@@ -9,6 +9,10 @@ s3_sia_cluster_dates(sia)
 \arguments{
 \item{sia}{\code{tibble} tibble of SIAs to identify rounds by vaccine type}
 }
+\value{
+\code{NULL} silently.
+}
 \description{
 manager function to run the cluster_dates() function using helper function s3_run_cluster_dates to cluster SIAs by type
 }
+\keyword{internal}

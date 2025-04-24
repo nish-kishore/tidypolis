@@ -11,6 +11,9 @@ s3_sia_evaluate_unmatched_guids(sia.05, polis_data_folder)
 
 \item{polis_data_folder}{The POLIS data folder.}
 }
+\value{
+\code{NULL} silently.
+}
 \description{
 Looks at the output from the GUID matching for SIAs and evalutes
 all the SIAs that did not have a matching GUID

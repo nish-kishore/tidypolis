@@ -22,6 +22,9 @@ global Polio SIAs}
 
 \item{type}{\code{str} vaccine type}
 }
+\value{
+\code{NULL} silently.
+}
 \description{
 Wrapper around the cluster_dates function to do some error checking
 }

@@ -17,6 +17,9 @@ s3_sia_merge_cluster_dates_final_data(
 
 \item{polis_data_folder}{\code{str} Path to the POLIS data folder.}
 }
+\value{
+\code{NULL} silently.
+}
 \description{
 s3_sia_cluster_dates() writes out the output of previously cached
 clustered data into the local cache. This functions reads in all cached

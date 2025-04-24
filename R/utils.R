@@ -7537,7 +7537,8 @@ s3_sia_combine_historical_data <- function(sia.new, polis_data_folder){
 #' manager function to run the cluster_dates() function using helper function s3_run_cluster_dates to cluster SIAs by type
 #' @import dplyr
 #' @param sia `tibble` tibble of SIAs to identify rounds by vaccine type
-#' @returns NULL
+#' @returns `NULL` silently.
+#' @keywords internal
 #'
 s3_sia_cluster_dates <- function(sia){
 
@@ -7575,7 +7576,7 @@ s3_sia_cluster_dates <- function(sia){
 #' using k-means versus using the minimum date available, defaults to 4 for
 #' global Polio SIAs
 #' @param type `str` vaccine type
-#' @returns NULL
+#' @returns `NULL` silently.
 #'
 s3_sia_cluster_dates_by_vax_type <- function(data,
                                  cache_folder = file.path(Sys.getenv("POLIS_DATA_FOLDER"),
@@ -7740,7 +7741,7 @@ s3_sia_cluster_dates_by_vax_type <- function(data,
 #' @param sia.clean.01 `tibble` all cleaned and historical SIA data without rounds
 #' @param polis_folder `str` Path to the POLIS folder.
 #' @param polis_data_folder `str` Path to the POLIS data folder.
-#'
+#' @returns `NULL` silently.
 #' @keywords internal
 #'
 s3_sia_merge_cluster_dates_final_data <- function(
@@ -7821,6 +7822,7 @@ s3_sia_merge_cluster_dates_final_data <- function(
 #' @param sia.05 `tibble` the output of s3_sia_check_guids()
 #' @param polis_data_folder The POLIS data folder.
 #'
+#' @returns `NULL` silently.
 #' @keywords internal
 #'
 s3_sia_evaluate_unmatched_guids <- function(sia.05, polis_data_folder){
