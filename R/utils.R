@@ -5093,7 +5093,7 @@ s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
     io = "list",
     file_path = file.path(
       polis_data_folder, "Core_Ready_Files/Archive",
-      latest_folder_in_archive
+      latest_folder_in_archive_path
     ),
     full_names = TRUE
   )
@@ -5160,7 +5160,7 @@ s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
   # Step 2k: Compare archives and generate outputs
   s2_export_afp_outputs(
     data = afp_final,
-    latest_archive = latest_folder_in_archive,
+    latest_archive = latest_folder_in_archive_path,
     polis_data_folder = polis_data_folder,
     col_afp_raw = colnames(afp_raw_new)
   )
