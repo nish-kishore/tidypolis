@@ -3808,6 +3808,7 @@ process_spatial <- function(gdb_folder,
     output_folder <- stringr::str_replace(output_folder, paste0("GID/PEB/SIR/"), "")
   }
 
+  cli::cli_process_start("Loading raw spatial data")
   if (edav) {
     dest <- tempdir()
     AzureStor::storage_download(container = azcontainer, gdb_folder, paste0(dest, "/gdb.zip"), overwrite = T)
@@ -3871,12 +3872,15 @@ process_spatial <- function(gdb_folder,
                     ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"), "COTE D IVOIRE", ADM0_NAME))
 
   }
+  cli::cli_process_done()
 
   #identify sf var in global.ctry
+  cli::cli_process_start("Starting Country shapefile processing")
   sf_columns_ctry <- sapply(global.ctry.01, function(col) inherits(col, "sfc"))
 
   sf_var_ctry <- names(global.ctry.01)[sf_columns_ctry]
 
+  cli::cli_process_start("Checking country shapes for validity")
   #identifying bad shapes
   check.ctry.valid <- tibble::as_tibble(sf::st_is_valid(global.ctry.01))
   row.num.ctry <- which(check.ctry.valid$value == FALSE)
@@ -3887,6 +3891,9 @@ process_spatial <- function(gdb_folder,
 
   sf::st_geometry(invalid.ctry.shapes) <- NULL
 
+  cli::cli_process_done()
+
+  cli::cli_process_start("Outputting invalid country shapes")
   if (edav) {
     tidypolis_io(io = "write", edav = T,
                  file_path = paste0(output_folder, "/invalid_ctry_shapes.csv"),
@@ -3896,6 +3903,7 @@ process_spatial <- function(gdb_folder,
                  file_path = paste0(output_folder, "/invalid_ctry_shapes.csv"),
                  obj = invalid.ctry.shapes, azcontainer = azcontainer)
   }
+  cli::cli_process_done()
 
   empty.ctry <- global.ctry.01 |>
     dplyr::mutate(empty = sf::st_is_empty(!!dplyr::sym(sf_var_ctry))) |>
@@ -3904,6 +3912,7 @@ process_spatial <- function(gdb_folder,
   sf::st_geometry(empty.ctry) <- NULL
 
   if(nrow(empty.ctry) > 0) {
+    cli::cli_process_start("Outputting empty country shapes")
     if (edav) {
       tidypolis_io(io = "write", edav = T,
                    file_path = paste0(output_folder, "/empty_ctry_shapes.csv"),
@@ -3915,11 +3924,13 @@ process_spatial <- function(gdb_folder,
                    obj = empty.ctry,
                    azcontainer = azcontainer)
     }
+    cli::cli_process_done()
   }
 
   rm(invalid.ctry.shapes, check.ctry.valid, row.num.ctry, empty.ctry)
 
   #identify potential duplicates
+  cli::cli_process_start("Checking country shapes for duplicates")
   dupe.guid.ctry <- global.ctry.01 |>
     dplyr::group_by(GUID) |>
     dplyr::mutate(n = dplyr::n()) |>
@@ -3931,6 +3942,7 @@ process_spatial <- function(gdb_folder,
     dplyr::mutate(n = dplyr::n()) |>
     dplyr::ungroup() |>
     dplyr::filter(n > 1)
+  cli::cli_process_done()
 
   if(nrow(dupe.guid.ctry) > 1 | nrow(dupe.name.ctry) > 1) {
     cli::cli_alert_warning("There is a country shape with an exact duplicate, please manually run shape preprocessing to inspect")
@@ -3938,6 +3950,7 @@ process_spatial <- function(gdb_folder,
 
   if(nrow(dupe.guid.ctry) > 1) {
     sf::st_geometry(dupe.guid.ctry) <- NULL
+    cli::cli_process_start("Outputting country shapes with duplicate GUIDs")
     if(edav) {
       tidypolis_io(io = "write", edav = T,
                    file_path = paste0(output_folder, "/duplicate_ctry_guid.csv"),
@@ -3951,8 +3964,11 @@ process_spatial <- function(gdb_folder,
     }
   }
 
+    cli::cli_process_done()
+
   if(nrow(dupe.name.ctry) > 1) {
     sf::st_geometry(dupe.name.ctry) <- NULL
+    cli::cli_process_start("Outputting country shapes with duplicate names")
     if(edav) {
       tidypolis_io(io = "write", edav = T,
                    file_path = paste0(output_folder, "/duplicate_ctry_name.csv"),
@@ -3964,6 +3980,7 @@ process_spatial <- function(gdb_folder,
                    obj = dupe.name.ctry,
                    azcontainer = azcontainer)
     }
+    cli::cli_process_done()
   }
 
   rm(dupe.guid.ctry, dupe.name.ctry, sf_columns_ctry, sf_var_ctry)
@@ -3985,6 +4002,8 @@ process_spatial <- function(gdb_folder,
   }
 
   sf::st_geometry(global.ctry.01) <- NULL
+
+  cli::cli_process_done()
 
   # Province shapes overlapping in Lower Juba in Somalia.
   global.prov.01 <- global.prov.01 |>
@@ -7060,7 +7079,7 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
     # Create light AFP dataset for WHO (filtered to recent years)
     afp_light <- afp_combined |>
       dplyr::filter(yronset >= 2019)
-    
+
     invisible(capture.output(
       tidypolis_io(
         obj = afp_light,
