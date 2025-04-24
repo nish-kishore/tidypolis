@@ -4006,6 +4006,7 @@ process_spatial <- function(gdb_folder,
   cli::cli_process_done()
 
   # Province shapes overlapping in Lower Juba in Somalia.
+  cli::cli_process_start("Starting Province shapefile processing")
   global.prov.01 <- global.prov.01 |>
     dplyr::mutate(yr.end = ifelse(ADM0_GUID == '{B5FF48B9-7282-445C-8CD2-BEFCE4E0BDA7}' &
                                     GUID == '{EE73F3EA-DD35-480F-8FEA-5904274087C4}', 2021, yr.end))
@@ -4015,6 +4016,7 @@ process_spatial <- function(gdb_folder,
 
   sf_var_prov <- names(global.prov.01)[sf_columns_prov]
 
+  cli::cli_process_start("Checking province shape validity")
   check.prov.valid <- tibble::as_tibble(sf::st_is_valid(global.prov.01))
   row.num.prov <- which(check.prov.valid$value == FALSE)
   invalid.prov.shapes <- global.prov.01 |>
@@ -4024,6 +4026,9 @@ process_spatial <- function(gdb_folder,
 
   sf::st_geometry(invalid.prov.shapes) <- NULL
 
+  cli::cli_process_done()
+
+  cli::cli_process_start("Outputting invalid province shapes")
   if(edav) {
     tidypolis_io(io = "write", edav = T,
                  file_path = paste0(output_folder, "/invalid_prov_shapes.csv"),
@@ -4035,12 +4040,14 @@ process_spatial <- function(gdb_folder,
                  obj = invalid.prov.shapes,
                  azcontainer = azcontainer)
   }
+  cli::cli_process_done()
 
   empty.prov <- global.prov.01 |>
     dplyr::mutate(empty = sf::st_is_empty(!!dplyr::sym(sf_var_prov))) |>
     dplyr::filter(empty == TRUE)
 
   if(nrow(empty.prov) > 0) {
+    cli::cli_process_start("Outputting empty province shapes")
     sf::st_geometry(empty.prov) <- NULL
     if(edav) {
       tidypolis_io(io = "write", edav = T,
@@ -4053,11 +4060,13 @@ process_spatial <- function(gdb_folder,
                    obj = empty.prov,
                    azcontainer = azcontainer)
     }
+    cli::cli_process_done()
   }
 
   rm(check.prov.valid, row.num.prov, invalid.prov.shapes, empty.prov)
 
   #duplicate checking in provinces
+  cli::cli_process_start("Checking province shapes for duplicates")
   dupe.guid.prov <- global.prov.01 |>
     dplyr::group_by(GUID) |>
     dplyr::mutate(n = n()) |>
@@ -4070,11 +4079,13 @@ process_spatial <- function(gdb_folder,
     dplyr::ungroup() |>
     dplyr::filter(n > 1)
 
+  cli::cli_process_done()
   if(nrow(dupe.guid.prov) > 1 | nrow(dupe.name.prov) > 1) {
     cli::cli_alert_warning("There is a duplicated province that is exactly the same, please run shape preprocessing manually to inspect")
   }
 
   if(nrow(dupe.guid.prov) > 1) {
+    cli::cli_process_start("Outputting provinces with duplicate GUIDs")
     sf::st_geometry(dupe.guid.prov) <- NULL
     if(edav) {
       tidypolis_io(io = "write", edav = T,
@@ -4087,9 +4098,11 @@ process_spatial <- function(gdb_folder,
                    obj = dupe.guid.prov,
                    azcontainer = azcontainer)
     }
+    cli::cli_process_done()
   }
 
   if(nrow(dupe.name.prov) > 1) {
+    cli::cli_process_start("Outputting provinces with duplicate names")
     sf::st_geometry(dupe.name.prov) <- NULL
     if(edav) {
       tidypolis_io(io = "write", edav = T,
@@ -4102,6 +4115,7 @@ process_spatial <- function(gdb_folder,
                    obj = dupe.name.prov,
                    azcontainer = azcontainer)
     }
+    cli::cli_process_done()
   }
 
   rm(dupe.guid.prov, dupe.name.prov, sf_columns_prov, sf_var_prov)
@@ -4122,6 +4136,8 @@ process_spatial <- function(gdb_folder,
   }
 
   sf::st_geometry(global.prov.01) <- NULL
+
+  cli::cli_process_done()
 
   #identify sf var in global.dist
   sf_columns_dist <- sapply(global.dist.01, function(col) inherits(col, "sfc"))
