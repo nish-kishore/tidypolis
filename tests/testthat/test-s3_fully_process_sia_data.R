@@ -16,7 +16,7 @@ test_that("Testing s3_fully_process_sia_data()", {
   latest_folder_in_archive <- s2_find_latest_archive(
     polis_data_folder = polis_data_folder, timestamp = timestamp)
 
-  expect_no_error(s3_fully_process_sia_data(long.global.dist.01,
+  expect_null(s3_fully_process_sia_data(long.global.dist.01,
                                             polis_data_folder,
                                             latest_folder_in_archive,
                                             timestamp))
