@@ -3875,7 +3875,7 @@ process_spatial <- function(gdb_folder,
   cli::cli_process_done()
 
   #identify sf var in global.ctry
-  cli::cli_process_start("Starting Country shapefile processing")
+  cli::cli_process_start("Country shapefile processing")
   sf_columns_ctry <- sapply(global.ctry.01, function(col) inherits(col, "sfc"))
 
   sf_var_ctry <- names(global.ctry.01)[sf_columns_ctry]
@@ -4006,7 +4006,7 @@ process_spatial <- function(gdb_folder,
   cli::cli_process_done()
 
   # Province shapes overlapping in Lower Juba in Somalia.
-  cli::cli_process_start("Starting Province shapefile processing")
+  cli::cli_process_start("Province shapefile processing")
   global.prov.01 <- global.prov.01 |>
     dplyr::mutate(yr.end = ifelse(ADM0_GUID == '{B5FF48B9-7282-445C-8CD2-BEFCE4E0BDA7}' &
                                     GUID == '{EE73F3EA-DD35-480F-8FEA-5904274087C4}', 2021, yr.end))
