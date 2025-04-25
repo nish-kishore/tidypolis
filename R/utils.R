@@ -4140,10 +4140,12 @@ process_spatial <- function(gdb_folder,
   cli::cli_process_done()
 
   #identify sf var in global.dist
+  cli::cli_process_start("District shape processing")
   sf_columns_dist <- sapply(global.dist.01, function(col) inherits(col, "sfc"))
 
   sf_var_dist <- names(global.dist.01)[sf_columns_dist]
 
+  cli::cli_process_start("Checking district shape validity")
   check.dist.valid <- tibble::as_tibble(sf::st_is_valid(global.dist.01))
   row.num.dist <- which(check.dist.valid$value == FALSE)
   invalid.dist.shapes <- global.dist.01 |>
@@ -4164,12 +4166,14 @@ process_spatial <- function(gdb_folder,
                  obj = invalid.dist.shapes,
                  azcontainer = azcontainer)
   }
+  cli::cli_process_done()
 
   empty.dist <- global.dist.01 |>
     dplyr::mutate(empty = sf::st_is_empty(!!dplyr::sym(sf_var_dist))) |>
     dplyr::filter(empty == TRUE)
 
   if(nrow(empty.dist) > 0) {
+    cli::cli_process_start("Outputting empty district shapes")
     sf::st_geometry(empty.dist) <- NULL
     if(edav) {
       tidypolis_io(io = "write", edav = T,
@@ -4182,11 +4186,13 @@ process_spatial <- function(gdb_folder,
                    obj = empty.dist,
                    azcontainer = azcontainer)
     }
+    cli::cli_process_done
   }
 
   rm(check.dist.valid, row.num.dist, invalid.dist.shapes, empty.dist)
 
   #evaluate district duplicates
+  cli::cli_process_start("Checking district shapes for duplicates")
   dupe.guid.dist <- global.dist.01 |>
     dplyr::group_by(GUID) |>
     dplyr::mutate(n = n()) |>
@@ -4205,6 +4211,7 @@ process_spatial <- function(gdb_folder,
   }
 
   if(nrow(dupe.guid.dist) > 1) {
+    cli::cli_process_start("Outputting districts with duplicate GUIDs")
     sf::st_geometry(dupe.guid.dist) <- NULL
     if(edav) {
       tidypolis_io(io = "write", edav = T,
@@ -4217,9 +4224,11 @@ process_spatial <- function(gdb_folder,
                    obj = dupe.guid.dist,
                    azcontainer = azcontainer)
     }
+    cli::cli_process_done()
   }
 
   if(nrow(dupe.name.dist) > 1) {
+    cli::cli_process_start("Outputting districts with duplicate names")
     sf::st_geometry(dupe.name.dist) <- NULL
     if(edav) {
       tidypolis_io(io = "write", edav = T,
@@ -4232,8 +4241,10 @@ process_spatial <- function(gdb_folder,
                    obj = dupe.name.dist,
                    azcontainer = azcontainer)
     }
+    cli::cli_process_done()
   }
 
+  cli::cli_process_done()
   rm(dupe.guid.dist, dupe.name.dist, sf_columns_dist, sf_var_dist)
 
   #ensure district CRS is 4326
@@ -4250,6 +4261,8 @@ process_spatial <- function(gdb_folder,
                  obj = global.dist.01,
                  azcontainer = azcontainer)
   }
+
+  cli::cli_process_done()
 
   sf::st_geometry(global.dist.01) <- NULL
 
