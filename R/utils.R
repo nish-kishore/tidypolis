@@ -8161,3 +8161,22 @@ s4_es_write_data <- function(es.05){
 
 }
 
+
+###### Step 5 Private Functions ----
+#' Process positives Data Pipeline
+#'
+#' This function processes virus data through multiple standardization and
+#' validation steps, including checking for duplicates, standardizing dates,
+#' classifying cases
+#'
+#' @param polis_data_folder `str` Path to the POLIS data folder containing
+#'   Core_Ready_Files.
+#' @param polis_folder `str` Path to the main POLIS folder.
+#' @param long.global.dist.01 `sf` Global district lookup table for GUID
+#'   validation.
+#'
+#' @export
+s5_fully_process_afp_data <- function(polis_data_folder, polis_folder,
+                                      long.global.dist.01) {
+
+}
