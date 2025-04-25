@@ -2247,7 +2247,7 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
 
   cli::cli_h1("Step 2/5 - Creating AFP and Epi analytic datasets")
 
-  latest_folder_in_archive <- s2_fully_process_afp_data(
+  s2_fully_process_afp_data(
     polis_data_folder = polis_data_folder,
     polis_folder = polis_folder,
     long.global.dist.01 = long.global.dist.01,
@@ -5166,7 +5166,6 @@ s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
     col_afp_raw = colnames(afp_raw_new)
   )
 
-  return(latest_folder_in_archive)
 }
 
 
