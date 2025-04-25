@@ -3793,6 +3793,15 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
 #' @param edav `bool` Whether gdb is on EDAV or local.
 #' @param azcontainer `Azure container` Azure storage container.
 #' @export
+#' @examples
+#' \dontrun{
+#' process_spatial(gdb_folder = "local_path/GEODATABASE.gdb",
+#' output_folder = "local_path",
+#' edav = F)
+#' process_spatial(gdb_folder = "edav_path/GEODATABASE.gdb",
+#' output_folder = "edav_path",
+#' edav = T)
+#' }
 process_spatial <- function(gdb_folder,
                             output_folder,
                             edav,
