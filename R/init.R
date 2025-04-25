@@ -69,6 +69,7 @@ init_tidypolis <- function(
   # Check for required files
   if (!tidypolis_io(io = "exists.dir", file_path = file.path(polis_folder, "misc"))) {
     cli::cli_alert_info("No misc folder inside POLIS folder, creating...")
+    tidypolis_io(io = "create", file_path = file.path(polis_folder, "misc"))
     } else {
     cli::cli_alert_success("misc folder found! Checking for required files")
     }
