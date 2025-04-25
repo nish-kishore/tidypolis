@@ -5843,10 +5843,14 @@ s2_standardize_dates <- function(data) {
           "case.date", "stool.date.sent.to.lab",
           "clinical.admitted.date", "followup.date"
         )),
-        ~ lubridate::ymd(as.Date(., "%Y-%m-%dT%H:%M:%S"), quiet = TRUE),
-        .names = "date_{stringr::str_replace_all(.col, '[^a-z0-9]', '_')}"
+        ~ lubridate::ymd(as.Date(., "%Y-%m-%dT%H:%M:%S"), quiet = TRUE)
       )
-    )
+    ) |>
+    dplyr::mutate(datenotificationtohq = date.notification.to.hq,
+                  casedate = case.date,
+                  stooltolabdate = stool.date.sent.to.lab,
+                  stooltoiclabdate = stool.date.sent.to.ic.lab,
+                  clinicadmitdate = clinical.admitted.date)
 
   cli::cli_process_done()
 
@@ -7008,7 +7012,7 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
     # Create light AFP dataset for WHO (filtered to recent years)
     afp_light <- afp_combined |>
       dplyr::filter(yronset >= 2019)
-    
+
     invisible(capture.output(
       tidypolis_io(
         obj = afp_light,
@@ -7016,7 +7020,7 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
         file_path = paste0(
           polis_data_folder,
           "/Core_Ready_Files/",
-          "afp_linelist_light_",
+          "afp_linelist_",
           min(afp_light$dateonset, na.rm = TRUE),
           "_",
           max(afp_light$dateonset, na.rm = TRUE),
@@ -7055,6 +7059,64 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
       )
     ))
 
+    # Create combined AFP dataset from multiple files
+    cli::cli_process_start("Generating combined Other Surveillance dataset",
+                           msg_done = "Generated combined Other Surveillance dataset")
+
+    # Find all other surveillance files in Core_Ready_Files and core_files_to_combine
+    other_files_main <- dplyr::tibble("name" = tidypolis_io(
+      io = "list",
+      file_path = paste0(polis_data_folder, "/Core_Ready_Files"),
+      full_names = TRUE
+    )) |>
+      dplyr::filter(grepl("^.*(other_surveillance).*(.rds)$", name)) |>
+      dplyr::pull(name)
+
+    other_files_combine <- dplyr::tibble("name" = tidypolis_io(
+      io = "list",
+      file_path = paste0(polis_data_folder, "/core_files_to_combine"),
+      full_names = TRUE
+    )) |>
+      dplyr::filter(grepl("^.*(other_surveillance).*(.rds)$", name)) |>
+      dplyr::pull(name)
+
+    # Combine other surveillance files
+    if (length(other_files_combine) > 0) {
+      other_to_combine <- purrr::map_df(other_files_combine, ~ tidypolis_io(
+        io = "read",
+        file_path = .x
+      )) |>
+        dplyr::mutate(
+          stool1tostool2 = as.numeric(stool1tostool2),
+          datenotificationtohq = lubridate::parse_date_time(
+            datenotificationtohq,
+            c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S")
+          )
+        )
+
+      other_new <- purrr::map_df(
+        other_files_main,
+        ~ tidypolis_io(io = "read", file_path = .x)
+      )
+
+      other_combined <- dplyr::bind_rows(other_new, other_to_combine)
+
+      # Export combined other surveillance dataset
+      invisible(capture.output(
+        tidypolis_io(
+          obj = other_combined,
+          io = "write",
+          file_path = paste0(
+            polis_data_folder,
+            "/Core_Ready_Files/",
+            "other_surveillance_type_linelist_",
+            min(other_combined$yronset, na.rm = TRUE),
+            "_",
+            max(other_combined$yronset, na.rm = TRUE),
+            ".rds"
+          )
+        )
+      ))
 
     cli::cli_process_done()
   }
@@ -7069,6 +7131,7 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
   gc(full = TRUE)
 
   invisible(NULL)
+  }
 }
 
 #' Compare AFP data with archived version
@@ -7241,4 +7304,3 @@ s2_compare_with_archive <- function(data,
     modified_details = modified_details
   ))
 }
-
