@@ -7,9 +7,9 @@
 s2_fix_admin_guids(data, shape_data)
 }
 \arguments{
-\item{data}{A data frame containing AFP surveillance data with admin GUIDs}
+\item{data}{\code{tibble} A data frame containing AFP surveillance data with admin GUIDs}
 
-\item{shape_data}{Spatial data containing administrative boundary info}
+\item{shape_data}{\code{sp} Spatial data containing administrative boundary info}
 }
 \value{
 A data frame with corrected admin GUIDs and added validation columns

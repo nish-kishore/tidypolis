@@ -7,10 +7,10 @@
 s2_validate_classifications(data)
 }
 \arguments{
-\item{data}{A data frame containing AFP data with classification columns}
+\item{data}{\code{tibble} A tibble containing AFP data with classification columns}
 }
 \value{
-The filtered data frame with invalid classifications removed
+The filtered tibble with invalid classifications removed
 }
 \description{
 Checks the data for invalid or unclassified cases ('none' classification).

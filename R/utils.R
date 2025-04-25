@@ -2045,7 +2045,20 @@ check_missingness <- function(data,
 #'
 preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
 
+  # Static global variables used in some part of our code
   polis_data_folder <- file.path(polis_folder, "data")
+  ts <- Sys.time()
+  timestamp <- paste0(
+    lubridate::date(ts),
+    "_",
+    lubridate::hour(ts),
+    "-",
+    lubridate::minute(ts),
+    "-",
+    round(lubridate::second(ts), 0)
+  )
+  latest_folder_in_archive <- s2_find_latest_archive(
+    polis_data_folder = polis_data_folder, timestamp = timestamp)
 
   if (!requireNamespace("purrr", quietly = TRUE)) {
     stop('Package "purrr" must be installed to use this function.',
@@ -2175,16 +2188,6 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
 
   #13. Export csv files that match the web download, and create archive and change log
   cli::cli_h2("Creating change log and exporting data")
-  ts <- Sys.time()
-  timestamp <- paste0(
-    lubridate::date(ts),
-    "_",
-    lubridate::hour(ts),
-    "-",
-    lubridate::minute(ts),
-    "-",
-    round(lubridate::second(ts), 0)
-  )
 
   # create directory for the Archive and Changelogs
   s1_create_core_ready_dir(polis_data_folder, timestamp)
@@ -2247,7 +2250,9 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
   latest_folder_in_archive <- s2_fully_process_afp_data(
     polis_data_folder = polis_data_folder,
     polis_folder = polis_folder,
-    long.global.dist.01 = long.global.dist.01)
+    long.global.dist.01 = long.global.dist.01,
+    timestamp = timestamp,
+    latest_folder_in_archive_path = latest_folder_in_archive)
 
   invisible(gc())
 
@@ -2256,7 +2261,10 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
   cli::cli_h1("Step 3/5 - Creating SIA analytic datasets")
 
   s3_fully_process_sia_data(
-    long.global.dist.01 = long.global.dist.01
+    long.global.dist.01,
+    polis_data_folder,
+    latest_folder_in_archive,
+    timestamp
   )
 
   invisible(gc())
@@ -3269,14 +3277,25 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
 #' @description
 #' a function to process WHO spatial datasets
 #' @import dplyr sf lubridate stringr readr tibble cli
-#' @param gdb_folder str the folder location of spatial datasets, should end with .gdb,
-#' if on edav the gdb will need to be zipped, ensure that the gdb and the zipped file name are the same
-#' @param output_folder str folder location to write outputs to
-#' @param edav boolean T or F, whether gdb is on EDAV or local
+#' @param gdb_folder `str` The folder location of spatial datasets, should end with .gdb,
+#' if on edav the gdb will need to be zipped, ensure that the gdb and the zipped file name are the same.
+#' @param output_folder `str` Folder location to write outputs to.
+#' @param edav `bool` Whether gdb is on EDAV or local.
+#' @param azcontainer `Azure container` Azure storage container.
 #' @export
+#' @examples
+#' \dontrun{
+#' process_spatial(gdb_folder = "local_path/GEODATABASE.gdb",
+#' output_folder = "local_path",
+#' edav = F)
+#' process_spatial(gdb_folder = "edav_path/GEODATABASE.gdb",
+#' output_folder = "edav_path",
+#' edav = T)
+#' }
 process_spatial <- function(gdb_folder,
                             output_folder,
-                            edav) {
+                            edav,
+                            azcontainer = suppressMessages(sirfunctions::get_azure_storage_connection())) {
 
   if (!requireNamespace("utils", quietly = TRUE)) {
     stop('Package "utils" must be installed to use this function.',
@@ -3288,8 +3307,8 @@ process_spatial <- function(gdb_folder,
     output_folder <- stringr::str_replace(output_folder, paste0("GID/PEB/SIR/"), "")
   }
 
-  if(edav) {
-    azcontainer = suppressMessages(get_azure_storage_connection())
+  cli::cli_process_start("Loading raw spatial data")
+  if (edav) {
     dest <- tempdir()
     AzureStor::storage_download(container = azcontainer, gdb_folder, paste0(dest, "/gdb.zip"), overwrite = T)
 
@@ -3352,91 +3371,118 @@ process_spatial <- function(gdb_folder,
                     ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"), "COTE D IVOIRE", ADM0_NAME))
 
   }
+  cli::cli_process_done()
 
+  #identify sf var in global.ctry
+  cli::cli_process_start("Country shapefile processing")
+  sf_columns_ctry <- sapply(global.ctry.01, function(col) inherits(col, "sfc"))
+
+  sf_var_ctry <- names(global.ctry.01)[sf_columns_ctry]
+
+  cli::cli_process_start("Checking country shapes for validity")
   #identifying bad shapes
   check.ctry.valid <- tibble::as_tibble(sf::st_is_valid(global.ctry.01))
   row.num.ctry <- which(check.ctry.valid$value == FALSE)
   invalid.ctry.shapes <- global.ctry.01 |>
     dplyr::slice(row.num.ctry) |>
-    dplyr::select(ADM0_NAME, GUID, yr.st, yr.end, Shape) |>
+    dplyr::select(ADM0_NAME, GUID, yr.st, yr.end, paste(sf_var_ctry)) |>
     dplyr::arrange(ADM0_NAME)
 
   sf::st_geometry(invalid.ctry.shapes) <- NULL
 
-  if(edav) {
+  cli::cli_process_done()
+
+  cli::cli_process_start("Outputting invalid country shapes")
+  if (edav) {
     tidypolis_io(io = "write", edav = T,
                  file_path = paste0(output_folder, "/invalid_ctry_shapes.csv"),
-                 obj = invalid.ctry.shapes)
+                 obj = invalid.ctry.shapes, azcontainer = azcontainer)
   } else {
     tidypolis_io(io = "write", edav = F,
                  file_path = paste0(output_folder, "/invalid_ctry_shapes.csv"),
-                 obj = invalid.ctry.shapes)
+                 obj = invalid.ctry.shapes, azcontainer = azcontainer)
   }
+  cli::cli_process_done()
 
   empty.ctry <- global.ctry.01 |>
-    dplyr::mutate(empty = sf::st_is_empty(Shape)) |>
+    dplyr::mutate(empty = sf::st_is_empty(!!dplyr::sym(sf_var_ctry))) |>
     dplyr::filter(empty == TRUE)
 
   sf::st_geometry(empty.ctry) <- NULL
 
   if(nrow(empty.ctry) > 0) {
-    if(edav) {
+    cli::cli_process_start("Outputting empty country shapes")
+    if (edav) {
       tidypolis_io(io = "write", edav = T,
                    file_path = paste0(output_folder, "/empty_ctry_shapes.csv"),
-                   obj = empty.ctry)
+                   obj = empty.ctry,
+                   azcontainer = azcontainer)
     } else {
       tidypolis_io(io = "write", edav = F,
                    file_path = paste0(output_folder, "/empty_ctry_shapes.csv"),
-                   obj = empty.ctry)
+                   obj = empty.ctry,
+                   azcontainer = azcontainer)
     }
+    cli::cli_process_done()
   }
 
   rm(invalid.ctry.shapes, check.ctry.valid, row.num.ctry, empty.ctry)
 
   #identify potential duplicates
+  cli::cli_process_start("Checking country shapes for duplicates")
   dupe.guid.ctry <- global.ctry.01 |>
     dplyr::group_by(GUID) |>
-    dplyr::mutate(n = n()) |>
+    dplyr::mutate(n = dplyr::n()) |>
     dplyr::ungroup() |>
     dplyr::filter(n > 1)
 
   dupe.name.ctry <- global.ctry.01 |>
     dplyr::group_by(ADM0_NAME, yr.st, yr.end) |>
-    dplyr::mutate(n = n()) |>
+    dplyr::mutate(n = dplyr::n()) |>
     dplyr::ungroup() |>
     dplyr::filter(n > 1)
+  cli::cli_process_done()
 
   if(nrow(dupe.guid.ctry) > 1 | nrow(dupe.name.ctry) > 1) {
     cli::cli_alert_warning("There is a country shape with an exact duplicate, please manually run shape preprocessing to inspect")
   }
 
   if(nrow(dupe.guid.ctry) > 1) {
-    dupe.guid.ctry$Shape <- NULL
+    sf::st_geometry(dupe.guid.ctry) <- NULL
+    cli::cli_process_start("Outputting country shapes with duplicate GUIDs")
     if(edav) {
       tidypolis_io(io = "write", edav = T,
                    file_path = paste0(output_folder, "/duplicate_ctry_guid.csv"),
-                   obj = dupe.guid.ctry)
+                   obj = dupe.guid.ctry,
+                   azcontainer = azcontainer)
     } else {
       tidypolis_io(io = "write", edav = F,
                    file_path = paste0(output_folder, "/duplicate_ctry_guid.csv"),
-                   obj = dupe.guid.ctry)
+                   obj = dupe.guid.ctry,
+                   azcontainer = azcontainer)
     }
   }
+
+    cli::cli_process_done()
 
   if(nrow(dupe.name.ctry) > 1) {
-    dupe.name.ctry$Shape <- NULL
+    sf::st_geometry(dupe.name.ctry) <- NULL
+    cli::cli_process_start("Outputting country shapes with duplicate names")
     if(edav) {
       tidypolis_io(io = "write", edav = T,
                    file_path = paste0(output_folder, "/duplicate_ctry_name.csv"),
-                   obj = dupe.name.ctry)
+                   obj = dupe.name.ctry,
+                   azcontainer = azcontainer)
     } else {
       tidypolis_io(io = "write", edav = F,
                    file_path = paste0(output_folder, "/duplicate_ctry_name.csv"),
-                   obj = dupe.name.ctry)
+                   obj = dupe.name.ctry,
+                   azcontainer = azcontainer)
     }
+    cli::cli_process_done()
   }
 
-  rm(dupe.guid.ctry, dupe.name.ctry)
+  rm(dupe.guid.ctry, dupe.name.ctry, sf_columns_ctry, sf_var_ctry)
 
   #ensure CRS of ctry file is 4326
   global.ctry.01 <- sf::st_set_crs(global.ctry.01, 4326)
@@ -3445,58 +3491,81 @@ process_spatial <- function(gdb_folder,
   if(edav) {
     tidypolis_io(io = "write", edav = T,
                  file_path = paste0(output_folder, "/global.ctry.rds"),
-                 obj = global.ctry.01)
+                 obj = global.ctry.01,
+                 azcontainer = azcontainer)
   } else {
     tidypolis_io(io = "write", edav = F,
                  file_path = paste0(output_folder, "/global.ctry.rds"),
-                 obj = global.ctry.01)
+                 obj = global.ctry.01,
+                 azcontainer = azcontainer)
   }
 
   sf::st_geometry(global.ctry.01) <- NULL
 
+  cli::cli_process_done()
+
   # Province shapes overlapping in Lower Juba in Somalia.
+  cli::cli_process_start("Province shapefile processing")
   global.prov.01 <- global.prov.01 |>
     dplyr::mutate(yr.end = ifelse(ADM0_GUID == '{B5FF48B9-7282-445C-8CD2-BEFCE4E0BDA7}' &
                                     GUID == '{EE73F3EA-DD35-480F-8FEA-5904274087C4}', 2021, yr.end))
 
+  #identify sf var in global.prov
+  sf_columns_prov <- sapply(global.prov.01, function(col) inherits(col, "sfc"))
+
+  sf_var_prov <- names(global.prov.01)[sf_columns_prov]
+
+  cli::cli_process_start("Checking province shape validity")
   check.prov.valid <- tibble::as_tibble(sf::st_is_valid(global.prov.01))
   row.num.prov <- which(check.prov.valid$value == FALSE)
   invalid.prov.shapes <- global.prov.01 |>
     dplyr::slice(row.num.prov) |>
-    dplyr::select(ADM0_NAME, ADM1_NAME, GUID, yr.st, yr.end, Shape) |>
+    dplyr::select(ADM0_NAME, ADM1_NAME, GUID, yr.st, yr.end, paste(sf_var_prov)) |>
     dplyr::arrange(ADM0_NAME)
 
   sf::st_geometry(invalid.prov.shapes) <- NULL
 
+  cli::cli_process_done()
+
+  cli::cli_process_start("Outputting invalid province shapes")
   if(edav) {
     tidypolis_io(io = "write", edav = T,
                  file_path = paste0(output_folder, "/invalid_prov_shapes.csv"),
-                 obj = invalid.prov.shapes)
+                 obj = invalid.prov.shapes,
+                 azcontainer = azcontainer)
   } else {
     tidypolis_io(io = "write", edav = F,
                  file_path = paste0(output_folder, "/invalid_prov_shapes.csv"),
-                 obj = invalid.prov.shapes)
+                 obj = invalid.prov.shapes,
+                 azcontainer = azcontainer)
   }
+  cli::cli_process_done()
 
   empty.prov <- global.prov.01 |>
-    dplyr::mutate(empty = sf::st_is_empty(Shape)) |>
+    dplyr::mutate(empty = sf::st_is_empty(!!dplyr::sym(sf_var_prov))) |>
     dplyr::filter(empty == TRUE)
 
   if(nrow(empty.prov) > 0) {
+    cli::cli_process_start("Outputting empty province shapes")
+    sf::st_geometry(empty.prov) <- NULL
     if(edav) {
       tidypolis_io(io = "write", edav = T,
                    file_path = paste0(output_folder, "/empty_prov_shapes.csv"),
-                   obj = empty.prov)
+                   obj = empty.prov,
+                   azcontainer = azcontainer)
     } else {
       tidypolis_io(io = "write", edav = F,
                    file_path = paste0(output_folder, "/empty_prov_shapes.csv"),
-                   obj = empty.prov)
+                   obj = empty.prov,
+                   azcontainer = azcontainer)
     }
+    cli::cli_process_done()
   }
 
   rm(check.prov.valid, row.num.prov, invalid.prov.shapes, empty.prov)
 
   #duplicate checking in provinces
+  cli::cli_process_start("Checking province shapes for duplicates")
   dupe.guid.prov <- global.prov.01 |>
     dplyr::group_by(GUID) |>
     dplyr::mutate(n = n()) |>
@@ -3509,37 +3578,46 @@ process_spatial <- function(gdb_folder,
     dplyr::ungroup() |>
     dplyr::filter(n > 1)
 
+  cli::cli_process_done()
   if(nrow(dupe.guid.prov) > 1 | nrow(dupe.name.prov) > 1) {
     cli::cli_alert_warning("There is a duplicated province that is exactly the same, please run shape preprocessing manually to inspect")
   }
 
   if(nrow(dupe.guid.prov) > 1) {
-    dupe.guid.prov$Shape <- NULL
+    cli::cli_process_start("Outputting provinces with duplicate GUIDs")
+    sf::st_geometry(dupe.guid.prov) <- NULL
     if(edav) {
       tidypolis_io(io = "write", edav = T,
                    file_path = paste0(output_folder, "/duplicate_prov_guid.csv"),
-                   obj = dupe.guid.prov)
+                   obj = dupe.guid.prov,
+                   azcontainer = azcontainer)
     } else {
       tidypolis_io(io = "write", edav = F,
                    file_path = paste0(output_folder, "/duplicate_prov_guid.csv"),
-                   obj = dupe.guid.prov)
+                   obj = dupe.guid.prov,
+                   azcontainer = azcontainer)
     }
+    cli::cli_process_done()
   }
 
   if(nrow(dupe.name.prov) > 1) {
-    dupe.name.prov$Shape <- NULL
+    cli::cli_process_start("Outputting provinces with duplicate names")
+    sf::st_geometry(dupe.name.prov) <- NULL
     if(edav) {
       tidypolis_io(io = "write", edav = T,
                    file_path = paste0(output_folder, "/duplicate_prov_name.csv"),
-                   obj = dupe.name.prov)
+                   obj = dupe.name.prov,
+                   azcontainer = azcontainer)
     } else {
       tidypolis_io(io = "write", edav = F,
                    file_path = paste0(output_folder, "/duplicate_prov_name.csv"),
-                   obj = dupe.name.prov)
+                   obj = dupe.name.prov,
+                   azcontainer = azcontainer)
     }
+    cli::cli_process_done()
   }
 
-  rm(dupe.guid.prov, dupe.name.prov)
+  rm(dupe.guid.prov, dupe.name.prov, sf_columns_prov, sf_var_prov)
 
   #ensure CRS is 4326
   global.prov.01 <- sf::st_set_crs(global.prov.01, 4326)
@@ -3547,20 +3625,31 @@ process_spatial <- function(gdb_folder,
   if(edav) {
     tidypolis_io(io = "write", edav = T,
                  file_path = paste0(output_folder, "/global.prov.rds"),
-                 obj = global.prov.01)
+                 obj = global.prov.01,
+                 azcontainer = azcontainer)
   } else {
     tidypolis_io(io = "write", edav = F,
                  file_path = paste0(output_folder, "/global.prov.rds"),
-                 obj = global.prov.01)
+                 obj = global.prov.01,
+                 azcontainer = azcontainer)
   }
 
   sf::st_geometry(global.prov.01) <- NULL
 
+  cli::cli_process_done()
+
+  #identify sf var in global.dist
+  cli::cli_process_start("District shape processing")
+  sf_columns_dist <- sapply(global.dist.01, function(col) inherits(col, "sfc"))
+
+  sf_var_dist <- names(global.dist.01)[sf_columns_dist]
+
+  cli::cli_process_start("Checking district shape validity")
   check.dist.valid <- tibble::as_tibble(sf::st_is_valid(global.dist.01))
   row.num.dist <- which(check.dist.valid$value == FALSE)
   invalid.dist.shapes <- global.dist.01 |>
     dplyr::slice(row.num.dist) |>
-    dplyr::select(ADM0_NAME, ADM1_NAME, ADM2_NAME, GUID, yr.st, yr.end, Shape) |>
+    dplyr::select(ADM0_NAME, ADM1_NAME, ADM2_NAME, GUID, yr.st, yr.end, paste(sf_var_dist)) |>
     dplyr::arrange(ADM0_NAME)
 
   sf::st_geometry(invalid.dist.shapes) <- NULL
@@ -3568,32 +3657,41 @@ process_spatial <- function(gdb_folder,
   if(edav) {
     tidypolis_io(io = "write", edav = T,
                  file_path = paste0(output_folder, "/invalid_dist_shapes.csv"),
-                 obj = invalid.dist.shapes)
+                 obj = invalid.dist.shapes,
+                 azcontainer = azcontainer)
   } else {
     tidypolis_io(io = "write", edav = F,
                  file_path = paste0(output_folder, "/invalid_dist_shapes.csv"),
-                 obj = invalid.dist.shapes)
+                 obj = invalid.dist.shapes,
+                 azcontainer = azcontainer)
   }
+  cli::cli_process_done()
 
   empty.dist <- global.dist.01 |>
-    dplyr::mutate(empty = sf::st_is_empty(Shape)) |>
+    dplyr::mutate(empty = sf::st_is_empty(!!dplyr::sym(sf_var_dist))) |>
     dplyr::filter(empty == TRUE)
 
   if(nrow(empty.dist) > 0) {
+    cli::cli_process_start("Outputting empty district shapes")
+    sf::st_geometry(empty.dist) <- NULL
     if(edav) {
       tidypolis_io(io = "write", edav = T,
                    file_path = paste0(output_folder, "/empty_dist_shapes.csv"),
-                   obj = empty.dist)
+                   obj = empty.dist,
+                   azcontainer = azcontainer)
     } else {
       tidypolis_io(io = "write", edav = F,
                    file_path = paste0(output_folder, "/empty_dist_shapes.csv"),
-                   obj = empty.dist)
+                   obj = empty.dist,
+                   azcontainer = azcontainer)
     }
+    cli::cli_process_done
   }
 
   rm(check.dist.valid, row.num.dist, invalid.dist.shapes, empty.dist)
 
   #evaluate district duplicates
+  cli::cli_process_start("Checking district shapes for duplicates")
   dupe.guid.dist <- global.dist.01 |>
     dplyr::group_by(GUID) |>
     dplyr::mutate(n = n()) |>
@@ -3612,30 +3710,41 @@ process_spatial <- function(gdb_folder,
   }
 
   if(nrow(dupe.guid.dist) > 1) {
-    dupe.guid.dist$Shape <- NULL
+    cli::cli_process_start("Outputting districts with duplicate GUIDs")
+    sf::st_geometry(dupe.guid.dist) <- NULL
     if(edav) {
       tidypolis_io(io = "write", edav = T,
                    file_path = paste0(output_folder, "/duplicate_dist_guid.csv"),
-                   obj = dupe.guid.dist)
+                   obj = dupe.guid.dist,
+                   azcontainer = azcontainer)
     } else {
       tidypolis_io(io = "write", edav = F,
                    file_path = paste0(output_folder, "/duplicate_dist_guid.csv"),
-                   obj = dupe.guid.dist)
+                   obj = dupe.guid.dist,
+                   azcontainer = azcontainer)
     }
+    cli::cli_process_done()
   }
 
   if(nrow(dupe.name.dist) > 1) {
-    dupe.name.dist$Shape <- NULL
+    cli::cli_process_start("Outputting districts with duplicate names")
+    sf::st_geometry(dupe.name.dist) <- NULL
     if(edav) {
       tidypolis_io(io = "write", edav = T,
                    file_path = paste0(output_folder, "/duplicate_dist_name.csv"),
-                   obj = dupe.name.dist)
+                   obj = dupe.name.dist,
+                   azcontainer = azcontainer)
     } else {
       tidypolis_io(io = "write", edav = F,
                    file_path = paste0(output_folder, "/duplicate_dist_name.csv"),
-                   obj = dupe.name.dist)
+                   obj = dupe.name.dist,
+                   azcontainer = azcontainer)
     }
+    cli::cli_process_done()
   }
+
+  cli::cli_process_done()
+  rm(dupe.guid.dist, dupe.name.dist, sf_columns_dist, sf_var_dist)
 
   #ensure district CRS is 4326
   global.dist.01 <- sf::st_set_crs(global.dist.01, 4326)
@@ -3643,12 +3752,16 @@ process_spatial <- function(gdb_folder,
   if(edav) {
     tidypolis_io(io = "write", edav = T,
                  file_path = paste0(output_folder, "/global.dist.rds"),
-                 obj = global.dist.01)
+                 obj = global.dist.01,
+                 azcontainer = azcontainer)
   } else {
     tidypolis_io(io = "write", edav = F,
                  file_path = paste0(output_folder, "/global.dist.rds"),
-                 obj = global.dist.01)
+                 obj = global.dist.01,
+                 azcontainer = azcontainer)
   }
+
+  cli::cli_process_done()
 
   sf::st_geometry(global.dist.01) <- NULL
 
@@ -3666,6 +3779,7 @@ process_spatial <- function(gdb_folder,
   }
 
   long.global.prov.01 <- do.call(rbind, df.list)
+  cli::cli_process_start("Evaluating overlapping province shapes")
 
   if(endyr == lubridate::year(format(Sys.time())) & startyr == 2000) {
     prov.shape.issue.01 <- long.global.prov.01 |>
@@ -3679,16 +3793,20 @@ process_spatial <- function(gdb_folder,
                                       paste(min(prov.shape.issue.01$active.year.01, na.rm = T),
                                             max(prov.shape.issue.01$active.year.01, na.rm = T),
                                             sep = "_"), ".csv"),
-                   obj = prov.shape.issue.01)
+                   obj = prov.shape.issue.01,
+                   azcontainer = azcontainer)
     } else {
       tidypolis_io(io = "write", edav = F,
                    file_path = paste0(output_folder, "/prov_shape_multiple_",
                                       paste(min(prov.shape.issue.01$active.year.01, na.rm = T),
                                             max(prov.shape.issue.01$active.year.01, na.rm = T),
                                             sep = "_"), ".csv"),
-                   obj = prov.shape.issue.01)
+                   obj = prov.shape.issue.01,
+                   azcontainer = azcontainer)
     }
   }
+
+  cli::cli_process_done()
 
   # District long shape
 
@@ -3702,6 +3820,8 @@ process_spatial <- function(gdb_folder,
 
   long.global.dist.01 <- do.call(rbind, df.list)
 
+  cli::cli_process_start("Evaluating overlapping district shapes")
+
   if(endyr == year(format(Sys.time())) & startyr == 2000) {
     dist.shape.issue.01 <- long.global.dist.01 |>
       dplyr::group_by(ADM0_NAME, ADM1_NAME, ADM2_NAME, active.year.01) |>
@@ -3714,17 +3834,20 @@ process_spatial <- function(gdb_folder,
                                       paste(min(dist.shape.issue.01$active.year.01, na.rm = T),
                                             max(dist.shape.issue.01$active.year.01, na.rm = T),
                                             sep = "_"), ".csv"),
-                   obj = dist.shape.issue.01)
+                   obj = dist.shape.issue.01,
+                   azcontainer = azcontainer)
     } else {
       tidypolis_io(io = "write", edav = F,
                    file_path = paste0(output_folder, "/dist_shape_multiple_",
                                       paste(min(dist.shape.issue.01$active.year.01, na.rm = T),
                                             max(dist.shape.issue.01$active.year.01, na.rm = T),
                                             sep = "_"), ".csv"),
-                   obj = dist.shape.issue.01)
+                   obj = dist.shape.issue.01,
+                   azcontainer = azcontainer)
     }
   }
 
+  cli::cli_process_done()
   remove(df.list, df02)
 
 }
@@ -4956,21 +5079,22 @@ s1_export_final_core_ready_files <- function(polis_data_folder, ts, timestamp,
 #' @param polis_folder `str` Path to the main POLIS folder.
 #' @param long.global.dist.01 `sf` Global district lookup table for GUID
 #'   validation.
+#' @param timestamp `str` Time stamp
+#' @param latest_folder_in_archive_path `str` The path to the latest archive folder.
 #'
 #' @export
 s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
-                                      long.global.dist.01) {
+                                      long.global.dist.01, timestamp,
+                                      latest_folder_in_archive_path) {
 
   # Step 2a: Read in "old" data file (System to find "Old" data file)
-  latest_folder_in_archive <- s2_find_latest_archive(
-    polis_data_folder = polis_data_folder)
 
   # list archive files
   x <- tidypolis_io(
     io = "list",
     file_path = file.path(
       polis_data_folder, "Core_Ready_Files/Archive",
-      latest_folder_in_archive
+      latest_folder_in_archive_path
     ),
     full_names = TRUE
   )
@@ -5037,7 +5161,7 @@ s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
   # Step 2k: Compare archives and generate outputs
   s2_export_afp_outputs(
     data = afp_final,
-    latest_archive = latest_folder_in_archive,
+    latest_archive = latest_folder_in_archive_path,
     polis_data_folder = polis_data_folder,
     col_afp_raw = colnames(afp_raw_new)
   )
@@ -5327,10 +5451,14 @@ s2_standardize_dates <- function(data) {
           "case.date", "stool.date.sent.to.lab",
           "clinical.admitted.date", "followup.date"
         )),
-        ~ lubridate::ymd(as.Date(., "%Y-%m-%dT%H:%M:%S"), quiet = TRUE),
-        .names = "date_{stringr::str_replace_all(.col, '[^a-z0-9]', '_')}"
+        ~ lubridate::ymd(as.Date(., "%Y-%m-%dT%H:%M:%S"), quiet = TRUE)
       )
-    )
+    ) |>
+    dplyr::mutate(datenotificationtohq = date.notification.to.hq,
+                  casedate = case.date,
+                  stooltolabdate = stool.date.sent.to.lab,
+                  stooltoiclabdate = stool.date.sent.to.ic.lab,
+                  clinicadmitdate = clinical.admitted.date)
 
   cli::cli_process_done()
 
@@ -6504,7 +6632,7 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
         file_path = paste0(
           polis_data_folder,
           "/Core_Ready_Files/",
-          "afp_linelist_light_",
+          "afp_linelist_",
           min(afp_light$dateonset, na.rm = TRUE),
           "_",
           max(afp_light$dateonset, na.rm = TRUE),
@@ -6543,6 +6671,64 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
       )
     ))
 
+    # Create combined AFP dataset from multiple files
+    cli::cli_process_start("Generating combined Other Surveillance dataset",
+                           msg_done = "Generated combined Other Surveillance dataset")
+
+    # Find all other surveillance files in Core_Ready_Files and core_files_to_combine
+    other_files_main <- dplyr::tibble("name" = tidypolis_io(
+      io = "list",
+      file_path = paste0(polis_data_folder, "/Core_Ready_Files"),
+      full_names = TRUE
+    )) |>
+      dplyr::filter(grepl("^.*(other_surveillance).*(.rds)$", name)) |>
+      dplyr::pull(name)
+
+    other_files_combine <- dplyr::tibble("name" = tidypolis_io(
+      io = "list",
+      file_path = paste0(polis_data_folder, "/core_files_to_combine"),
+      full_names = TRUE
+    )) |>
+      dplyr::filter(grepl("^.*(other_surveillance).*(.rds)$", name)) |>
+      dplyr::pull(name)
+
+    # Combine other surveillance files
+    if (length(other_files_combine) > 0) {
+      other_to_combine <- purrr::map_df(other_files_combine, ~ tidypolis_io(
+        io = "read",
+        file_path = .x
+      )) |>
+        dplyr::mutate(
+          stool1tostool2 = as.numeric(stool1tostool2),
+          datenotificationtohq = lubridate::parse_date_time(
+            datenotificationtohq,
+            c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S")
+          )
+        )
+
+      other_new <- purrr::map_df(
+        other_files_main,
+        ~ tidypolis_io(io = "read", file_path = .x)
+      )
+
+      other_combined <- dplyr::bind_rows(other_new, other_to_combine)
+
+      # Export combined other surveillance dataset
+      invisible(capture.output(
+        tidypolis_io(
+          obj = other_combined,
+          io = "write",
+          file_path = paste0(
+            polis_data_folder,
+            "/Core_Ready_Files/",
+            "other_surveillance_type_linelist_",
+            min(other_combined$yronset, na.rm = TRUE),
+            "_",
+            max(other_combined$yronset, na.rm = TRUE),
+            ".rds"
+          )
+        )
+      ))
 
     cli::cli_process_done()
   }
@@ -6557,6 +6743,7 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
   gc(full = TRUE)
 
   invisible(NULL)
+  }
 }
 
 #' Compare AFP data with archived version
@@ -6746,9 +6933,14 @@ s2_compare_with_archive <- function(data,
 #'
 #' @param long.global.dist.01 `sf` Global district lookup table for GUID
 #'   validation.
+#' @param polis_data_folder `str` Path to the POLIS data folder.
+#' @param latest_folder_in_archive `str` Name of the latest folder in the archive.
+#' @param timestamp `str` The time stamp.
+#'
 #'
 #' @export
-s3_fully_process_sia_data <- function(long.global.dist.01){
+s3_fully_process_sia_data <- function(long.global.dist.01, polis_data_folder,
+                                      latest_folder_in_archive, timestamp){
   #dataset used to check mismatched guids and create sia.06
   sia.05 <- s3_sia_load_data(
     polis_data_folder = polis_data_folder,
@@ -6769,7 +6961,7 @@ s3_fully_process_sia_data <- function(long.global.dist.01){
                                polis_data_folder = polis_data_folder)
 
   #final clean dataset
-  sia.clean.01 <- s3_sia_combine_historical_data(sia.new = sia.06)
+  sia.clean.01 <- s3_sia_combine_historical_data(sia.new = sia.06, polis_data_folder)
 
   #creates cache from clustered SIA dates
   s3_sia_cluster_dates(sia.clean.01)
@@ -6778,7 +6970,7 @@ s3_fully_process_sia_data <- function(long.global.dist.01){
   s3_sia_merge_cluster_dates_final_data(sia.clean.01 = sia.clean.01)
 
   #evaluate unmatched GUIDs
-  s3_sia_evaluate_unmatched_guids(sia.05 = sia.05)
+  s3_sia_evaluate_unmatched_guids(sia.05 = sia.05, polis_data_folder)
 
   update_polis_log(.event = "SIA Finished",
                    .event_type = "PROCESS")
@@ -6787,6 +6979,7 @@ s3_fully_process_sia_data <- function(long.global.dist.01){
   rm(list = c("sia.05", "sia.06", "sia.clean.01"))
   invisible(gc())
   cli::cli_process_done()
+  invisible()
 }
 
 #' Load SIA Data
@@ -7250,7 +7443,7 @@ s3_sia_check_metadata <- function(sia.06, polis_data_folder, latest_folder_in_ar
   }
 
   cli::cli_process_done()
-
+  invisible()
 }
 
 #' Write out SIA data
@@ -7280,6 +7473,7 @@ s3_sia_write_precluster_data <- function(sia.06, polis_data_folder){
   ))
 
   cli::cli_process_done()
+  invisible()
 }
 
 #' Read in SIA data pre 2020 and combine with current SIA data
@@ -7292,7 +7486,7 @@ s3_sia_write_precluster_data <- function(sia.06, polis_data_folder){
 #' @returns `tibble` sia.clean.01 All historical SIA data
 #' @keywords internal
 #'
-s3_sia_combine_historical_data <- function(sia.new){
+s3_sia_combine_historical_data <- function(sia.new, polis_data_folder){
 
   #combine SIA pre-2020 with the current rds
   # read SIA and combine to make one SIA dataset
@@ -7343,7 +7537,8 @@ s3_sia_combine_historical_data <- function(sia.new){
 #' manager function to run the cluster_dates() function using helper function s3_run_cluster_dates to cluster SIAs by type
 #' @import dplyr
 #' @param sia `tibble` tibble of SIAs to identify rounds by vaccine type
-#' @returns NULL
+#' @returns `NULL` silently.
+#' @keywords internal
 #'
 s3_sia_cluster_dates <- function(sia){
 
@@ -7366,6 +7561,7 @@ s3_sia_cluster_dates <- function(sia){
   }
 
   cli::cli_progress_done()
+  invisible()
 
 }
 
@@ -7380,7 +7576,7 @@ s3_sia_cluster_dates <- function(sia){
 #' using k-means versus using the minimum date available, defaults to 4 for
 #' global Polio SIAs
 #' @param type `str` vaccine type
-#' @returns NULL
+#' @returns `NULL` silently.
 #'
 s3_sia_cluster_dates_by_vax_type <- function(data,
                                  cache_folder = file.path(Sys.getenv("POLIS_DATA_FOLDER"),
@@ -7544,12 +7740,14 @@ s3_sia_cluster_dates_by_vax_type <- function(data,
 #'
 #' @param sia.clean.01 `tibble` all cleaned and historical SIA data without rounds
 #' @param polis_folder `str` Path to the POLIS folder.
-#'
+#' @param polis_data_folder `str` Path to the POLIS data folder.
+#' @returns `NULL` silently.
 #' @keywords internal
 #'
 s3_sia_merge_cluster_dates_final_data <- function(
     sia.clean.01,
-    polis_folder = Sys.getenv("POLIS_DATA_FOLDER")
+    polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
+    polis_data_folder = file.path(polis_folder, "data")
 ){
 
   cli::cli_process_start("Reading in cached SIA cluster data")
@@ -7612,6 +7810,7 @@ s3_sia_merge_cluster_dates_final_data <- function(
                  ))
   ))
   cli::cli_process_done()
+  invisible()
 
 }
 
@@ -7621,10 +7820,12 @@ s3_sia_merge_cluster_dates_final_data <- function(
 #' all the SIAs that did not have a matching GUID
 #'
 #' @param sia.05 `tibble` the output of s3_sia_check_guids()
+#' @param polis_data_folder The POLIS data folder.
 #'
+#' @returns `NULL` silently.
 #' @keywords internal
 #'
-s3_sia_evaluate_unmatched_guids <- function(sia.05){
+s3_sia_evaluate_unmatched_guids <- function(sia.05, polis_data_folder){
 
   cli::cli_process_start("Evaluating unmatched SIAs")
 
@@ -7659,6 +7860,7 @@ s3_sia_evaluate_unmatched_guids <- function(sia.05){
   ))
 
   cli::cli_process_done()
+  invisible()
 
 }
 

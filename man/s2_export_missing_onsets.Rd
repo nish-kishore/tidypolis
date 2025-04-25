@@ -7,9 +7,9 @@
 s2_export_missing_onsets(data, polis_data_folder)
 }
 \arguments{
-\item{data}{A data frame containing AFP surveillance data}
+\item{data}{\code{tibble} A tibble containing AFP surveillance data}
 
-\item{polis_data_folder}{String path to the POLIS data folder}
+\item{polis_data_folder}{\code{str} String path to the POLIS data folder}
 }
 \value{
 Invisibly returns the filtered data frame of records with missing
