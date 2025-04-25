@@ -9,10 +9,10 @@ get_env_site_data(
 )
 }
 \arguments{
-\item{file_loc}{`path` Path to the env_sites.rds file.}
+\item{file_loc}{\code{path} Path to the env_sites.rds file.}
 }
 \value{
-`tibble` Env site list
+\code{tibble} Env site list
 }
 \description{
 Function to get cached env site data

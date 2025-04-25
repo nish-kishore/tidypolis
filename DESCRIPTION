@@ -41,5 +41,4 @@ Suggests:
     utils,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
-Roxygen: list(markdown = TRUE), 
-  cluster
+Roxygen: list(markdown = TRUE)
