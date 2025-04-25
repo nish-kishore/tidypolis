@@ -4280,6 +4280,7 @@ process_spatial <- function(gdb_folder,
   }
 
   long.global.prov.01 <- do.call(rbind, df.list)
+  cli::cli_process_start("Evaluating overlapping province shapes")
 
   if(endyr == lubridate::year(format(Sys.time())) & startyr == 2000) {
     prov.shape.issue.01 <- long.global.prov.01 |>
@@ -4306,6 +4307,8 @@ process_spatial <- function(gdb_folder,
     }
   }
 
+  cli::cli_process_done()
+
   # District long shape
 
   df.list <- list()
@@ -4317,6 +4320,8 @@ process_spatial <- function(gdb_folder,
   }
 
   long.global.dist.01 <- do.call(rbind, df.list)
+
+  cli::cli_process_start("Evaluating overlapping district shapes")
 
   if(endyr == year(format(Sys.time())) & startyr == 2000) {
     dist.shape.issue.01 <- long.global.dist.01 |>
@@ -4343,6 +4348,7 @@ process_spatial <- function(gdb_folder,
     }
   }
 
+  cli::cli_process_done()
   remove(df.list, df02)
 
 }
