@@ -813,31 +813,6 @@ update_polis_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
     }
 }
 
-#' Create/Update POLIS debugging API call log
-#'
-#' @description Create/Update POLIS debugging API call log
-#' @import readr tibble
-#' @param log_file str: location of cache file
-#' @param .time dttm: time of update
-#' @param .call str: URL of API call conducted
-#' @param .event str: event to be logged
-#' @export
-#' @returns Return true if cache updated
-update_polis_api_call_log <- function(log_file = Sys.getenv("POLIS_API_LOG_FILE"),
-                             .time = Sys.time(),
-                             .call,
-                             .event){
-
-  log_file <- tidypolis_io(io = "read", file_path = log_file)
-
-  log_file |>
-    tibble::add_row(time = .time,
-                    call = .call,
-                    event = .event) |>
-    tidypolis_io(io = "write", file_path = log_file)
-
-}
-
 #### Local Cache ####
 
 #' Load local POLIS cache
