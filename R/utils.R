@@ -6766,22 +6766,28 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
 
     # Combine other surveillance files
     if (length(other_files_combine) > 0) {
-      other_to_combine <- purrr::map_df(other_files_combine, ~ tidypolis_io(
-        io = "read",
-        file_path = .x
-      )) |>
-        dplyr::mutate(
-          stool1tostool2 = as.numeric(stool1tostool2),
-          datenotificationtohq = lubridate::parse_date_time(
-            datenotificationtohq,
-            c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S")
-          )
-        )
+      invisible(capture.output(
+        other_to_combine <- purrr::map_df(other_files_combine, ~ tidypolis_io(
+          io = "read",
+          file_path = .x
+        ))
+      ))
 
-      other_new <- purrr::map_df(
-        other_files_main,
-        ~ tidypolis_io(io = "read", file_path = .x)
+     other_to_combine <- other_to_combine |>
+      dplyr::mutate(
+        stool1tostool2 = as.numeric(stool1tostool2),
+        datenotificationtohq = lubridate::parse_date_time(
+          datenotificationtohq,
+          c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S")
+        )
       )
+
+     invisible(capture.output(
+       other_new <- purrr::map_df(
+         other_files_main,
+         ~ tidypolis_io(io = "read", file_path = .x)
+       )
+     ))
 
       other_combined <- dplyr::bind_rows(other_new, other_to_combine)
 
