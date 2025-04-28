@@ -2317,161 +2317,8 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
   es.01.new <- s4_es_load_data(polis_data_folder = polis_data_folder,
                                latest_folder_in_archive = latest_folder_in_archive)
 
-  # Data manipulation
+  es.02 <- s4_es_create_cdc_vars(es.01.new = es.01.new)
 
-  # Renaming and creating variables
-  es.02 <- es.01.new |>
-    dplyr::rename(
-      province = admin.1.officialname,
-      district = admin.2.officialname,
-      ctry.guid = admin.0.guid,
-      prov.guid = admin.1.guid,
-      dist.guid = admin.2.guid,
-      lat = y,
-      lng = x,
-      vdpv.classification.id = `vdpv.classification.id(s)`,
-      vdpv.classification = `vdpv.classification(s)`,
-      is.advanced.notification = advanced.notification,
-      virus.cluster = `virus.cluster(s)`,
-      emergence.group = `emergence.group(s)`,
-      virus.type = `virus.type(s)`
-    ) |>
-    dplyr::mutate(
-      ctry = admin.0,
-      site = stringr::str_to_title(site.name),
-      collect.date = lubridate::dmy(collection.date),
-      collect.yr = lubridate::year(collect.date),
-      sabin = dplyr::case_when(
-        vaccine.1 == "Yes" | vaccine.2 == "Yes" | vaccine.3 == "Yes" ~ 1,
-        vaccine.1 == "No" & vaccine.2 == "No" & vaccine.3 == "No" ~ 0
-      ),
-      vdpv = dplyr::case_when(
-        vdpv.1 == "Yes" | vdpv.2 == "Yes" | vdpv.3 == "Yes" ~ 1,
-        vdpv.1 == "No" & vdpv.2 == "No" & vdpv.3 == "No" ~ 0
-      ),
-      wpv = dplyr::case_when(
-        wild.1 == "Yes" | wild.3 == "Yes" ~ 1,
-        wild.1 == "No" & wild.3 == "No" ~ 0
-      ),
-      npev = dplyr::case_when(
-        npev == "Yes" ~ 1,
-        #npev == "No" | is.na(npev) ~ 0
-        npev == "No" | npev=="" | is.na(npev) ~ 0
-      ),
-      nvaccine = dplyr::case_when(
-        nvaccine.2 == "Yes"  ~ 1,
-        nvaccine.2 == "No"   ~ 0,
-      ),
-      ev.detect = dplyr::case_when((
-        dplyr::if_any( c("vaccine.1", "vaccine.2", "vaccine.3", "nvaccine.2",
-                         "vdpv.1", "vdpv.2", "vdpv.3",
-                         "wild.1", "wild.3"), ~stringr::str_detect(., "Yes")) |
-          npev==1 |
-          stringr::str_detect(virus.type, "WILD") |
-          stringr::str_detect(virus.type, "VDPV") |
-          stringr::str_detect(virus.type, "VACCINE") |
-          stringr::str_detect(virus.type, "NPE") |
-          stringr::str_detect(final.combined.rtpcr.results, "PV") |
-          stringr::str_detect(final.combined.rtpcr.results, "NPE") |
-          stringr::str_detect(final.cell.culture.result, "Poliovirus") |
-          stringr::str_detect(final.cell.culture.result, "NPENT")) ~ 1,
-        TRUE ~ 0),
-      ctry.guid = ifelse(is.na(ctry.guid) | ctry.guid == "", NA, paste("{", stringr::str_to_upper(ctry.guid), "}", sep = "")),
-      prov.guid = ifelse(is.na(prov.guid) | prov.guid == "", NA, paste("{", stringr::str_to_upper(prov.guid), "}", sep = "")),
-      dist.guid = ifelse(is.na(dist.guid) | dist.guid == "", NA, paste("{", stringr::str_to_upper(dist.guid), "}", sep = ""))
-    ) |>
-    dplyr::mutate_at(c("ctry", "province", "district"), list(~stringr::str_trim(stringr::str_to_upper(.), "both"))) |>
-    dplyr::distinct()
-
-
-  # Make sure 'env.sample.maual.edit.id' is unique for each ENV sample
-  es.00 <- es.02[duplicated(es.02$env.sample.manual.edit.id), ]
-
-  # Script below will stop further execution if there is a duplicate ENV sample manual id
-  if (nrow(es.00) >= 1) {
-    cli::cli_alert_danger("Duplicate ENV sample manual ids. Flag for POLIS. Output in duplicate_ES_sampleID_Polis.csv.")
-
-    tidypolis_io(obj = es.00, io = "write", file_path =  paste0(polis_data_folder, "/Core_Ready_Files/duplicate_ES_sampleID_Polis.csv"))
-
-  } else {
-    cli::cli_alert_info("No duplicates identified")
-  }
-
-
-  # find out duplicate ES samples even though they have different 'env.sample.maual.edit.id'
-  # from same site, same date, with same virus type
-
-  es.dup.01 <- es.02 |>
-    #dplyr::filter(sabin==1) |>
-    dplyr::group_by(env.sample.id, virus.type, emergence.group, nt.changes, site.id, collection.date, collect.yr) |>
-    dplyr::mutate(es.dups=dplyr::n()) |>
-    dplyr::filter(es.dups >=2)|>
-    dplyr::select(env.sample.manual.edit.id, env.sample.id, sample.id, site.id, site.code, site.name, sample.condition, collection.date, virus.type,
-                  nt.changes, emergence.group,ctry, collect.date, collect.yr, es.dups )
-
-  # Script below will stop further execution if there is a duplicate ENV sabin sample from same site, same date, with same virus type
-  if (nrow(es.dup.01) >= 1) {
-    cli::cli_alert_warning("Duplicate ENV sample. Check the data for duplicate records. If they are the exact same, then contact Ashley")
-    cli::cli_alert_warning("Writing out ES duplicates file, please check, continuing processing")
-    es.dup.01 <- es.dup.01[order(es.dup.01$env.sample.id,es.dup.01$virus.type, es.dup.01$collect.yr),] |> dplyr::select(-es.dups)
-
-    # Export duplicate viruses in the CSV file:
-    tidypolis_io(obj = es.dup.01, io = "write", file_path = paste0(polis_data_folder, "/Core_Ready_Files/duplicate_ES_Polis.csv"))
-
-  } else {
-    cli::cli_alert_info("No duplicates identified")
-  }
-
-  remove("es.dup.01")
-
-  cli::cli_process_start("Checking for missingness in key ES vars")
-  check_missingness(data = es.02, type = "ES")
-  cli::cli_process_done("Review missing vars in es_missingness.rds")
-
-  cli::cli_process_start("Cleaning 'virus.type' and creating CDC variables")
-
-  es.space.02 <- es.02 |>
-    tidyr::separate_rows(virus.type, sep = ",") |>
-    dplyr::mutate(
-      virus.type = stringr::str_trim(virus.type, "both"),
-      virus.type = ifelse(virus.type == "cVDPV1", "cVDPV 1", virus.type),
-      virus.type = ifelse(virus.type == "cVDPV2", "cVDPV 2", virus.type),
-      virus.type = ifelse(virus.type == "cVDPV3", "cVDPV 3", virus.type),
-      virus.type = ifelse(virus.type == "WILD1", "WILD 1", virus.type),
-      virus.type = ifelse(virus.type == "WILD3", "WILD 3", virus.type),
-      virus.type = ifelse(virus.type == "VDPV1", "VDPV 1", virus.type),
-      virus.type = ifelse(virus.type == "VDPV2", "VDPV 2", virus.type),
-      virus.type = ifelse(virus.type == "VDPV3", "VDPV 3", virus.type),
-      virus.type = ifelse(virus.type == "VACCINE1", "VACCINE 1", virus.type),
-      virus.type = ifelse(virus.type == "VACCINE2", "VACCINE 2", virus.type),
-      virus.type = ifelse(virus.type == "VACCINE3", "VACCINE 3", virus.type),
-      virus.type = ifelse(virus.type == "aVDPV1", "aVDPV 1", virus.type),
-      virus.type = ifelse(virus.type == "aVDPV2", "aVDPV 2", virus.type),
-      virus.type = ifelse(virus.type == "aVDPV3", "aVDPV 3", virus.type)
-    )
-
-
-  es.space.03 <- es.space.02 |>
-    dplyr::group_by(env.sample.manual.edit.id) |>
-    dplyr::summarise(virus.type.01 = paste(virus.type, collapse = ", "))
-
-  es.space.03$virus.type.01[es.space.03$virus.type.01=="NA"] <- NA
-
-  es.02 <- dplyr::right_join(es.space.03, es.02, by= c("env.sample.manual.edit.id"="env.sample.manual.edit.id")) |>
-    dplyr::select(-virus.type) |>
-    dplyr::rename(virus.type=virus.type.01) |>
-    dplyr::mutate(lat = as.numeric(lat),
-                  lng = as.numeric(lng))
-
-
-
-  # Check if na in guid of es country, province or district
-  na.es.01 <- es.02 |>
-    dplyr::summarise_at(dplyr::vars(ctry.guid, prov.guid, dist.guid, lat, lng), list(~sum(is.na(.))))
-
-  remove("es.space.02", "es.space.03", "es.01.new", "es.02.new")
-  gc()
-  cli::cli_process_done()
   # attach to shapefile
 
   # check and make sure there are no new site names:
@@ -7974,5 +7821,208 @@ s4_es_load_data <- function(polis_data_folder, latest_folder_in_archive){
   }
 
   return(es.01.new)
+
+}
+
+#' Convert variables in POLIS download to CDC specific variables and clean
+#' variables
+#'
+#' @param es.01.new `tibble` The latest ES download with variables checked
+#' against the last download
+#' @param startyr `int` The subset of years for which to process ES data
+#' @param endyr `int` The subset of years for which to process ES data
+#'
+#' @returns `tibble` es.02 SIA data with CDC variables enforced
+#' @keywords internal
+#'
+s4_es_create_cdc_vars <- function(es.01.new){
+
+  # Data manipulation
+
+  # Renaming and creating variables
+  es.02 <- es.01.new |>
+    dplyr::rename(
+      province = admin.1.officialname,
+      district = admin.2.officialname,
+      ctry.guid = admin.0.guid,
+      prov.guid = admin.1.guid,
+      dist.guid = admin.2.guid,
+      lat = y,
+      lng = x,
+      vdpv.classification.id = `vdpv.classification.id(s)`,
+      vdpv.classification = `vdpv.classification(s)`,
+      is.advanced.notification = advanced.notification,
+      virus.cluster = `virus.cluster(s)`,
+      emergence.group = `emergence.group(s)`,
+      virus.type = `virus.type(s)`
+    ) |>
+    dplyr::mutate(
+      ctry = admin.0,
+      site = stringr::str_to_title(site.name),
+      collect.date = lubridate::dmy(collection.date),
+      collect.yr = lubridate::year(collect.date),
+      sabin = dplyr::case_when(
+        vaccine.1 == "Yes" | vaccine.2 == "Yes" | vaccine.3 == "Yes" ~ 1,
+        vaccine.1 == "No" & vaccine.2 == "No" & vaccine.3 == "No" ~ 0
+      ),
+      vdpv = dplyr::case_when(
+        vdpv.1 == "Yes" | vdpv.2 == "Yes" | vdpv.3 == "Yes" ~ 1,
+        vdpv.1 == "No" & vdpv.2 == "No" & vdpv.3 == "No" ~ 0
+      ),
+      wpv = dplyr::case_when(
+        wild.1 == "Yes" | wild.3 == "Yes" ~ 1,
+        wild.1 == "No" & wild.3 == "No" ~ 0
+      ),
+      npev = dplyr::case_when(
+        npev == "Yes" ~ 1,
+        #npev == "No" | is.na(npev) ~ 0
+        npev == "No" | npev=="" | is.na(npev) ~ 0
+      ),
+      nvaccine = dplyr::case_when(
+        nvaccine.2 == "Yes"  ~ 1,
+        nvaccine.2 == "No"   ~ 0,
+      ),
+      ev.detect = dplyr::case_when((
+        dplyr::if_any( c("vaccine.1", "vaccine.2", "vaccine.3", "nvaccine.2",
+                         "vdpv.1", "vdpv.2", "vdpv.3",
+                         "wild.1", "wild.3"), ~stringr::str_detect(., "Yes")) |
+          npev==1 |
+          stringr::str_detect(virus.type, "WILD") |
+          stringr::str_detect(virus.type, "VDPV") |
+          stringr::str_detect(virus.type, "VACCINE") |
+          stringr::str_detect(virus.type, "NPE") |
+          stringr::str_detect(final.combined.rtpcr.results, "PV") |
+          stringr::str_detect(final.combined.rtpcr.results, "NPE") |
+          stringr::str_detect(final.cell.culture.result, "Poliovirus") |
+          stringr::str_detect(final.cell.culture.result, "NPENT")) ~ 1,
+        TRUE ~ 0),
+      ctry.guid = ifelse(
+        is.na(ctry.guid) | ctry.guid == "",
+        NA, paste("{", stringr::str_to_upper(ctry.guid), "}", sep = "")),
+      prov.guid = ifelse(
+        is.na(prov.guid) | prov.guid == "",
+        NA,
+        paste("{", stringr::str_to_upper(prov.guid), "}", sep = "")),
+      dist.guid = ifelse(
+        is.na(dist.guid) | dist.guid == "",
+        NA,
+        paste("{", stringr::str_to_upper(dist.guid), "}", sep = ""))
+    ) |>
+    dplyr::mutate_at(c("ctry", "province", "district"),
+                     list(~stringr::str_trim(stringr::str_to_upper(.), "both"))) |>
+    dplyr::distinct()
+
+
+  # Make sure 'env.sample.maual.edit.id' is unique for each ENV sample
+  es.00 <- es.02[duplicated(es.02$env.sample.manual.edit.id), ]
+
+  # Script below will stop further execution if there is a duplicate ENV sample manual id
+  if (nrow(es.00) >= 1) {
+    cli::cli_alert_danger("Duplicate ENV sample manual ids. Flag for POLIS.
+                            Output in duplicate_ES_sampleID_Polis.csv.")
+
+    invisible(capture.output(
+      tidypolis_io(obj = es.00, io = "write",
+                   file_path =  paste0(polis_data_folder,
+                                       "/Core_Ready_Files/duplicate_ES_sampleID_Polis.csv"))
+    ))
+
+  } else {
+    cli::cli_alert_info("No duplicates identified")
+  }
+
+
+  # find out duplicate ES samples even though they have different
+  # 'env.sample.manual.edit.id' from same site, same date, with same virus type
+
+  es.dup.01 <- es.02 |>
+    #dplyr::filter(sabin==1) |>
+    dplyr::group_by(env.sample.id, virus.type, emergence.group,
+                    nt.changes, site.id, collection.date, collect.yr) |>
+    dplyr::mutate(es.dups=dplyr::n()) |>
+    dplyr::filter(es.dups >=2)|>
+    dplyr::select(env.sample.manual.edit.id, env.sample.id, sample.id,
+                  site.id, site.code, site.name, sample.condition,
+                  collection.date, virus.type, nt.changes, emergence.group,
+                  ctry, collect.date, collect.yr, es.dups )
+
+  # Script below will stop further execution if there is a duplicate ENV sabin
+  # sample from same site, same date, with same virus type
+  if (nrow(es.dup.01) >= 1) {
+    cli::cli_alert_warning("Duplicate ENV sample. Check the data for duplicate
+                             records. If they are the exact same, then contact POLIS")
+    cli::cli_alert_warning(
+      paste0("Writing out ES duplicates file: ",
+             polis_data_folder,
+             "/Core_Ready_Files/duplicate_ES_Polis.csv -",
+             " please check, continuing processing"))
+    es.dup.01 <- es.dup.01[order(es.dup.01$env.sample.id,es.dup.01$virus.type, es.dup.01$collect.yr),] |>
+      dplyr::select(-es.dups)
+
+    # Export duplicate viruses in the CSV file:
+    invisible(capture.output(
+      tidypolis_io(obj = es.dup.01, io = "write",
+                   file_path = paste0(polis_data_folder,
+                                      "/Core_Ready_Files/duplicate_ES_Polis.csv"))
+    ))
+
+  } else {
+    cli::cli_alert_info("No duplicates identified")
+  }
+
+  remove("es.dup.01")
+
+  cli::cli_process_start("Checking for missingness in key ES vars")
+  check_missingness(data = es.02, type = "ES")
+  cli::cli_process_done("Review missing vars in es_missingness.rds")
+
+  cli::cli_process_start("Cleaning 'virus.type' and creating CDC variables")
+
+  es.space.02 <- es.02 |>
+    tidyr::separate_rows(virus.type, sep = ",") |>
+    dplyr::mutate(
+      virus.type = stringr::str_trim(virus.type, "both"),
+      virus.type = ifelse(virus.type == "cVDPV1", "cVDPV 1", virus.type),
+      virus.type = ifelse(virus.type == "cVDPV2", "cVDPV 2", virus.type),
+      virus.type = ifelse(virus.type == "cVDPV3", "cVDPV 3", virus.type),
+      virus.type = ifelse(virus.type == "WILD1", "WILD 1", virus.type),
+      virus.type = ifelse(virus.type == "WILD3", "WILD 3", virus.type),
+      virus.type = ifelse(virus.type == "VDPV1", "VDPV 1", virus.type),
+      virus.type = ifelse(virus.type == "VDPV2", "VDPV 2", virus.type),
+      virus.type = ifelse(virus.type == "VDPV3", "VDPV 3", virus.type),
+      virus.type = ifelse(virus.type == "VACCINE1", "VACCINE 1", virus.type),
+      virus.type = ifelse(virus.type == "VACCINE2", "VACCINE 2", virus.type),
+      virus.type = ifelse(virus.type == "VACCINE3", "VACCINE 3", virus.type),
+      virus.type = ifelse(virus.type == "aVDPV1", "aVDPV 1", virus.type),
+      virus.type = ifelse(virus.type == "aVDPV2", "aVDPV 2", virus.type),
+      virus.type = ifelse(virus.type == "aVDPV3", "aVDPV 3", virus.type)
+    )
+
+
+  es.space.03 <- es.space.02 |>
+    dplyr::group_by(env.sample.manual.edit.id) |>
+    dplyr::summarise(virus.type.01 = paste(virus.type, collapse = ", "))
+
+  es.space.03$virus.type.01[es.space.03$virus.type.01=="NA"] <- NA
+
+  es.02 <- dplyr::right_join(
+    es.space.03,
+    es.02,
+    by= c("env.sample.manual.edit.id"="env.sample.manual.edit.id")
+  ) |>
+    dplyr::select(-virus.type) |>
+    dplyr::rename(virus.type=virus.type.01) |>
+    dplyr::mutate(lat = as.numeric(lat),
+                  lng = as.numeric(lng))
+
+  # Check if na in guid of es country, province or district
+  na.es.01 <- es.02 |>
+    dplyr::summarise_at(dplyr::vars(ctry.guid, prov.guid, dist.guid, lat, lng),
+                        list(~sum(is.na(.))))
+
+  remove("es.space.02", "es.space.03", "es.01.new")
+  gc(verbose = F)
+  cli::cli_process_done()
+  return(es.02)
 
 }
