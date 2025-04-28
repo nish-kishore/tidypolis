@@ -882,6 +882,46 @@ update_polis_cache <- function(cache_file = Sys.getenv("POLIS_CACHE_FILE"),
 
 }
 
+#### External Data ####
+
+#' Get crosswalk data
+#'
+#' @description
+#' Get all data from crosswalk location
+#' @param file_loc str: location of crosswalk file
+#' @import dplyr cli sirfunctions
+#' @return tibble: crosswalk data
+get_crosswalk_data <- function(
+    file_loc = file.path(Sys.getenv("POLIS_DATA_FOLDER"),
+                         "misc",
+                         "crosswalk.rds")
+){
+  cli::cli_process_start("Import crosswalk")
+  invisible(
+    capture.output(
+      crosswalk <-
+        tidypolis_io(io = "read", file_path = file_loc) |>
+        #TrendID removed from export
+        dplyr::filter(!API_Name %in% c("Admin0TrendId", "Admin0Iso2Code"))
+    )
+  )
+  cli::cli_process_done()
+  return(crosswalk)
+}
+
+#' Function to get cached env site data
+#' @description Function to get cached env site data
+#' @param file_loc `path` Path to the env_sites.rds file.
+#'
+#' @returns `tibble` Env site list
+#' @keywords internal
+get_env_site_data <- function(file_loc = file.path(Sys.getenv("POLIS_DATA_FOLDER"),
+                                                   "misc",
+                                                   "env_sites.rds")) {
+  envSiteYearList <- tidypolis_io(io = "read",
+                                  file_path = file_loc)
+  return(envSiteYearList)
+}
 
 #### Misc ####
 
@@ -1048,32 +1088,6 @@ remove_empty_columns <- function(dataframe) {
       dplyr::select(-empty_cols)
   )
 
-}
-
-
-#' Get crosswalk data
-#'
-#' @description
-#' Get all data from crosswalk location
-#' @param file_loc str: location of crosswalk file
-#' @import dplyr cli sirfunctions
-#' @return tibble: crosswalk data
-get_crosswalk_data <- function(
-    file_loc = file.path(Sys.getenv("POLIS_DATA_FOLDER"),
-                         "misc",
-                         "crosswalk.rds")
-){
-  cli::cli_process_start("Import crosswalk")
-  invisible(
-    capture.output(
-      crosswalk <-
-        tidypolis_io(io = "read", file_path = file_loc) |>
-        #TrendID removed from export
-        dplyr::filter(!API_Name %in% c("Admin0TrendId", "Admin0Iso2Code"))
-    )
-  )
-  cli::cli_process_done()
-  return(crosswalk)
 }
 
 #' Check if sets of columns are the same and stop if not
@@ -1646,20 +1660,6 @@ f.summarise.metadata <- function(dataframe, categorical_max = 10){
     dplyr::left_join(categorical_vars, by=c("var_name"))
 
   return(table_metadata)
-}
-
-#' Function to get cached env site data
-#' @description Function to get cached env site data
-#' @param file_loc `path` Path to the env_sites.rds file.
-#'
-#' @returns `tibble` Env site list
-#' @keywords internal
-get_env_site_data <- function(file_loc = file.path(Sys.getenv("POLIS_DATA_FOLDER"),
-                                                   "misc",
-                                                   "env_sites.rds")) {
-  envSiteYearList <- tidypolis_io(io = "read",
-                                  file_path = file_loc)
-  return(envSiteYearList)
 }
 
 
@@ -3091,7 +3091,7 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
 
 }
 
-#Began work on pop processing pipeline but not ready for V1
+#### Spatial ####
 
 # #' Preprocess population data into flat files
 # #'
