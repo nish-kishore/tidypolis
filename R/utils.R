@@ -2314,73 +2314,8 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
 
   cli::cli_h1("Step 4/5 - Creating ES analytic datasets")
 
-  # Step 1: Read in "old" data file (System to find "Old" data file)
-  old.file <- x[grepl("EnvSamples",x)]
-
-  new.file <- y[grepl("EnvSamples", y)]
-
-  es.01.new <- tidypolis_io(io = "read", file_path = new.file) |>
-    dplyr::mutate_all(as.character) |>
-    dplyr::rename_all(function(x) gsub(" ", ".", x)) |>
-    dplyr::mutate_all(list(~dplyr::na_if(.,"")))
-
-  names(es.01.new) <- stringr::str_to_lower(names(es.01.new))
-
-  if(length(old.file) > 0){
-    es.01.old <- tidypolis_io(io = "read", file_path = old.file) |>
-      dplyr::mutate_all(as.character) |>
-      dplyr::rename_all(function(x) gsub(" ", ".", x)) |>
-      dplyr::mutate_all(list(~dplyr::na_if(.,"")))
-
-    # Modifing POLIS variable names to make them easier to work with
-    names(es.01.old) <- stringr::str_to_lower(names(es.01.old))
-
-    # Are there differences in the names of the columns between two downloads?
-    f.compare.dataframe.cols(es.01.old, es.01.new)
-
-    var.list.01 <- c(
-      "env.sample.id", "env.sample.manual.edit.id", "sample.id", "worksheet.name", "labid",
-      "site.comment", "y", "x", "collection.date", "npev", "under.process", "is.suspected","advanced.notification",
-      "date.shipped.to.ref.lab", "region.id", "region.official.name", "admin.0.officialname", "admin.1.id",
-      "admin.1.officialname", "admin.2.id", "admin.2.officialname", "updated.date", "publish.date", "uploaded.date",
-      "uploaded.by",  "reporting.year", "date.notification.to.hq", "date.received.in.lab", "created.date", "date.f1.ref.itd",
-      "date.f2.ref.itd", "date.f3.ref.itd","date.f4.ref.itd","date.f5.ref.itd", "date.f6.ref.itd",
-      "date.final.culture.result", "date.final.results.reported", "date.final.combined.result",
-      "date.isol.sent.seq2", "date.isol.rec.seq2", "date.final.seq.result", "date.res.sent.out.vaccine2",
-      "date.res.sent.out.vdpv2", "nt.changes"
-    )
-
-
-    ## Exclude the variables from
-    es.02.old <- es.01.old |>
-      dplyr::select(-dplyr::all_of(var.list.01))
-
-    es.02.new <- es.01.new |>
-      dplyr::select(-dplyr::all_of(var.list.01))
-
-    new.var.es.01 <- f.download.compare.01(old.download = es.02.old, new.download = es.02.new)
-
-    new.df <- new.var.es.01 |>
-      dplyr::filter(is.na(old.distinct.01) | diff.distinct.01 >= 1) |>
-      dplyr::filter(variable != "id")
-
-    if (nrow(new.df) >= 1) {
-      cli::cli_alert_danger("There is either a new variable in the ES data or new value of an existing variable.
-          Please run f.download.compare.01 to see what it is. Preprocessing can not continue until this is adressed.")
-
-
-      es.new.value <- f.download.compare.02(new.var.es.01 |>
-                                              dplyr::filter(!(is.na(old.distinct.01)) & variable != "id"), es.02.old, es.02.new, type = "ES")
-
-    }else{
-      cli::cli_alert_info("No variable change errors")
-    }
-
-    remove("es.01.old", "es.02.old")
-  }else{
-    cli::cli_alert_info("No ES file found in archives")
-  }
-
+  es.01.new <- s4_es_load_data(polis_data_folder = polis_data_folder,
+                               latest_folder_in_archive = latest_folder_in_archive)
 
   # Data manipulation
 
@@ -7938,4 +7873,106 @@ s3_sia_evaluate_unmatched_guids <- function(sia.05, polis_data_folder){
 
 }
 
+###### Step 4 Private Functions ----
 
+#' Load and check ES data against previous downloads
+#'
+#' @param polis_data_folder `str` Path to the POLIS data folder.
+#' @param latest_folder_in_archive `str` Time stamp of latest folder in archive
+#'
+#' @returns `tiblle` es.01.new - the latest SIA data quality checked for variable
+#' stability against the last download if it exists
+#' @keywords internal
+#'
+s4_es_load_data <- function(polis_data_folder, latest_folder_in_archive){
+
+  # Step 1: Read in "old" data file (System to find "Old" data file)
+  x <- tidypolis_io(io = "list",
+                    file_path = file.path(polis_data_folder,
+                                          "Core_Ready_Files/Archive",
+                                          latest_folder_in_archive),
+                    full_names = T)
+
+  y <- tidypolis_io(io = "list",
+                    file_path = file.path(polis_data_folder,
+                                          "Core_Ready_Files"),
+                    full_names = T)
+
+  old.file <- x[grepl("EnvSamples",x)]
+
+  new.file <- y[grepl("EnvSamples", y)]
+
+  invisible(capture.output(
+    es.01.new <- tidypolis_io(io = "read", file_path = new.file) |>
+      dplyr::mutate_all(as.character) |>
+      dplyr::rename_all(function(x) gsub(" ", ".", x)) |>
+      dplyr::mutate_all(list(~dplyr::na_if(.,"")))
+  ))
+
+  names(es.01.new) <- stringr::str_to_lower(names(es.01.new))
+
+  if(length(old.file) > 0){
+    invisible(capture.output(
+      es.01.old <- tidypolis_io(io = "read", file_path = old.file) |>
+        dplyr::mutate_all(as.character) |>
+        dplyr::rename_all(function(x) gsub(" ", ".", x)) |>
+        dplyr::mutate_all(list(~dplyr::na_if(.,"")))
+    ))
+
+    # Modifing POLIS variable names to make them easier to work with
+    names(es.01.old) <- stringr::str_to_lower(names(es.01.old))
+
+    # Are there differences in the names of the columns between two downloads?
+    f.compare.dataframe.cols(es.01.old, es.01.new)
+
+    var.list.01 <- c(
+      "env.sample.id", "env.sample.manual.edit.id", "sample.id",
+      "worksheet.name", "labid", "site.comment", "y", "x", "collection.date",
+      "npev", "under.process", "is.suspected","advanced.notification",
+      "date.shipped.to.ref.lab", "region.id", "region.official.name",
+      "admin.0.officialname", "admin.1.id", "admin.1.officialname",
+      "admin.2.id", "admin.2.officialname", "updated.date", "publish.date",
+      "uploaded.date", "uploaded.by",  "reporting.year",
+      "date.notification.to.hq", "date.received.in.lab", "created.date",
+      "date.f1.ref.itd", "date.f2.ref.itd", "date.f3.ref.itd",
+      "date.f4.ref.itd","date.f5.ref.itd", "date.f6.ref.itd",
+      "date.final.culture.result", "date.final.results.reported",
+      "date.final.combined.result", "date.isol.sent.seq2", "date.isol.rec.seq2",
+      "date.final.seq.result", "date.res.sent.out.vaccine2",
+      "date.res.sent.out.vdpv2", "nt.changes"
+    )
+
+    ## Exclude the variables from
+    es.02.old <- es.01.old |>
+      dplyr::select(-dplyr::all_of(var.list.01))
+
+    es.02.new <- es.01.new |>
+      dplyr::select(-dplyr::all_of(var.list.01))
+
+    new.var.es.01 <- f.download.compare.01(old.download = es.02.old, new.download = es.02.new)
+
+    new.df <- new.var.es.01 |>
+      dplyr::filter(is.na(old.distinct.01) | diff.distinct.01 >= 1) |>
+      dplyr::filter(variable != "id")
+
+    if (nrow(new.df) >= 1) {
+      cli::cli_alert_danger("There is either a new variable in the ES data or new value of an existing variable.
+          Please run f.download.compare.01 to see what it is. Preprocessing can not continue until this is adressed.")
+
+      es.new.value <- f.download.compare.02(
+        new.var.es.01 |>
+          dplyr::filter(!(is.na(old.distinct.01)) & variable != "id"),
+        es.02.old, es.02.new, type = "ES")
+
+    }else{
+      cli::cli_alert_info("No variable change errors")
+    }
+
+    remove("es.01.old", "es.02.old")
+  }else{
+    cli::cli_alert_info("No ES file found in archives")
+  }
+
+  return(es.01.new)
+
+}
