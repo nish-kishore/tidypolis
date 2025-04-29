@@ -2317,7 +2317,7 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
   es.01.new <- s4_es_load_data(polis_data_folder = polis_data_folder,
                                latest_folder_in_archive = latest_folder_in_archive)
 
-  es.02 <- s4_es_create_cdc_vars(es.01.new = es.01.new)
+  es.02 <- s4_es_data_processing(es.01.new = es.01.new)
 
   # attach to shapefile
 
@@ -7824,8 +7824,7 @@ s4_es_load_data <- function(polis_data_folder, latest_folder_in_archive){
 
 }
 
-#' Convert variables in POLIS download to CDC specific variables and clean
-#' variables
+#' Convert variables in POLIS download to to cleaned outputs
 #'
 #' @param es.01.new `tibble` The latest ES download with variables checked
 #' against the last download
@@ -7835,7 +7834,7 @@ s4_es_load_data <- function(polis_data_folder, latest_folder_in_archive){
 #' @returns `tibble` es.02 SIA data with CDC variables enforced
 #' @keywords internal
 #'
-s4_es_create_cdc_vars <- function(es.01.new){
+s4_es_data_processing <- function(es.01.new){
 
   # Data manipulation
 
