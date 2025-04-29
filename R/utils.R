@@ -8089,3 +8089,38 @@ s4_es_check_metadata <- function(es.05){
   invisible()
 
 }
+
+#' Write out final ES data
+#'
+#' @param es.05 `tibble` The latest ES download with variables checked
+#' against the last download, variables validated and sites checked and
+#' CDC variables enforced
+#'
+#' @returns `NULL` invisible return with write out to logs if necessary
+#' @keywords internal
+#'
+s4_es_write_data <- function(es.05){
+
+  cli::cli_process_start("Writing out ES datasets")
+
+  invisible(capture.output(
+    tidypolis_io(
+      obj = es.05,
+      io = "write",
+      file_path = paste(
+        polis_data_folder,
+        "/Core_Ready_Files/",
+        paste("es", min(es.05$collect.date, na.rm = T),
+              max(es.05$collect.date, na.rm = T), sep = "_"),
+        ".rds",
+        sep = ""
+      ))
+  ))
+
+  cli::cli_process_done()
+
+  update_polis_log(.event = paste0("ES finished"),
+                   .event_type = "PROCESS")
+
+}
+
