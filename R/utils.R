@@ -2319,35 +2319,7 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
 
   es.02 <- s4_es_data_processing(es.01.new = es.01.new)
 
-  # attach to shapefile
-
-  # check and make sure there are no new site names:
-  envSiteYearList <- get_env_site_data()
-  envSiteYearList$site.name <- gsub("\n", " ", envSiteYearList$site.name)
-  envSiteYearList$site.name <- toupper(envSiteYearList$site.name)
-
-  es.02$site.name <- gsub("\r\n", " ", es.02$site.name)
-  es.02$site.name <- toupper(es.02$site.name)
-  es.02$site.name <- stringr::str_trim(es.02$site.name)
-
-  envSiteYearList$site.name <- stringr::str_trim(envSiteYearList$site.name)
-
-  newsites <- setdiff(es.02$site.name, envSiteYearList$site.name)
-
-  # some new sites are just old sites with no lat or long
-  truenewsites <- es.02 |>
-    dplyr::filter(site.name %in% newsites) |>
-    dplyr::filter(is.na(lat)) |>
-    dplyr::select(admin.0, site.name, site.id, site.code, lat) |>
-    unique()
-
-  if (nrow(truenewsites) > 0) {
-    Sys.setenv(POLIS_ENVstatus = "WARNING")
-    cli::cli_alert_warning("WARNING, there are site names which can not be found in our database.
-            Please run envshapecheck_02.R to make sure each site has a new GUID.")
-  }else{
-    Sys.setenv(POLIS_ENVstatus = "clear")
-  }
+  es.02 <- s4_es_validate_sites(es.02 = es.02)
 
   cli::cli_process_start("Creating ES CDC variables")
 
@@ -8023,5 +7995,51 @@ s4_es_data_processing <- function(es.01.new){
   gc(verbose = F)
   cli::cli_process_done()
   return(es.02)
+
+}
+
+#' Validate ES Site names
+#'
+#' @param es.02 `tibble` Tibble containing all ES data with variable contents
+#' validated
+#'
+#' @returns `tibble` es.02 - the latest SIA data quality checked for variable
+#' stability against the last download if it exists, data cleaned and site
+#' names validated
+#' @keywords internal
+#'
+s4_es_validate_sites <- function(es.02){
+
+  cli::cli_process_start("Validating ES Sites")
+
+  # check and make sure there are no new site names:
+  envSiteYearList <- get_env_site_data()
+  envSiteYearList$site.name <- gsub("\n", " ", envSiteYearList$site.name)
+  envSiteYearList$site.name <- toupper(envSiteYearList$site.name)
+
+  es.02$site.name <- gsub("\r\n", " ", es.02$site.name)
+  es.02$site.name <- toupper(es.02$site.name)
+  es.02$site.name <- stringr::str_trim(es.02$site.name)
+
+  envSiteYearList$site.name <- stringr::str_trim(envSiteYearList$site.name)
+
+  newsites <- setdiff(es.02$site.name, envSiteYearList$site.name)
+
+  # some new sites are just old sites with no lat or long
+  truenewsites <- es.02 |>
+    dplyr::filter(site.name %in% newsites) |>
+    dplyr::filter(is.na(lat)) |>
+    dplyr::select(admin.0, site.name, site.id, site.code, lat) |>
+    unique()
+
+  if (nrow(truenewsites) > 0) {
+    Sys.setenv(POLIS_ENVstatus = "WARNING")
+    cli::cli_alert_warning("WARNING, there are site names which can not be found in our database.
+            Please run envshapecheck_02.R to make sure each site has a new GUID.")
+  }else{
+    Sys.setenv(POLIS_ENVstatus = "clear")
+  }
+
+  cli::cli_process_done()
 
 }
