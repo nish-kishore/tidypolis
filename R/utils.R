@@ -7803,7 +7803,7 @@ s4_es_load_data <- function(polis_data_folder, latest_folder_in_archive){
 #' @param startyr `int` The subset of years for which to process ES data
 #' @param endyr `int` The subset of years for which to process ES data
 #'
-#' @returns `tibble` es.02 SIA data with CDC variables enforced
+#' @returns `tibble` es.02 SIA data with outputs validated
 #' @keywords internal
 #'
 s4_es_data_processing <- function(es.01.new){
