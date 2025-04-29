@@ -2327,100 +2327,7 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
 
   es.05 <- s4_es_create_cdc_vars(es.02 = es.02)
 
-  cli::cli_process_start("Checking metadata with previous data")
-
-  # save data
-  #Compare the final file to last week's final file to identify any differences in var_names, var_classes, or categorical responses
-  old.es.file <- tidypolis_io(io = "list", file_path = file.path(polis_data_folder, "Core_Ready_Files/Archive", latest_folder_in_archive), full_names = T)
-
-  old.es.file <- old.es.file[grepl("es_2001-01-08", old.es.file)]
-
-  if(length(old.es.file) > 0){
-
-    old.es <- tidypolis_io(io = "read", file_path = old.es.file)
-
-    new_table_metadata <- f.summarise.metadata(es.05)
-    old_table_metadata <- f.summarise.metadata(old.es)
-    es_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata, "ES")
-
-    #compare obs
-    new <- es.05 |>
-      dplyr::mutate(env.sample.manual.edit.id = stringr::str_squish(env.sample.manual.edit.id)) |>
-      dplyr::mutate_all(as.character)
-
-
-    old <- old.es |>
-      dplyr::mutate(env.sample.manual.edit.id = stringr::str_squish(env.sample.manual.edit.id)) |>
-      dplyr::mutate_all(as.character)
-
-    in_new_not_old <- new |>
-      dplyr::filter(!(env.sample.manual.edit.id %in% old$env.sample.manual.edit.id))
-
-    in_old_not_new <- old |>
-      dplyr::filter(!(env.sample.manual.edit.id %in% new$env.sample.manual.edit.id))
-
-    in_new_and_old_but_modified <- new |>
-      dplyr::filter(env.sample.manual.edit.id %in% old$env.sample.manual.edit.id) |>
-      dplyr::select(-c(setdiff(colnames(new), colnames(old)))) |>
-      setdiff(old |>
-                dplyr::select(-c(setdiff(colnames(old), colnames(new))))) |>
-      dplyr::inner_join(old |>
-                          dplyr::filter(env.sample.manual.edit.id %in% new$env.sample.manual.edit.id) |>
-                          dplyr::select(-c(setdiff(colnames(old), colnames(new)))) |>
-                          setdiff(new |>
-                                    dplyr::select(-c(setdiff(colnames(new), colnames(old))))), by="env.sample.manual.edit.id") |>
-      #wide_to_long
-      tidyr::pivot_longer(cols=-env.sample.manual.edit.id) |>
-      dplyr::mutate(source = ifelse(stringr::str_sub(name, -2) == ".x", "new", "old")) |>
-      dplyr::mutate(name = stringr::str_sub(name, 1, -3)) |>
-      #long_to_wide
-      tidyr::pivot_wider(names_from=source, values_from=value)
-
-    if(nrow(in_new_and_old_but_modified) > 0){
-      in_new_and_old_but_modified <- in_new_and_old_but_modified |>
-        dplyr::mutate(new = as.character(new),
-                      old = as.character(old)) |>
-        dplyr::filter(new != old)
-    }
-
-    update_polis_log(.event = paste0("ES New Records: ", nrow(in_new_not_old), "; ",
-                                     "ES Removed Records: ", nrow(in_old_not_new), "; ",
-                                     "ES Modified Records: ", length(unique(in_new_and_old_but_modified$env.sample.manual.edit.id))),
-                     .event_type = "INFO")
-
-
-    cli::cli_process_done()
-  }else{
-    cli::cli_process_done()
-    cli::cli_alert_info("No old ES file found")
-  }
-
-
-  cli::cli_process_start("Writing out ES datasets")
-  tidypolis_io(obj = es.05, io = "write", file_path = paste(polis_data_folder, "/Core_Ready_Files/",
-                                                            paste("es", min(es.04$collect.date, na.rm = T), max(es.04$collect.date, na.rm = T), sep = "_"),
-                                                            ".rds",
-                                                            sep = ""
-  ))
-
-  cli::cli_process_done()
-
-  update_polis_log(.event = paste0("ES finished"),
-                   .event_type = "PROCESS")
-
-  # remove unneeded data from workspace
-
-  cli::cli_process_start("Clearing memory")
-
-  rm(
-    'envSiteYearList', 'es.00', 'es.02', 'es.03', 'es.04', 'es.05', 'es_metadata_comparison', 'global.ctry.01',
-    'in_new_and_old_but_modified', 'in_new_not_old', 'in_old_not_new',
-    'na.es.01', 'new', 'new.df', 'new.file', 'new.var.es.01', 'new_table_metadata', 'newsites',
-    'old', 'old.es.file', 'old.file', 'old_table_metadata', 'savescipen',
-    'shape.name.01', 'truenewsites', 'var.list.01'
-  )
-  gc()
-  cli::cli_process_done()
+  invisible(gc())
 
   #Step 5 - Creating Virus datasets ====
   update_polis_log(.event = "Creating Positives analytic datasets",
@@ -8084,5 +7991,101 @@ s4_es_create_cdc_vars <- function(es.02){
   cli::cli_process_done()
 
   return(es.05)
+
+}
+
+#' Compare ES outputs with metadata from previous output
+#'
+#' @param es.05 `tibble` The latest ES download with variables checked
+#' against the last download, variables validated and sites checked and
+#' CDC variables enforced
+#'
+#' @returns `NULL` invisible return with write out to logs if necessary
+#' @keywords internal
+#'
+s4_es_check_metadata <- function(es.05){
+
+  cli::cli_process_start("Checking metadata with previous data")
+
+  #Compare the final file to last week's final file to identify any
+  #differences in var_names, var_classes, or categorical responses
+
+  old.es.file <- tidypolis_io(
+    io = "list",
+    file_path = file.path(
+      polis_data_folder,
+      "Core_Ready_Files/Archive",
+      latest_folder_in_archive),
+    full_names = T)
+
+  old.es.file <- old.es.file[grepl("es_2001-01-08", old.es.file)]
+
+  if(length(old.es.file) > 0){
+
+    invisible(capture.output(
+      old.es <- tidypolis_io(io = "read", file_path = old.es.file)
+    ))
+
+    new_table_metadata <- f.summarise.metadata(es.05)
+    old_table_metadata <- f.summarise.metadata(old.es)
+    es_metadata_comparison <- f.compare.metadata(new_table_metadata, old_table_metadata, "ES")
+
+    #compare obs
+    new <- es.05 |>
+      dplyr::mutate(env.sample.manual.edit.id = stringr::str_squish(env.sample.manual.edit.id)) |>
+      dplyr::mutate_all(as.character)
+
+    old <- old.es |>
+      dplyr::mutate(env.sample.manual.edit.id = stringr::str_squish(env.sample.manual.edit.id)) |>
+      dplyr::mutate_all(as.character)
+
+    in_new_not_old <- new |>
+      dplyr::filter(!(env.sample.manual.edit.id %in% old$env.sample.manual.edit.id))
+
+    in_old_not_new <- old |>
+      dplyr::filter(!(env.sample.manual.edit.id %in% new$env.sample.manual.edit.id))
+
+    in_new_and_old_but_modified <- new |>
+      dplyr::filter(env.sample.manual.edit.id %in% old$env.sample.manual.edit.id) |>
+      dplyr::select(-c(setdiff(colnames(new), colnames(old)))) |>
+      setdiff(old |>
+                dplyr::select(-c(setdiff(colnames(old), colnames(new))))) |>
+      dplyr::inner_join(old |>
+                          dplyr::filter(env.sample.manual.edit.id %in% new$env.sample.manual.edit.id) |>
+                          dplyr::select(-c(setdiff(colnames(old), colnames(new)))) |>
+                          setdiff(new |>
+                                    dplyr::select(-c(setdiff(colnames(new), colnames(old))))),
+                        by="env.sample.manual.edit.id") |>
+      #wide_to_long
+      tidyr::pivot_longer(cols=-env.sample.manual.edit.id) |>
+      dplyr::mutate(source = ifelse(stringr::str_sub(name, -2) == ".x", "new", "old")) |>
+      dplyr::mutate(name = stringr::str_sub(name, 1, -3)) |>
+      #long_to_wide
+      tidyr::pivot_wider(names_from=source, values_from=value)
+
+    if(nrow(in_new_and_old_but_modified) > 0){
+      in_new_and_old_but_modified <- in_new_and_old_but_modified |>
+        dplyr::mutate(new = as.character(new),
+                      old = as.character(old)) |>
+        dplyr::filter(new != old)
+    }
+
+    update_polis_log(.event =
+                       paste0("ES New Records: ",
+                              nrow(in_new_not_old), "; ",
+                              "ES Removed Records: ",
+                              nrow(in_old_not_new), "; ",
+                              "ES Modified Records: ",
+                              length(unique(in_new_and_old_but_modified$env.sample.manual.edit.id))),
+                     .event_type = "INFO")
+
+
+    cli::cli_process_done()
+  }else{
+    cli::cli_process_done()
+    cli::cli_alert_info("No old ES file found")
+  }
+
+  invisible()
 
 }
