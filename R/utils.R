@@ -2325,60 +2325,7 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
 
   es.02 <- s4_es_validate_sites(es.02 = es.02)
 
-  cli::cli_process_start("Creating ES CDC variables")
-
-  #Rename es.02 as es.03 directly, until the above has been re-instated and issues with envshapecheck resolved. Change var names to match es.03 expected output
-  es.03 <-  es.02 |>
-    dplyr::rename(ADM0_NAME = admin.0,
-                  ADM1_NAME = admin.1,
-                  ADM2_NAME = admin.2) |>
-    dplyr::mutate(GUID = dist.guid) |>
-    dplyr::select(-c("district", "ctry", "province"))
-
-    if (Sys.getenv("POLIS_EDAV_FLAG")) {
-
-  #fix CIV
-  es.03 = es.03|>
-    dplyr::mutate(ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"),"COTE D IVOIRE",ADM0_NAME))
-
-  if (Sys.getenv("POLIS_EDAV_FLAG")) {
-    global.ctry.01 <- sirfunctions::load_clean_ctry_sp()
-  } else {
-    global.ctry.01 <- tidypolis_io(io = "read",
-                                   file_path = file.path(Sys.getenv("POLIS_DATA_FOLDER"),
-                                                         "misc",
-                                                         "global.ctry.rds"))
-    global.ctry.01 <- global.ctry.01 |>
-      dplyr::mutate(
-        yr.st = lubridate::year(STARTDATE),
-        yr.end = lubridate::year(ENDDATE),
-        ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"), "COTE D IVOIRE", ADM0_NAME)
-      )
-  }
-
-  sf::sf_use_s2(F)
-  shape.name.01 <- global.ctry.01 |>
-    dplyr::select(ISO_3_CODE, ADM0_NAME.rep = ADM0_NAME) |>
-    dplyr::distinct(.keep_all = T)
-  sf::sf_use_s2(T)
-
-  savescipen <- getOption("scipen")
-  options(scipen = 999)
-
-  es.04 <- dplyr::left_join(es.03, shape.name.01, by = c("country.iso3" = "ISO_3_CODE"), relationship = "many-to-many") |>
-    dplyr::mutate(ADM0_NAME = ifelse(is.na(ADM0_NAME), ADM0_NAME.rep, ADM0_NAME)) |>
-    dplyr::select(-c("ADM0_NAME.rep", "Shape")) |>
-    dplyr::mutate(lat = as.character(lat),
-                  lng = as.character(lng)) |>
-    dplyr::mutate_at(c("admin.2.id", "region.id", "reporting.week", "reporting.year",
-                       "env.sample.manual.edit.id", "site.id", "sample.id", "admin.0.id", "admin.1.id"), ~as.numeric(.)) |>
-    dplyr::distinct()
-
-  es.05 <- remove_character_dates(type = "ES", df = es.04)
-
-  options(scipen = savescipen)
-
-  cli::cli_process_done()
+  es.05 <- s4_es_create_cdc_vars(es.02 = es.02)
 
   cli::cli_process_start("Checking metadata with previous data")
 
@@ -7234,6 +7181,8 @@ s3_sia_check_metadata <- function(sia.06, polis_data_folder, latest_folder_in_ar
 
     invisible(capture.output(
       old <- tidypolis_io(io = "read", file_path = old.file)))
+    old <- old |>
+      dplyr::select(-dplyr::starts_with("Shape"))
     old_table_metadata <- f.summarise.metadata(dataframe = old)
     sia_metadata_comparison <- f.compare.metadata(new_table_metadata = new_table_metadata,
                                                   old_table_metadata = old_table_metadata,
@@ -8047,5 +7996,93 @@ s4_es_validate_sites <- function(es.02){
   }
 
   cli::cli_process_done()
+
+  return(es.02)
+
+}
+
+#' Convert variables in POLIS download to to cleaned outputs
+#'
+#' @param es.02 `tibble` The latest ES download with variables checked
+#' against the last download, variables validated and sites checked
+#'
+#' @returns `tibble` es.05 SIA data with CDC variables enforced
+#' @keywords internal
+#'
+s4_es_create_cdc_vars <- function(es.02){
+
+
+  cli::cli_process_start("Creating ES CDC variables")
+
+  es.03 <-  es.02 |>
+    dplyr::rename(ADM0_NAME = admin.0,
+                  ADM1_NAME = admin.1,
+                  ADM2_NAME = admin.2) |>
+    dplyr::mutate(GUID = dist.guid) |>
+    dplyr::select(-c("district", "ctry", "province"))
+
+  #fix CIV
+  es.03 <- es.03 |>
+    dplyr::mutate(ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"),
+                                     "COTE D IVOIRE",ADM0_NAME))
+
+  if (Sys.getenv("POLIS_EDAV_FLAG")) {
+
+    invisible(capture.output(
+      global.ctry.01 <- sirfunctions::load_clean_ctry_sp()
+    ))
+
+  } else {
+
+    invisible(capture.output(
+      global.ctry.01 <- tidypolis_io(
+        io = "read",
+        file_path = file.path(
+          Sys.getenv("POLIS_DATA_FOLDER"),
+          "misc",
+          "global.ctry.rds"))
+    ))
+
+    global.ctry.01 <- global.ctry.01 |>
+      dplyr::mutate(
+        yr.st = lubridate::year(STARTDATE),
+        yr.end = lubridate::year(ENDDATE),
+        ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"),
+                           "COTE D IVOIRE", ADM0_NAME)
+      )
+  }
+
+  sf::sf_use_s2(F)
+  shape.name.01 <- global.ctry.01 |>
+    dplyr::select(ISO_3_CODE, ADM0_NAME.rep = ADM0_NAME) |>
+    dplyr::distinct(.keep_all = T)
+  sf::sf_use_s2(T)
+
+  savescipen <- getOption("scipen")
+  options(scipen = 999)
+
+  es.04 <- dplyr::left_join(
+    es.03,
+    shape.name.01,
+    by = c("country.iso3" = "ISO_3_CODE"),
+    relationship = "many-to-many"
+  ) |>
+    dplyr::mutate(ADM0_NAME = ifelse(is.na(ADM0_NAME), ADM0_NAME.rep, ADM0_NAME)) |>
+    dplyr::select(-c("ADM0_NAME.rep", "Shape")) |>
+    dplyr::mutate(lat = as.character(lat),
+                  lng = as.character(lng)) |>
+    dplyr::mutate_at(c("admin.2.id", "region.id", "reporting.week",
+                       "reporting.year", "env.sample.manual.edit.id",
+                       "site.id", "sample.id", "admin.0.id", "admin.1.id"),
+                     ~as.numeric(.)) |>
+    dplyr::distinct()
+
+  es.05 <- remove_character_dates(type = "ES", df = es.04)
+
+  options(scipen = savescipen)
+
+  cli::cli_process_done()
+
+  return(es.05)
 
 }
