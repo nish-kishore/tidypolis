@@ -2318,16 +2318,8 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
 
   cli::cli_h1("Step 4/5 - Creating ES analytic datasets")
 
-  es.01.new <- s4_es_load_data(polis_data_folder = polis_data_folder,
-                               latest_folder_in_archive = latest_folder_in_archive)
-
-  es.02 <- s4_es_data_processing(es.01.new = es.01.new)
-
-  es.02 <- s4_es_validate_sites(es.02 = es.02)
-
-  es.05 <- s4_es_create_cdc_vars(es.02 = es.02)
-
-  invisible(gc())
+  s4_fully_process_es_data(polis_data_folder = polis_data_folder,
+                           latest_folder_in_archive = latest_folder_in_archive)
 
   #Step 5 - Creating Virus datasets ====
   update_polis_log(.event = "Creating Positives analytic datasets",
@@ -7555,6 +7547,34 @@ s3_sia_evaluate_unmatched_guids <- function(sia.05, polis_data_folder){
 }
 
 ###### Step 4 Private Functions ----
+
+#' Process ES Data Pipeline
+#'
+#' This function processes ES data through multiple standardization and
+#' validation steps, including checking for duplicates, validating
+#' ES sites and checking against previous downloads
+#'
+#' @param polis_data_folder `str` Path to the POLIS data folder.
+#' @param latest_folder_in_archive `str` Name of the latest folder in the archive.
+#'
+#' @export
+s4_fully_process_es_data <- function(polis_data_folder, latest_folder_in_archive){
+
+  es.05 <- s4_es_load_data(polis_data_folder = polis_data_folder,
+                           latest_folder_in_archive = latest_folder_in_archive) |>
+    s4_es_data_processing() |>
+    s4_es_validate_sites() |>
+    s4_es_create_cdc_vars()
+
+  s4_es_check_metadata(es.05 = es.05)
+
+  s4_es_write_data(es.05 = es.05)
+
+  rm("es.05")
+
+  invisible(gc())
+
+}
 
 #' Load and check ES data against previous downloads
 #'
