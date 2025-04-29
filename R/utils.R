@@ -2331,6 +2331,7 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
     dplyr::mutate(GUID = dist.guid) |>
     dplyr::select(-c("district", "ctry", "province"))
 
+    if (Sys.getenv("POLIS_EDAV_FLAG")) {
 
   #fix CIV
   es.03 = es.03|>
@@ -7094,6 +7095,7 @@ s3_sia_check_guids <- function(sia.02, long.global.dist.01){
     dplyr::filter(no_match==1) |>
     #left join based on location names and year
     dplyr::left_join(long.global.dist.01 |>
+                       tibble::as_tibble() |>
                        dplyr::select(GUID, ADM0_NAME, ADM1_NAME,
                                      ADM2_NAME, active.year.01),
                      by = c("place.admin.0" = "ADM0_NAME",
