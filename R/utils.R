@@ -918,8 +918,12 @@ get_crosswalk_data <- function(
 get_env_site_data <- function(file_loc = file.path(Sys.getenv("POLIS_DATA_FOLDER"),
                                                    "misc",
                                                    "env_sites.rds")) {
-  envSiteYearList <- tidypolis_io(io = "read",
-                                  file_path = file_loc)
+
+  invisible(capture.output(
+    envSiteYearList <- tidypolis_io(io = "read",
+                                    file_path = file_loc)
+  ))
+
   return(envSiteYearList)
 }
 
