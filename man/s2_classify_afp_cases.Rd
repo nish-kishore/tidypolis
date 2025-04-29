@@ -11,12 +11,12 @@ s2_classify_afp_cases(
 )
 }
 \arguments{
-\item{data}{A data frame containing AFP surveillance data with columns:
+\item{data}{\code{tibble} A tibble containing AFP surveillance data with columns:
 poliovirustypes, vtype.fixed, classification, yronset}
 
-\item{startyr}{Integer. The start year for filtering cases (default: 2020)}
+\item{startyr}{\code{int} The start year for filtering cases (default: 2020)}
 
-\item{endyr}{Integer. The end year for filtering cases (default: current
+\item{endyr}{\code{int} The end year for filtering cases (default: current
 year)}
 }
 \value{

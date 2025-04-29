@@ -7,15 +7,15 @@
 s2_process_coordinates(data, polis_data_folder, polis_folder)
 }
 \arguments{
-\item{data}{A data frame containing AFP data with admin GUIDs}
+\item{data}{\code{tibble} A data frame containing AFP data with admin GUIDs}
 
-\item{polis_data_folder}{Character. Path to the POLIS data folder containing
+\item{polis_data_folder}{\code{str} Path to the POLIS data folder containing
 Core_Ready_Files.}
 
-\item{polis_folder}{Character. Path to the main POLIS folder.}
+\item{polis_folder}{\code{str} Path to the main POLIS folder.}
 }
 \value{
-A data frame with processed coordinate data
+A tibble with processed coordinate data
 }
 \description{
 Handles missing coordinates, validates existing ones, and ensures that all

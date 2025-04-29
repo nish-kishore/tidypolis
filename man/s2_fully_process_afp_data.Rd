@@ -4,16 +4,26 @@
 \alias{s2_fully_process_afp_data}
 \title{Process AFP Data Pipeline}
 \usage{
-s2_fully_process_afp_data(polis_data_folder, polis_folder, long.global.dist.01)
+s2_fully_process_afp_data(
+  polis_data_folder,
+  polis_folder,
+  long.global.dist.01,
+  timestamp,
+  latest_folder_in_archive_path
+)
 }
 \arguments{
-\item{polis_data_folder}{Character. Path to the POLIS data folder containing
+\item{polis_data_folder}{\code{str} Path to the POLIS data folder containing
 Core_Ready_Files.}
 
-\item{polis_folder}{Character. Path to the main POLIS folder.}
+\item{polis_folder}{\code{str} Path to the main POLIS folder.}
 
-\item{long.global.dist.01}{Data frame. Global district lookup table for GUID
+\item{long.global.dist.01}{\code{sf} Global district lookup table for GUID
 validation.}
+
+\item{timestamp}{\code{str} Time stamp}
+
+\item{latest_folder_in_archive_path}{\code{str} The path to the latest archive folder.}
 }
 \description{
 This function processes AFP data through multiple standardization and
