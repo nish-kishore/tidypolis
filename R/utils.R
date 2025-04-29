@@ -7117,10 +7117,6 @@ s3_sia_load_data <- function(polis_data_folder,
 
       sia.new.value <- f.download.compare.02(new.var.sia.01, sia.01.old.compare, sia.01.new.compare, type = "SIA")
 
-      return(sia.new.value)
-
-      stop()
-
     } else {
 
       cli::cli_alert_info("New SIA download is comparable to old SIA download")
