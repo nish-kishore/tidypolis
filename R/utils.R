@@ -4765,6 +4765,11 @@ s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
                                       long.global.dist.01, timestamp,
                                       latest_folder_in_archive_path) {
 
+  if (!tidypolis_io(io = "exists.dir",
+                    file_path = file.path(polis_data_folder, "Core_Ready_Files"))) {
+    cli::cli_abort("Please run Step 1 and create a Core Ready folder before running this step.")
+  }
+
   # Step 2a: Read in "old" data file (System to find "Old" data file)
 
   # list archive files
@@ -6624,6 +6629,12 @@ s2_compare_with_archive <- function(data,
 #' @export
 s3_fully_process_sia_data <- function(long.global.dist.01, polis_data_folder,
                                       latest_folder_in_archive, timestamp){
+
+  if (!tidypolis_io(io = "exists.dir",
+                    file_path = file.path(polis_data_folder, "Core_Ready_Files"))) {
+    cli::cli_abort("Please run Step 1 and create a Core Ready folder before running this step.")
+  }
+
   #dataset used to check mismatched guids and create sia.06
   sia.05 <- s3_sia_load_data(
     polis_data_folder = polis_data_folder,
@@ -7559,6 +7570,11 @@ s3_sia_evaluate_unmatched_guids <- function(sia.05, polis_data_folder){
 #'
 #' @export
 s4_fully_process_es_data <- function(polis_data_folder, latest_folder_in_archive){
+
+   if (!tidypolis_io(io = "exists.dir",
+                    file_path = file.path(polis_data_folder, "Core_Ready_Files"))) {
+     cli::cli_abort("Please run Step 1 and create a Core Ready folder before running this step.")
+   }
 
   es.05 <- s4_es_load_data(polis_data_folder = polis_data_folder,
                            latest_folder_in_archive = latest_folder_in_archive) |>
