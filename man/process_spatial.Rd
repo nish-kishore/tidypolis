@@ -4,15 +4,22 @@
 \alias{process_spatial}
 \title{A function to process WHO spatial datasets}
 \usage{
-process_spatial(gdb_folder, output_folder, edav)
+process_spatial(
+  gdb_folder,
+  output_folder,
+  edav,
+  azcontainer = suppressMessages(sirfunctions::get_azure_storage_connection())
+)
 }
 \arguments{
-\item{gdb_folder}{str the folder location of spatial datasets, should end with .gdb,
-if on edav the gdb will need to be zipped, ensure that the gdb and the zipped file name are the same}
+\item{gdb_folder}{\code{str} The folder location of spatial datasets, should end with .gdb,
+if on edav the gdb will need to be zipped, ensure that the gdb and the zipped file name are the same.}
 
-\item{output_folder}{str folder location to write outputs to}
+\item{output_folder}{\code{str} Folder location to write outputs to.}
 
-\item{edav}{boolean T or F, whether gdb is on EDAV or local}
+\item{edav}{\code{bool} Whether gdb is on EDAV or local.}
+
+\item{azcontainer}{\verb{Azure container} Azure storage container.}
 }
 \description{
 a function to process WHO spatial datasets
