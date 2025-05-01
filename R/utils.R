@@ -7254,6 +7254,8 @@ s3_sia_check_guids <- function(sia.02, long.global.dist.01){
     #flag if spatial files do not match
     dplyr::mutate(no_match=ifelse(is.na(ADM2_NAME), 1, 0))
 
+  sia.03$Shape <- NULL
+
   # SIAs did not match with GUIDs in shapes.
   tofix <- sia.03 |>
     dplyr::select(-ADM0_NAME, -ADM1_NAME, -ADM2_NAME) |>
@@ -7271,6 +7273,8 @@ s3_sia_check_guids <- function(sia.02, long.global.dist.01){
     dplyr::mutate(missing.guid = ifelse(is.na(GUID), 1, 0),
                   adm2guid = ifelse(missing.guid==0, GUID, adm2guid)) |>
     dplyr::select(-GUID, -no_match)
+
+  tofix$Shape <- NULL
 
   # Combine SIAs matched with prov, dist with shapes
   sia.04 <- sia.03 |>
