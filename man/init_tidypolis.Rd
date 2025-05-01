@@ -4,12 +4,14 @@
 \alias{init_tidypolis}
 \title{A function to intitialize a POLIS data folder}
 \usage{
-init_tidypolis(polis_folder = "POLIS", edav = F)
+init_tidypolis(polis_folder = "POLIS", edav = F, api_debug = F)
 }
 \arguments{
 \item{polis_folder}{\code{str} Location of folder where to store all information from POLIS.}
 
 \item{edav}{\code{bool} Should the system use EDAV as it's cache; default \code{FALSE}.}
+
+\item{api_debug}{boolean: if true will log all api calls}
 }
 \value{
 Messages on process.

@@ -2,8 +2,7 @@
 % Please edit documentation in R/utils.R
 \name{process_spatial}
 \alias{process_spatial}
-\title{Process WHO spatial data and output country, province and district level shape files and basic
-quality checks}
+\title{A function to process WHO spatial datasets}
 \usage{
 process_spatial(
   gdb_folder,

@@ -7,7 +7,7 @@
 #' @import cli yaml tibble dplyr readr lubridate sirfunctions
 #' @param polis_folder `str` Location of folder where to store all information from POLIS.
 #' @param edav `bool` Should the system use EDAV as it's cache; default `FALSE`.
-#'
+#' @param api_debug boolean: if true will log all api calls
 #' @returns Messages on process.
 #' @examples
 #' \dontrun{
@@ -18,8 +18,17 @@
 #' @export
 init_tidypolis <- function(
     polis_folder = "POLIS",
-    edav = F
+    edav = F,
+    api_debug = F
     ){
+
+  if(api_debug){
+    Sys.setenv("API_DEBUG" = TRUE)
+  }else{
+    Sys.setenv("API_DEBUG" = FALSE)
+  }
+
+  cli::cli_alert_info(paste0("API Debug set to: ", Sys.getenv("API_DEBUG")))
 
   if(edav){
     tryCatch(
@@ -249,7 +258,26 @@ init_tidypolis <- function(
     ))
     cli::cli_alert_success("No log located, creating log file.")
   }
+
+  api_log_file <- log_file |>
+    stringr::str_replace("/log.rds", "/api_call_log.rds")
+
+  log_exists <- tidypolis_io(io = "exists.file", file_path = api_log_file)
+
+  if(!log_exists){
+    cli::cli_alert_success("No API call log located, creating log file.")
+    tibble::tibble(
+      time = Sys.time(),
+      call = "INIT",
+      event = "INIT"
+    ) |>
+      tidypolis_io(io = "write", file_path = api_log_file)
+  } else {
+    cli::cli_alert_success("Previous API call log located!")
+  }
+
   Sys.setenv(POLIS_LOG_FILE = log_file)
+  Sys.setenv(POLIS_API_LOG_FILE = api_log_file)
 
   flag <- c("POLIS_DATA_FOLDER", "POLIS_API_KEY", "POLIS_DATA_CACHE",
     "POLIS_CACHE_FILE", "POLIS_LOG_FILE") |>
