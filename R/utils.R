@@ -1838,7 +1838,11 @@ create_response_vars <- function(pos, polis_data_folder = Sys.getenv("POLIS_DATA
   #bring in processed SIA data
   path <- tidypolis_io(io = "list", file_path = file.path(polis_data_folder, "/Core_Ready_Files"), full_names = T)
 
-  sia <- tidypolis_io(io = "read", file_path = path[grepl("sia_2000", path)])
+  tryCatch({
+    sia <- tidypolis_io(io = "read", file_path = path[grepl("sia_2000", path)])
+  }, error = \(e) {
+    cli::cli_abort("Please run Step 3 of preprocessing before Step 5.")
+  })
 
   sia.sub <- sia |>
     dplyr::select(sia.code, sia.sub.activity.code, activity.start.date,
@@ -2242,14 +2246,8 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
 
   s5_fully_process_pos_data(polis_folder, latest_folder_in_archive, long.global.dist.01)
 
-  cli::cli_process_start("Clearing memory")
-  invisible(rm(list = ls()))
-  invisible(gc())
-  cli::cli_process_done()
-
   update_polis_log(.event = "Processing of CORE datafiles complete",
                    .event_type = "END")
-
 
   #log_report()
   #archive_log()
@@ -7653,7 +7651,7 @@ s5_fully_process_pos_data <- function(polis_folder,
 
   rm(afp.es.virus.02)
 
-  s5_pos_compare_with_archive(afp.es.virus.01, afp.es.virus.03,
+  s5_pos_compare_with_archive(afp.es.virus.03,
                               polis_data_folder, latest_folder_in_archive)
 
   s5_pos_evaluate_unmatched_guids(afp.es.virus.03, long.global.dist.01, polis_data_folder)
@@ -7987,20 +7985,30 @@ s5_pos_process_human_virus <- function(virus.01, polis_data_folder) {
     dplyr::mutate(short_name = stringr::str_replace(name, paste0(polis_data_folder, "/Core_Ready_Files/"), "")) |>
     dplyr::filter(grepl("^(afp_linelist_2001-01-01_2025).*(.rds)$", short_name)) |>
     dplyr::pull(name)
-  afp.01 <- lapply(afp.files.01, function(x) tidypolis_io(io = "read", file_path = x)) |>
-    dplyr::bind_rows() |>
-    dplyr::ungroup() |>
-    dplyr::distinct(.keep_all = T)|>
-    dplyr::filter(dplyr::between(yronset, startyr, endyr))
+
+  tryCatch({
+    afp.01 <- lapply(afp.files.01, function(x) tidypolis_io(io = "read", file_path = x)) |>
+      dplyr::bind_rows() |>
+      dplyr::ungroup() |>
+      dplyr::distinct(.keep_all = T)|>
+      dplyr::filter(dplyr::between(yronset, startyr, endyr))
+  }, error = \(e) {
+    cli::cli_abort("Please run Step 2 of preprocessing before Step 5.")
+  })
 
   non.afp.files.01 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path = file.path(polis_data_folder, "Core_Ready_Files"), full_names = T)) |>
     dplyr::mutate(short_name = stringr::str_replace(name, paste0(polis_data_folder, "/Core_Ready_Files/"), "")) |>
     dplyr::filter(grepl("^(other_surveillance_type_linelist_2016_2025).*(.rds)$", short_name)) |>
     dplyr::pull(name)
-  non.afp.01 <- purrr::map_df(non.afp.files.01, ~ tidypolis_io(io = "read", file_path = .x)) |>
-    dplyr::ungroup() |>
-    dplyr::distinct(.keep_all = T) |>
-    dplyr::filter(dplyr::between(yronset, startyr, endyr))
+
+  tryCatch({
+    non.afp.01 <- purrr::map_df(non.afp.files.01, ~ tidypolis_io(io = "read", file_path = .x)) |>
+      dplyr::ungroup() |>
+      dplyr::distinct(.keep_all = T) |>
+      dplyr::filter(dplyr::between(yronset, startyr, endyr))
+  }, error = \(e) {
+    cli::cli_abort("Please run Step 2 of preprocessing before Step 5.")
+  })
 
   # deleting any duplicate records in afp.01.
   afp.01 <- afp.01[!duplicated(afp.01$epid), ] |>
@@ -8103,13 +8111,16 @@ s5_pos_process_es_virus <- function(virus.01, polis_data_folder) {
     dplyr::mutate(short_name = stringr::str_replace(name, paste0(polis_data_folder, "/Core_Ready_Files/"), "")) |>
     dplyr::filter(grepl("^(es).*(.rds)$", short_name)) |>
     dplyr::pull(name)
-  es.01 <- purrr::map_df(env.files.01, ~ tidypolis_io(io = "read", file_path = .x)) |>
-    dplyr::ungroup() |>
-    dplyr::distinct(.keep_all = T)
+  tryCatch({
+    es.01 <- purrr::map_df(env.files.01, ~ tidypolis_io(io = "read", file_path = .x)) |>
+      dplyr::ungroup() |>
+      dplyr::distinct(.keep_all = T)
+  }, error = \(e) {
+    cli::cli_abort("Please run Step 4 of preprocessing before Step 5.")
+  })
 
   # Make sure 'env.sample.maual.edit.id' is unique for each ENV sample
   es.00 <- es.01[duplicated(es.01$env.sample.manual.edit.id), ]
-
 
   es.02 <- es.01 |>
     dplyr::rename(
@@ -8213,8 +8224,6 @@ s5_pos_create_final_virus_data <- function(human.virus.05, env.virus.04) {
 #' any changes, including the number of records that changed since the last run. Changes
 #' are also added into the `polis_data_folder` as csv files.
 #'
-#'
-#' @param afp.es.virus.01 `tibble` Output of [s5_pos_create_final_virus()].
 #' @param afp.es.virus.03 `tibble` Output of [s5_pos_create_final_virus()] but processed
 #' further using [remove_character_dates()] and [create_response_vars()].
 #' @inheritParams s5_fully_process_pos_data
@@ -8222,7 +8231,7 @@ s5_pos_create_final_virus_data <- function(human.virus.05, env.virus.04) {
 #' @returns `NULL` quietly upon success.
 #' @keywords internal
 #'
-s5_pos_compare_with_archive <- function(afp.es.virus.01, afp.es.virus.03, polis_data_folder, latest_folder_in_archive) {
+s5_pos_compare_with_archive <- function(afp.es.virus.03, polis_data_folder, latest_folder_in_archive) {
   cli::cli_process_start("Checking for variables that don't match last weeks pull")
 
   #Compare the final file to last week's final file to identify any differences in var_names, var_classes, or categorical responses
@@ -8323,7 +8332,7 @@ s5_pos_compare_with_archive <- function(afp.es.virus.01, afp.es.virus.03, polis_
   }
 
   #identify updated viruses logging change from VDPV to cVDPV
-  class.updated <- afp.es.virus.01 |>
+  class.updated <- afp.es.virus.03 |>
     dplyr::filter(vdpvclassificationchangedate <= Sys.Date() & vdpvclassificationchangedate > (Sys.Date()- 7)) |>
     dplyr::select(epid, virustype, measurement, vdpvclassificationchangedate, vdpvclassificationcode, createddate) |>
     dplyr::mutate(vdpvclassificationchangedate = as.Date(vdpvclassificationchangedate, "%Y-%m-%d"))
@@ -8343,8 +8352,8 @@ s5_pos_compare_with_archive <- function(afp.es.virus.01, afp.es.virus.03, polis_
   tidypolis_io(obj = afp.es.virus.03,
                io = "write",
                file_path = paste(polis_data_folder, "/Core_Ready_Files/",
-                                 paste("positives", min(afp.es.virus.01$dateonset, na.rm = T),
-                                       max(afp.es.virus.01$dateonset, na.rm = T),
+                                 paste("positives", min(afp.es.virus.03$dateonset, na.rm = T),
+                                       max(afp.es.virus.03$dateonset, na.rm = T),
                                        sep = "_"
                                  ),
                                  ".rds",
