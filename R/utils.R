@@ -2240,7 +2240,7 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
   #Step 5 - Creating Virus datasets ====
   cli::cli_h1("Step 5/5 - Creating Virus datasets")
 
-  s5_fully_process_afp_data(polis_folder, latest_folder_in_archive, long.global.dist.01)
+  s5_fully_process_pos_data(polis_folder, latest_folder_in_archive, long.global.dist.01)
 
   cli::cli_process_start("Clearing memory")
   invisible(rm(list = ls()))
@@ -7633,7 +7633,7 @@ s4_es_write_data <- function(es.05){
 #' @returns `NULL` quietly upon success.
 #'
 #' @export
-s5_fully_process_afp_data <- function(polis_folder,
+s5_fully_process_pos_data <- function(polis_folder,
                                       latest_folder_in_archive,
                                       long.global.dist.01,
                                       polis_data_folder = file.path(polis_folder, "data")) {
@@ -7671,7 +7671,7 @@ s5_fully_process_afp_data <- function(polis_folder,
 #' Loads the most recent positives dataset and archives the previous
 #' positives dataset.
 #'
-#' @inheritParams s5_fully_process_afp_data
+#' @inheritParams s5_fully_process_pos_data
 #'
 #' @returns `tibble` New virus dataset.
 #' @keywords internal
@@ -7786,7 +7786,7 @@ s5_pos_load_data <- function(polis_data_folder, latest_folder_in_archive) {
 #'
 #'
 #' @param virus.raw.new `tibble` Output of [s5_pos_load_data()].
-#' @inheritParams s5_fully_process_afp_data
+#' @inheritParams s5_fully_process_pos_data
 #'
 #' @returns `tibble` Raw virus data with additional CDC columns.
 #' @keywords internal
@@ -7906,7 +7906,7 @@ s5_pos_create_cdc_vars <- function(virus.raw.new, polis_folder, polis_data_folde
 #' Checks for potential duplicate positive records and outputs the result to
 #' a csv in `polis_data_folder`
 #'
-#' @inheritParams s5_fully_process_afp_data
+#' @inheritParams s5_fully_process_pos_data
 #' @param virus.01 `tibble` Output of [s5_pos_create_cdc_vars()].
 #'
 #' @returns `NULL` quietly upon success.
@@ -8217,7 +8217,7 @@ s5_pos_create_final_virus_data <- function(human.virus.05, env.virus.04) {
 #' @param afp.es.virus.01 `tibble` Output of [s5_pos_create_final_virus()].
 #' @param afp.es.virus.03 `tibble` Output of [s5_pos_create_final_virus()] but processed
 #' further using [remove_character_dates()] and [create_response_vars()].
-#' @inheritParams s5_fully_process_afp_data
+#' @inheritParams s5_fully_process_pos_data
 #'
 #' @returns `NULL` quietly upon success.
 #' @keywords internal
@@ -8359,7 +8359,7 @@ s5_pos_compare_with_archive <- function(afp.es.virus.01, afp.es.virus.03, polis_
 
 #'
 #'
-#' @inheritParams s5_fully_process_afp_data
+#' @inheritParams s5_fully_process_pos_data
 #' @inheritParams s5_pos_compare_with_archive
 #'
 #' @returns `NULL` quietly upon success.
