@@ -2105,6 +2105,7 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
     "-",
     round(lubridate::second(ts), 0)
   )
+
   latest_folder_in_archive <- s2_find_latest_archive(
     polis_data_folder = polis_data_folder, timestamp = timestamp)
 
@@ -2125,61 +2126,6 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
          .call = FALSE
     )
   }
-
-  #Step 0 - create a CORE datafiles to combine folder and check for datasets before continuing with pre-p =========
-  core_files_folder_path <- file.path(polis_data_folder, "core_files_to_combine")
-
-  if (!tidypolis_io(io = "exists.dir", file_path = core_files_folder_path)) {
-    tidypolis_io(io = "create", file_path = core_files_folder_path)
-  }
-
-  missing_static_files <- check_missing_static_files(core_files_folder_path)
-  # if on EDAV, create files to combine folder and write datasets into it
-  if (length(missing_static_files) > 0) {
-    cli::cli_alert_warning(paste0(
-      "Please request the following file(s) from the SIR team",
-      "and move them into: ", core_files_folder_path
-    ))
-
-    for (file in missing_static_files) {
-      cli::cli_alert_info(paste0(file, "\n"))
-    }
-    cli::cli_abort("Halting execution of preprocessing due to missing files.")
-  }
-
-  rm(core_files_folder_path, missing_static_files)
-
-  #Step 1 - Basic cleaning and crosswalk ======
-  cli::cli_h1("Step 1/5: Basic cleaning and crosswalk across datasets")
-
-  # update log for start of creation of CORE ready datasets
-  update_polis_log(.event = "Beginning Preprocessing - Creation of CORE Ready Datasets",
-                   .event_type = "START")
-
-  crosswalk_data <- get_crosswalk_data()
-
-  cli::cli_h2("Case")
-  api_case_data <- s1_clean_case_table(
-    path = file.path(polis_data_folder, "case.rds"),
-    crosswalk = crosswalk_data)
-
-  cli::cli_h2("Environmental Samples")
-  api_es_data <- s1_clean_es_table(
-    path = file.path(polis_data_folder, "environmental_sample.rds"),
-    crosswalk = crosswalk_data
-  )
-
-  cli::cli_h2("Virus")
-  api_virus_data <- s1_clean_virus_table(
-    path = file.path(polis_data_folder, "virus.rds"),
-    crosswalk = crosswalk_data)
-
-  cli::cli_h2("Activity")
-  api_activity_data <- s1_clean_activity_table(
-    path = file.path(polis_data_folder, "activity.rds"),
-    subactivity_path = file.path(polis_data_folder, "sub_activity.rds"),
-    crosswalk = crosswalk_data
-  )
 
   cli::cli_process_start("Long district spatial file")
   if (Sys.getenv("POLIS_EDAV_FLAG")) {
@@ -2222,69 +2168,34 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
   }
   cli::cli_process_done()
 
-  cli::cli_h2("Sub-activity")
-  api_subactivity_data <- s1_clean_subactivity_table(
-    file.path(polis_data_folder, "sub_activity.rds"),
-    api_activity_data,
-    crosswalk_data,
-    long.global.dist.01
-  )
+  #Step 0 - create a CORE datafiles to combine folder and check for datasets before continuing with pre-p =========
+  core_files_folder_path <- file.path(polis_data_folder, "core_files_to_combine")
 
-  rm(crosswalk_data)
-
-  invisible(capture.output(gc()))
-
-  #13. Export csv files that match the web download, and create archive and change log
-  cli::cli_h2("Creating change log and exporting data")
-
-  # create directory for the Archive and Changelogs
-  s1_create_core_ready_dir(polis_data_folder, timestamp)
-
-  # Get list of most recent files
-  most_recent_file_patterns <- c(
-    "Activity_Data",
-    "EnvSamples",
-    "Human_Detailed",
-    "Viruses_Detailed"
-  )
-  most_recent_files <- s1_get_most_recent_files(polis_data_folder,
-                                                most_recent_file_patterns)
-
-  if (length(most_recent_files) > 0) {
-    for (i in most_recent_files) {
-      s1_create_change_log(polis_data_folder, i, timestamp,
-                           api_case_data,
-                           api_es_data,
-                           api_virus_data,
-                           api_subactivity_data)
-    }
-  } else {
-    cli::cli_alert_info("No previous main Core Ready Files found, creating new files")
+  if (!tidypolis_io(io = "exists.dir", file_path = core_files_folder_path)) {
+    tidypolis_io(io = "create", file_path = core_files_folder_path)
   }
 
-  invisible(capture.output(gc()))
+  missing_static_files <- check_missing_static_files(core_files_folder_path)
+  # if on EDAV, create files to combine folder and write datasets into it
+  if (length(missing_static_files) > 0) {
+    cli::cli_alert_warning(paste0(
+      "Please request the following file(s) from the SIR team",
+      "and move them into: ", core_files_folder_path
+    ))
 
-  # Move files from the current POLIS data folder into the archive
-  s1_archive_old_files(polis_data_folder, timestamp)
+    for (file in missing_static_files) {
+      cli::cli_alert_info(paste0(file, "\n"))
+    }
+    cli::cli_abort("Halting execution of preprocessing due to missing files.")
+  }
 
-  invisible(capture.output(gc()))
+  rm(core_files_folder_path, missing_static_files)
 
-  # Export files (as csv) to be used as pre-processing starting points
-  s1_export_final_core_ready_files(
-    polis_data_folder = polis_data_folder,
-    ts = ts,
-    timestamp = timestamp,
-    api_case_data = api_case_data,
-    api_subactivity_data = api_subactivity_data,
-    api_es_data = api_es_data,
-    api_virus_data = api_virus_data)
+  #Step 1 - Basic cleaning and crosswalk ======
+  cli::cli_h1("Step 1/5: Basic cleaning and crosswalk across datasets")
 
-  rm(api_case_data, api_es_data, api_virus_data, api_activity_data,
-     api_subactivity_data, i)
-
-  invisible(capture.output(gc()))
-
-  update_polis_log(.event = "CORE Ready files and change logs complete", .event_type = "PROCESS")
+  s1_prep_polis_tables(polis_folder, polis_data_folder,
+                       long.global.dist.01, ts, timestamp)
 
   # Step 2 - Creating AFP and EPI datasets =====================================
 
@@ -3298,6 +3209,118 @@ check_missing_static_files <- function(core_files_folder_path,
 # Private functions ----
 
 ###### Step 1 Private Functions ----
+
+#' Prepare the POLIS tables for preprocessing
+#'
+#' @description
+#' Prepares the POLIS tables downloaded via API for further preprocessing.
+#'
+#' @inheritParams preprocess_cdc
+#' @param polis_data_folder `str` Data folder within the POLIS folder.
+#' @param long.global.dist.01 `sf` Long global district shapefile.
+#' @param ts `str` Time stamp from [Sys.time()].
+#' @param timestamp `str` Formatted time stamp.
+#'
+#' @returns `NULL` quietly upon success.
+#' @export
+#'
+s1_prep_polis_tables <- function(polis_folder, polis_data_folder,
+                                 long.global.dist.01, ts, timestamp) {
+  # update log for start of creation of CORE ready datasets
+  update_polis_log(.event = "Beginning Preprocessing - Creation of CORE Ready Datasets",
+                   .event_type = "START")
+
+  crosswalk_data <- get_crosswalk_data(file.path(polis_folder,
+                                                 "misc", "crosswalk.rds"))
+
+  cli::cli_h2("Case")
+  api_case_data <- s1_clean_case_table(
+    path = file.path(polis_data_folder, "case.rds"),
+    crosswalk = crosswalk_data)
+
+  cli::cli_h2("Environmental Samples")
+  api_es_data <- s1_clean_es_table(
+    path = file.path(polis_data_folder, "environmental_sample.rds"),
+    crosswalk = crosswalk_data
+  )
+
+  cli::cli_h2("Virus")
+  api_virus_data <- s1_clean_virus_table(
+    path = file.path(polis_data_folder, "virus.rds"),
+    crosswalk = crosswalk_data)
+
+  cli::cli_h2("Activity")
+  api_activity_data <- s1_clean_activity_table(
+    path = file.path(polis_data_folder, "activity.rds"),
+    subactivity_path = file.path(polis_data_folder, "sub_activity.rds"),
+    crosswalk = crosswalk_data
+  )
+
+  cli::cli_h2("Sub-activity")
+  api_subactivity_data <- s1_clean_subactivity_table(
+    file.path(polis_data_folder, "sub_activity.rds"),
+    api_activity_data,
+    crosswalk_data,
+    long.global.dist.01
+  )
+
+  rm(crosswalk_data)
+
+  invisible(capture.output(gc()))
+
+  #13. Export csv files that match the web download, and create archive and change log
+  cli::cli_h2("Creating change log and exporting data")
+
+  # create directory for the Archive and Changelogs
+  s1_create_core_ready_dir(polis_data_folder, timestamp)
+
+  # Get list of most recent files
+  most_recent_file_patterns <- c(
+    "Activity_Data",
+    "EnvSamples",
+    "Human_Detailed",
+    "Viruses_Detailed"
+  )
+  most_recent_files <- s1_get_most_recent_files(polis_data_folder,
+                                                most_recent_file_patterns)
+
+  if (length(most_recent_files) > 0) {
+    for (i in most_recent_files) {
+      s1_create_change_log(polis_data_folder, i, timestamp,
+                           api_case_data,
+                           api_es_data,
+                           api_virus_data,
+                           api_subactivity_data)
+    }
+  } else {
+    cli::cli_alert_info("No previous main Core Ready Files found, creating new files")
+  }
+
+  invisible(capture.output(gc()))
+
+  # Move files from the current POLIS data folder into the archive
+  s1_archive_old_files(polis_data_folder, timestamp)
+
+  invisible(capture.output(gc()))
+
+  # Export files (as csv) to be used as pre-processing starting points
+  s1_export_final_core_ready_files(
+    polis_data_folder = polis_data_folder,
+    ts = ts,
+    timestamp = timestamp,
+    api_case_data = api_case_data,
+    api_subactivity_data = api_subactivity_data,
+    api_es_data = api_es_data,
+    api_virus_data = api_virus_data)
+
+  rm(api_case_data, api_es_data, api_virus_data, api_activity_data,
+     api_subactivity_data, i)
+
+  invisible(capture.output(gc()))
+
+  update_polis_log(.event = "CORE Ready files and change logs complete", .event_type = "PROCESS")
+
+}
 
 #' Clean Case table
 #'
