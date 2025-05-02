@@ -7602,6 +7602,7 @@ s4_es_write_data <- function(es.05){
 #' @param long.global.dist.01 `sf` Global district lookup table for GUID
 #' @param polis_data_folder `str` The data folder within the POLIS folder.
 #'   validation.
+#' @returns `NULL` quietly upon success.
 #'
 #' @export
 s5_fully_process_afp_data <- function(polis_folder,
@@ -7636,7 +7637,11 @@ s5_fully_process_afp_data <- function(polis_folder,
 
 }
 
-#' Title
+#' Loads the most recent positives dataset
+#'
+#' @description
+#' Loads the most recent positives dataset and archives the previous
+#' positives dataset.
 #'
 #' @inheritParams s5_fully_process_afp_data
 #'
