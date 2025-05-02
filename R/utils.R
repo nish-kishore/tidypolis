@@ -6947,7 +6947,8 @@ s3_sia_check_guids <- function(sia.02, long.global.dist.01){
                      by = c("adm2guid" = "GUID",
                             "yr.sia" = "active.year.01")) |>
     #flag if spatial files do not match
-    dplyr::mutate(no_match=ifelse(is.na(ADM2_NAME), 1, 0))
+    dplyr::mutate(no_match=ifelse(is.na(ADM2_NAME), 1, 0)) |>
+    dplyr::select(-Shape)
 
   # SIAs did not match with GUIDs in shapes.
   tofix <- sia.03 |>
