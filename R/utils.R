@@ -7590,16 +7590,17 @@ s4_es_write_data <- function(es.05){
 
 ###### Step 5 Private Functions ----
 
-#' Process positives Data Pipeline
+#' Process positives data pipeline
 #'
+#' @description
 #' This function processes virus data through multiple standardization and
 #' validation steps, including checking for duplicates, standardizing dates,
 #' classifying cases
 #'
-#' @param polis_data_folder `str` Path to the POLIS data folder containing
-#'   Core_Ready_Files.
 #' @param polis_folder `str` Path to the main POLIS folder.
+#' @param latest_folder_in_archive `str` Name of the latest folder in the archive, if one exists.
 #' @param long.global.dist.01 `sf` Global district lookup table for GUID
+#' @param polis_data_folder `str` The data folder within the POLIS folder.
 #'   validation.
 #'
 #' @export
@@ -7631,13 +7632,18 @@ s5_fully_process_afp_data <- function(polis_folder,
   update_polis_log(.event = "Positives file finished",
                    .event_type = "PROCESS")
 
-
-
+  invisible(gc())
 
 }
 
-s5_pos_load_data <- function(polis_data_folder, latest_folder_in_archive,
-                             startyr = 2000, endyr = year(format(Sys.time()))) {
+#' Title
+#'
+#' @inheritParams s5_fully_process_afp_data
+#'
+#' @returns `tibble` New virus dataset.
+#' @keywords internal
+#'
+s5_pos_load_data <- function(polis_data_folder, latest_folder_in_archive) {
   update_polis_log(.event = "Creating Positives analytic datasets",
                    .event_type = "PROCESS")
 
@@ -7740,9 +7746,19 @@ s5_pos_load_data <- function(polis_data_folder, latest_folder_in_archive,
   return(virus.raw.new)
 }
 
-s5_pos_create_cdc_vars <- function(virus.raw.new,
-                                   polis_folder = Sys.getenv("POLIS_FOLDER"),
-                                   polis_data_folder = file.path(polis_folder, "data")) {
+#' Create CDC variables
+#'
+#' @description
+#' Create variables used in CDC data analysis.
+#'
+#'
+#' @param virus.raw.new `tibble` Output of [s5_pos_load_data()].
+#' @inheritParams s5_fully_process_afp_data
+#'
+#' @returns `tibble` Raw virus data with additional CDC columns.
+#' @keywords internal
+#'
+s5_pos_create_cdc_vars <- function(virus.raw.new, polis_folder, polis_data_folder) {
   cli::cli_process_start("Creating CDC variables")
 
   #read in list of novel emergences supplied by ORPG
@@ -7843,7 +7859,6 @@ s5_pos_create_cdc_vars <- function(virus.raw.new,
 
     update_polis_log(.event = paste0("Vaccine viruses with 6+ NT changes, flag for POLIS"),
                      .event_type = "ALERT")
-
   } else {
     cli::cli_alert_info("Virus classifications are correct")
   }
@@ -7852,6 +7867,18 @@ s5_pos_create_cdc_vars <- function(virus.raw.new,
 
 }
 
+#' Check for duplicate entries in the virus table
+#'
+#' @description
+#' Checks for potential duplicate positive records and outputs the result to
+#' a csv in `polis_data_folder`
+#'
+#' @inheritParams s5_fully_process_afp_data
+#' @param virus.01 `tibble` Output of [s5_pos_create_cdc_vars()].
+#'
+#' @returns `NULL` quietly upon success.
+#' @keywords internal
+#'
 s5_pos_check_duplicates <- function(virus.01, polis_data_folder) {
   virus.dup.01 <- virus.01 |>
     dplyr::select(epid, epid.in.polis, pons.epid, virus.id, polis.case.id, env.sample.id,
@@ -7880,8 +7907,18 @@ s5_pos_check_duplicates <- function(virus.01, polis_data_folder) {
   invisible(gc())
 }
 
-s5_pos_write_missing_onsets <- function(virus.01,
-                                        polis_data_folder = file.path(Sys.getenv("POLIS_FOLDER"), "data")) {
+#' Obtain positives records with missing onset date
+#'
+#' @description
+#' Obtains the records in the positives dataset without onset date and outputs them to the
+#' `polis_data_folder` as a csv.
+#'
+#' @inheritParams s5_pos_check_duplicates
+#'
+#' @returns `NULL` quietly upon success.
+#' @keywords internal
+#'
+s5_pos_write_missing_onsets <- function(virus.01, polis_data_folder) {
   tidypolis_io(io = "write", obj = virus.01 |>
                  dplyr::select(epid, dateonset) |>
                  dplyr::filter(is.na(dateonset)),
@@ -7889,8 +7926,24 @@ s5_pos_write_missing_onsets <- function(virus.01,
                                   "/Core_Ready_Files/virus_missing_onset.csv"))
 }
 
-s5_pos_process_human_virus <- function(virus.01,
-                                       polis_data_folder = file.path(Sys.getenv("POLIS_FOLDER"), "data")) {
+#' Process and clean cases in the positives dataset
+#'
+#' @description
+#' Performs deep cleaning of AFP/non-AFP cases in the positives dataset.
+#'
+#'
+#' @inheritParams s5_pos_check_duplicates
+#' @param startyr `int` Start year to process the positives dataset.
+#' @param endyr `int` End year to process the positives dataset.
+#'
+#' @returns `tibble` Cleaned positives dataset containing human cases only.
+#' @keywords internal
+#'
+s5_pos_process_human_virus <- function(virus.01, polis_data_folder) {
+
+  startyr <- 2000
+  endyr <- year(format(Sys.time()))
+
   # Human virus dataset with sabin 2 and positive viruses only
   human.virus.01 <- virus.01 |>
     dplyr::filter(!surveillance.type=="ENV") |>
@@ -7991,7 +8044,19 @@ s5_pos_process_human_virus <- function(virus.01,
   return(human.virus.05)
 
 }
-s5_pos_process_es_virus <- function(virus.01, polis_data_folder = file.path(Sys.getenv("POLIS_FOLDER"), "data")) {
+
+#' Process and clean cases in the positives dataset
+#'
+#' @description
+#' Performs deep cleaning of environmental samples in the positives dataset.
+#'
+#'
+#' @inheritParams s5_pos_check_duplicates
+#'
+#' @returns `tibble` Cleaned positives dataset containing environmental samples only.
+#' @keywords internal
+#'
+s5_pos_process_es_virus <- function(virus.01, polis_data_folder) {
 
   ### ENV data from virus table
   env.virus.01 <- virus.01 |>
@@ -8070,6 +8135,18 @@ s5_pos_process_es_virus <- function(virus.01, polis_data_folder = file.path(Sys.
 
 }
 
+#' Combine cleaned human and environmental samples positives dataset
+#'
+#' @description
+#' Combines both the cleaned human and environmental surveillance samples positives
+#' datasets into a final cleaned positives dataset.
+#'
+#' @param human.virus.05 `tibble` Output of [s5_pos_process_human_virus()].
+#' @param env.virus.04 `tibble` Output of [s5_pos_process_es_virus()].
+#'
+#' @returns `tibble` Combined cleaned positives dataset.
+#' @keywords internal
+#'
 s5_pos_create_final_virus_data <- function(human.virus.05, env.virus.04) {
   cli::cli_process_start("Creating final virus file")
 
@@ -8095,6 +8172,23 @@ s5_pos_create_final_virus_data <- function(human.virus.05, env.virus.04) {
   return(afp.es.virus.01)
 
 }
+
+#' Compares the old virus dataset in the latest archive folder with the new processed virus dataset
+#'
+#' @description
+#' Compares the old virus dataset with the new processed virus dataset to determine
+#' any changes, including the number of records that changed since the last run. Changes
+#' are also added into the `polis_data_folder` as csv files.
+#'
+#'
+#' @param afp.es.virus.01 `tibble` Output of [s5_pos_create_final_virus()].
+#' @param afp.es.virus.03 `tibble` Output of [s5_pos_create_final_virus()] but processed
+#' further using [remove_character_dates()] and [create_response_vars()].
+#' @inheritParams s5_fully_process_afp_data
+#'
+#' @returns `NULL` quietly upon success.
+#' @keywords internal
+#'
 s5_pos_compare_with_archive <- function(afp.es.virus.01, afp.es.virus.03, polis_data_folder, latest_folder_in_archive) {
   cli::cli_process_start("Checking for variables that don't match last weeks pull")
 
@@ -8229,6 +8323,15 @@ s5_pos_compare_with_archive <- function(afp.es.virus.01, afp.es.virus.03, polis_
 
   invisible()
 }
+
+#'
+#'
+#' @inheritParams s5_fully_process_afp_data
+#' @inheritParams s5_pos_compare_with_archive
+#'
+#' @returns `NULL` quietly upon success.
+#' @keywords internal
+#'
 s5_pos_evaluate_unmatched_guids <- function(afp.es.virus.03, long.global.dist.01, polis_data_folder) {
   cli::cli_process_start("Checking for positives that don't match to GUIDs")
 
