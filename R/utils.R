@@ -7651,7 +7651,7 @@ s5_fully_process_pos_data <- function(polis_folder,
 
   rm(afp.es.virus.02)
 
-  s5_pos_compare_with_archive(afp.es.virus.03,
+  s5_pos_compare_with_archive(afp.es.virus.01, afp.es.virus.03,
                               polis_data_folder, latest_folder_in_archive)
 
   s5_pos_evaluate_unmatched_guids(afp.es.virus.03, long.global.dist.01, polis_data_folder)
@@ -8224,6 +8224,7 @@ s5_pos_create_final_virus_data <- function(human.virus.05, env.virus.04) {
 #' any changes, including the number of records that changed since the last run. Changes
 #' are also added into the `polis_data_folder` as csv files.
 #'
+#' @param afp.es.virus.01 `tibble` Output of [s5_pos_create_final_virus()].
 #' @param afp.es.virus.03 `tibble` Output of [s5_pos_create_final_virus()] but processed
 #' further using [remove_character_dates()] and [create_response_vars()].
 #' @inheritParams s5_fully_process_pos_data
@@ -8231,7 +8232,7 @@ s5_pos_create_final_virus_data <- function(human.virus.05, env.virus.04) {
 #' @returns `NULL` quietly upon success.
 #' @keywords internal
 #'
-s5_pos_compare_with_archive <- function(afp.es.virus.03, polis_data_folder, latest_folder_in_archive) {
+s5_pos_compare_with_archive <- function(afp.es.virus.01, afp.es.virus.03, polis_data_folder, latest_folder_in_archive) {
   cli::cli_process_start("Checking for variables that don't match last weeks pull")
 
   #Compare the final file to last week's final file to identify any differences in var_names, var_classes, or categorical responses
@@ -8332,7 +8333,7 @@ s5_pos_compare_with_archive <- function(afp.es.virus.03, polis_data_folder, late
   }
 
   #identify updated viruses logging change from VDPV to cVDPV
-  class.updated <- afp.es.virus.03 |>
+  class.updated <- afp.es.virus.01 |>
     dplyr::filter(vdpvclassificationchangedate <= Sys.Date() & vdpvclassificationchangedate > (Sys.Date()- 7)) |>
     dplyr::select(epid, virustype, measurement, vdpvclassificationchangedate, vdpvclassificationcode, createddate) |>
     dplyr::mutate(vdpvclassificationchangedate = as.Date(vdpvclassificationchangedate, "%Y-%m-%d"))

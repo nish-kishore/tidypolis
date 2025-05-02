@@ -5,12 +5,15 @@
 \title{Compares the old virus dataset in the latest archive folder with the new processed virus dataset}
 \usage{
 s5_pos_compare_with_archive(
+  afp.es.virus.01,
   afp.es.virus.03,
   polis_data_folder,
   latest_folder_in_archive
 )
 }
 \arguments{
+\item{afp.es.virus.01}{\code{tibble} Output of \code{\link[=s5_pos_create_final_virus]{s5_pos_create_final_virus()}}.}
+
 \item{afp.es.virus.03}{\code{tibble} Output of \code{\link[=s5_pos_create_final_virus]{s5_pos_create_final_virus()}} but processed
 further using \code{\link[=remove_character_dates]{remove_character_dates()}} and \code{\link[=create_response_vars]{create_response_vars()}}.}
 
