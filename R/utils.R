@@ -7422,7 +7422,7 @@ s4_es_create_cdc_vars <- function(es.02){
         "GID/PEB/SIR",
         polis_folder,
         "misc",
-        "global.dist.rds"
+        "global.ctry.rds"
       ))
     },
     "FALSE" = {
@@ -7430,7 +7430,7 @@ s4_es_create_cdc_vars <- function(es.02){
         fp = file.path(
           polis_folder,
           "misc",
-          "global.dist.rds"
+          "global.ctry.rds"
         ),
         edav = FALSE
       )
