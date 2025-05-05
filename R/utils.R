@@ -1714,18 +1714,18 @@ log_report <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
   change.virus.class <- tidypolis_io(io = "read", file_path = paste0(polis_data_folder, "/Core_Ready_Files/virus_class_changed_date.csv"))
   new.virus.records <- tidypolis_io(io = "read", file_path = paste0(polis_data_folder, "/Core_Ready_Files/in_new_not_old_virusTableData.csv"))
 
-  file1 <- tempfile(fileext = ".csv")
-  file2 <- tempfile(fileext = ".csv")
-  file3 <- tempfile(fileext = ".csv")
-
-  readr::write_csv(x = changed.virus.type, file = file1)
-  readr::write_csv(x = change.virus.class, file = file2)
-  readr::write_csv(x = new.virus.records, file = file3)
+  readr::write_csv(x = changed.virus.type, file = file.path(tempdir(), "changed_virus_type.csv"))
+  readr::write_csv(x = change.virus.class, file = file.path(tempdir(), "changed_virus_class.csv"))
+  readr::write_csv(x = new.virus.records, file = file.path(tempdir(), "new_virus_records.csv"))
 
   #coms section
   sirfunctions::send_teams_message(msg = paste0("New CORE data files info: ", report_info))
   sirfunctions::send_teams_message(msg = paste0("New CORE data files alerts: ", report_alert))
-  sirfunctions::send_teams_message(msg = "Attached CSVs contain information on new/changed virus records", attach = c(file1, file2, file3))
+  sirfunctions::send_teams_message(msg = "Attached CSVs contain information on new/changed virus records",
+                                   attach = c(file.path(tempdir(), "changed_virus_type.csv"),
+                                              file.path(tempdir(), "changed_virus_class.csv"),
+                                              file.path(tempdir(), "new_virus_records.csv"))
+                                   )
 
 }
 
