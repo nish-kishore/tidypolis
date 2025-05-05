@@ -2132,44 +2132,32 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
   }
 
   cli::cli_process_start("Long district spatial file")
-  if (Sys.getenv("POLIS_EDAV_FLAG")) {
-    long.global.dist.01 <- sirfunctions::load_clean_dist_sp(type = "long")
-  } else {
-    long.global.dist.01 <- tidypolis_io(io = "read",
-                                        file_path = file.path(Sys.getenv("POLIS_DATA_FOLDER"),
-                                                              "misc",
-                                                              "global.dist.rds"))
-    long.global.dist.01 <- long.global.dist.01 |>
-      dplyr::mutate(
-        STARTDATE = lubridate::as_date(STARTDATE),
-        # Typo in the dist start date (year) in shapefiles.
-        # Temporary correcting the start date for South Darfur in Sudan
-        STARTDATE = dplyr::if_else(ADM0_GUID == "{3050873E-F010-4C4F-82D1-541E3C4FD887}" &
-                                     ADM1_GUID == "{0836D898-32B9-4912-AEA2-D07BD6E50ED8}" &
-                                     STARTDATE == "2018-01-01",
-                                   STARTDATE + 365, STARTDATE
+  invisible(capture.output(
+    long.global.dist.01 <- switch(Sys.getenv("POLIS_EDAV_FLAG"),
+    "TRUE" = {
+      sirfunctions::load_clean_dist_sp(
+        fp = file.path(
+          "GID/PEB/SIR",
+          polis_folder,
+          "misc",
+          "global.dist.rds"
         ),
-
-        # Error in shapes of LAR district in FARS province of IRAN.
-        # Received confirmation from WHO - Start date should be '2021-01-01'.
-        # Manually making corrections until WHO fix it in the original geodatabase.
-        STARTDATE = dplyr::if_else(ADM0_GUID == "{2EEA3A5C-8A36-4A18-A7AB-1B927A092A60}" &
-                                     ADM1_GUID == "{76F33E17-ADB9-4582-A533-4C96286864E3}" &
-                                     GUID == "{54464216-2BD3-4F30-BF2C-3846BEE6805D}" &
-                                     STARTDATE == "2020-01-01",
-                                   STARTDATE + 366, STARTDATE
-        ),
-        yr.st = lubridate::year(STARTDATE),
-        yr.end = lubridate::year(ENDDATE),
-        ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"), "COTE D IVOIRE", ADM0_NAME)
+        type = "long"
       )
-    long.global.dist.01 <- lapply(2000:lubridate::year(Sys.Date()),
-                                  \(i) sirfunctions:::f.yrs.01(long.global.dist.01, i))
+    },
+    "FALSE" = {
+      sirfunctions::load_clean_dist_sp(
+        fp = file.path(
+          polis_folder,
+          "misc",
+          "global.dist.rds"
+        ),
+        edav = FALSE,
+        type = "long"
+      )
+    }
+  )))
 
-    long.global.dist.01 <- data.table::rbindlist(
-      long.global.dist.01) |>
-      as.data.frame()
-  }
   cli::cli_process_done()
 
   #Step 0 - create a CORE datafiles to combine folder and check for datasets before continuing with pre-p =========
@@ -5250,14 +5238,19 @@ s2_process_coordinates <- function(data, polis_data_folder, polis_folder) {
   )
 
   invisible(capture.output(
-    shape_data <- tidypolis_io(
-      io = "read",
-      file_path = file.path(
-        polis_folder,
-        "misc",
-        "global.dist.rds"
-      )
-    )
+    shape_data <- switch(Sys.getenv("POLIS_EDAV_FLAG"),
+                         "TRUE" = {
+                           sirfunctions::load_clean_dist_sp(fp = file.path("GID/PEB/SIR",
+                                                                           polis_folder,
+                                                                           "misc",
+                                                                           "global.dist.rds"))
+                         },
+                         "FALSE" = {
+                           sirfunctions::load_clean_dist_sp(fp = file.path(polis_folder,
+                                                                           "misc",
+                                                                           "global.dist.rds"),
+                                                            edav = FALSE)
+                         })
   ))
 
   # Rename latitude and longitude columns
@@ -7422,31 +7415,27 @@ s4_es_create_cdc_vars <- function(es.02){
     dplyr::mutate(ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"),
                                      "COTE D IVOIRE",ADM0_NAME))
 
-  if (Sys.getenv("POLIS_EDAV_FLAG")) {
-
-    invisible(capture.output(
-      global.ctry.01 <- sirfunctions::load_clean_ctry_sp()
-    ))
-
-  } else {
-
-    invisible(capture.output(
-      global.ctry.01 <- tidypolis_io(
-        io = "read",
-        file_path = file.path(
-          Sys.getenv("POLIS_DATA_FOLDER"),
+  invisible(capture.output(
+    global.ctry.01 <- switch(Sys.getenv("POLIS_EDAV_FLAG"),
+    "TRUE" = {
+      sirfunctions::load_clean_ctry_sp(fp = file.path(
+        "GID/PEB/SIR",
+        polis_folder,
+        "misc",
+        "global.dist.rds"
+      ))
+    },
+    "FALSE" = {
+      sirfunctions::load_clean_ctry_sp(
+        fp = file.path(
+          polis_folder,
           "misc",
-          "global.ctry.rds"))
-    ))
-
-    global.ctry.01 <- global.ctry.01 |>
-      dplyr::mutate(
-        yr.st = lubridate::year(STARTDATE),
-        yr.end = lubridate::year(ENDDATE),
-        ADM0_NAME = ifelse(stringr::str_detect(ADM0_NAME, "IVOIRE"),
-                           "COTE D IVOIRE", ADM0_NAME)
+          "global.dist.rds"
+        ),
+        edav = FALSE
       )
-  }
+    })
+    ))
 
   sf::sf_use_s2(F)
   shape.name.01 <- global.ctry.01 |>
