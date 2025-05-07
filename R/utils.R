@@ -3300,7 +3300,7 @@ s1_prep_polis_tables <- function(polis_folder, polis_data_folder,
     api_virus_data = api_virus_data)
 
   rm(api_case_data, api_es_data, api_virus_data, api_activity_data,
-     api_subactivity_data, i)
+     api_subactivity_data)
 
   invisible(capture.output(gc()))
 
