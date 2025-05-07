@@ -4110,7 +4110,7 @@
     },
     "sirfunctions": {
       "Package": "sirfunctions",
-      "Version": "1.3.2",
+      "Version": "1.3.3",
       "Source": "GitHub",
       "Title": "Key Functions to Analyze Global Polio Surveillance Data",
       "Authors@R": "c( person(\"Nishant\", \"Kishore\", , \"ynm2@cdc.gov\", role = c(\"aut\", \"cre\"), comment = c(ORCID = \"0000-0003-0408-2747\")), person(\"Mervin Keith\", \"Cuadera\", , \"xrg9@cdc.gov\", role = \"aut\", comment = c(ORCID = \"0000-0003-4898-2659\")), person(\"Nicholas\", \"Heaghney\", , \"uic3@cdc.gov\", role = \"aut\"), person(\"Elizabeth\", \"Krow-Lucal\", , \"yxn9@cdc.gov\", role = \"aut\"), person(\"Smita\", \"Chavan\", , \"wsy2@cdc.gov\", role = \"aut\") )",
@@ -4169,15 +4169,14 @@
       "Encoding": "UTF-8",
       "Roxygen": "list(markdown = TRUE)",
       "RoxygenNote": "7.3.2",
-      "RemoteType": "github",
-      "RemoteHost": "api.github.com",
-      "RemoteRepo": "sirfunctions",
-      "RemoteUsername": "nish-kishore",
-      "RemoteRef": "dev",
-      "RemoteSha": "e47d361aea8ea32f4cdaa20d9c3966345e645906",
-      "NeedsCompilation": "no",
       "Author": "Nishant Kishore [aut, cre] (<https://orcid.org/0000-0003-0408-2747>), Mervin Keith Cuadera [aut] (<https://orcid.org/0000-0003-4898-2659>), Nicholas Heaghney [aut], Elizabeth Krow-Lucal [aut], Smita Chavan [aut]",
-      "Maintainer": "Nishant Kishore <ynm2@cdc.gov>"
+      "Maintainer": "Nishant Kishore <ynm2@cdc.gov>",
+      "RemoteType": "github",
+      "RemoteUsername": "nish-kishore",
+      "RemoteRepo": "sirfunctions",
+      "RemoteRef": "dev",
+      "RemoteSha": "aa5dda29237dd5622322ed7598e65541757607b0",
+      "RemoteHost": "api.github.com"
     },
     "skimr": {
       "Package": "skimr",

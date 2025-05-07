@@ -24,3 +24,13 @@ if on edav the gdb will need to be zipped, ensure that the gdb and the zipped fi
 \description{
 a function to process WHO spatial datasets
 }
+\examples{
+\dontrun{
+process_spatial(gdb_folder = "local_path/GEODATABASE.gdb",
+output_folder = "local_path",
+edav = F)
+process_spatial(gdb_folder = "edav_path/GEODATABASE.gdb",
+output_folder = "edav_path",
+edav = T)
+}
+}

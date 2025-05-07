@@ -2,13 +2,19 @@
 % Please edit documentation in R/utils.R
 \name{create_response_vars}
 \alias{create_response_vars}
-\title{This function creates a summary of SIA responses to cVDPV detections in the positives dataset}
+\title{Creates a summary of SIA responses to cVDPV detections}
 \usage{
-create_response_vars(pos)
+create_response_vars(pos, polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"))
 }
 \arguments{
-\item{pos}{tibble a df of positive viruses}
+\item{pos}{\code{tibble} The positive viruses dataset.}
+
+\item{polis_data_folder}{\code{str} Path to the POLIS data folder.}
+}
+\value{
+\code{tibble} Positives dataset with summary of SIA response variables.
 }
 \description{
-a function to create summary SIA response variables for cVDPVs
+A function to create summary SIA response variables for cVDPVs in the positives dataset.
 }
+\keyword{internal}
