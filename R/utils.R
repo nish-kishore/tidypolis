@@ -7050,10 +7050,9 @@ s4_fully_process_es_data <- function(polis_folder,
 
 #' Load and check ES data against previous downloads
 #'
-#' @param polis_data_folder `str` Path to the POLIS data folder.
-#' @param latest_folder_in_archive `str` Time stamp of latest folder in archive
+#' @inheritParams s4_fully_process_es_data
 #'
-#' @returns `tiblle` es.01.new - the latest SIA data quality checked for variable
+#' @returns `tibble` es.01.new - the latest SIA data quality checked for variable
 #' stability against the last download if it exists
 #' @keywords internal
 #'
@@ -7404,7 +7403,7 @@ s4_es_validate_sites <- function(es.02){
 #'
 #' @param es.02 `tibble` The latest ES download with variables checked
 #' against the last download, variables validated and sites checked
-#' @param polis_folder `str` Path to the main POLIS folder.
+#' @inheritParams s4_fully_process_es_data
 #'
 #' @returns `tibble` es.05 SIA data with CDC variables enforced
 #' @keywords internal
@@ -7485,11 +7484,10 @@ s4_es_create_cdc_vars <- function(es.02, polis_folder){
 
 #' Compare ES outputs with metadata from previous output
 #'
-#' @param polis_data_folder str: location of the POLIS data folder
+#' @inheritParams s4_fully_process_es_data
 #' @param es.05 `tibble` The latest ES download with variables checked
 #' against the last download, variables validated and sites checked and
 #' CDC variables enforced
-#' @param latest_folder_in_archive `str` Time stamp of latest folder in archive
 #'
 #' @returns `NULL` invisible return with write out to logs if necessary
 #' @keywords internal
@@ -7584,7 +7582,7 @@ s4_es_check_metadata <- function(polis_data_folder, es.05,
 
 #' Write out final ES data
 #'
-#' @param polis_data_folder str: location of the POLIS data folder
+#' @inheritParams s4_fully_process_es_data
 #' @param es.05 `tibble` The latest ES download with variables checked
 #' against the last download, variables validated and sites checked and
 #' CDC variables enforced

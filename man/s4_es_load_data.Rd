@@ -9,10 +9,10 @@ s4_es_load_data(polis_data_folder, latest_folder_in_archive)
 \arguments{
 \item{polis_data_folder}{\code{str} Path to the POLIS data folder.}
 
-\item{latest_folder_in_archive}{\code{str} Time stamp of latest folder in archive}
+\item{latest_folder_in_archive}{\code{str} Name of the latest folder in the archive.}
 }
 \value{
-\code{tiblle} es.01.new - the latest SIA data quality checked for variable
+\code{tibble} es.01.new - the latest SIA data quality checked for variable
 stability against the last download if it exists
 }
 \description{
