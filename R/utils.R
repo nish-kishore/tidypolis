@@ -7026,7 +7026,7 @@ s4_fully_process_es_data <- function(polis_data_folder, latest_folder_in_archive
                            latest_folder_in_archive = latest_folder_in_archive) |>
     s4_es_data_processing() |>
     s4_es_validate_sites() |>
-    s4_es_create_cdc_vars()
+    s4_es_create_cdc_vars(polis_folder = polis_folder)
 
   s4_es_check_metadata(
     polis_data_folder = polis_data_folder,
@@ -7399,11 +7399,12 @@ s4_es_validate_sites <- function(es.02){
 #'
 #' @param es.02 `tibble` The latest ES download with variables checked
 #' against the last download, variables validated and sites checked
+#' @param polis_folder `str` Path to the main POLIS folder.
 #'
 #' @returns `tibble` es.05 SIA data with CDC variables enforced
 #' @keywords internal
 #'
-s4_es_create_cdc_vars <- function(es.02){
+s4_es_create_cdc_vars <- function(es.02, polis_folder){
 
 
   cli::cli_process_start("Creating ES CDC variables")
