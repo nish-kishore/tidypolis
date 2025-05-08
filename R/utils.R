@@ -7030,7 +7030,8 @@ s4_fully_process_es_data <- function(polis_data_folder, latest_folder_in_archive
 
   s4_es_check_metadata(es.05 = es.05)
 
-  s4_es_write_data(es.05 = es.05)
+  s4_es_write_data(polis_data_folder = polis_data_folder,
+                   es.05 = es.05)
 
   rm("es.05")
 
@@ -7570,6 +7571,7 @@ s4_es_check_metadata <- function(es.05){
 
 #' Write out final ES data
 #'
+#' @param polis_data_folder str: location of the POLIS data folder
 #' @param es.05 `tibble` The latest ES download with variables checked
 #' against the last download, variables validated and sites checked and
 #' CDC variables enforced
@@ -7577,7 +7579,7 @@ s4_es_check_metadata <- function(es.05){
 #' @returns `NULL` invisible return with write out to logs if necessary
 #' @keywords internal
 #'
-s4_es_write_data <- function(es.05){
+s4_es_write_data <- function(polis_data_folder, es.05){
 
   cli::cli_process_start("Writing out ES datasets")
 
