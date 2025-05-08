@@ -4,12 +4,16 @@
 \alias{s4_es_check_metadata}
 \title{Compare ES outputs with metadata from previous output}
 \usage{
-s4_es_check_metadata(es.05)
+s4_es_check_metadata(polis_data_folder, es.05, latest_folder_in_archive)
 }
 \arguments{
+\item{polis_data_folder}{str: location of the POLIS data folder}
+
 \item{es.05}{\code{tibble} The latest ES download with variables checked
 against the last download, variables validated and sites checked and
 CDC variables enforced}
+
+\item{latest_folder_in_archive}{\code{str} Time stamp of latest folder in archive}
 }
 \value{
 \code{NULL} invisible return with write out to logs if necessary

@@ -4,11 +4,13 @@
 \alias{s4_es_create_cdc_vars}
 \title{Convert variables in POLIS download to to cleaned outputs}
 \usage{
-s4_es_create_cdc_vars(es.02)
+s4_es_create_cdc_vars(es.02, polis_folder)
 }
 \arguments{
 \item{es.02}{\code{tibble} The latest ES download with variables checked
 against the last download, variables validated and sites checked}
+
+\item{polis_folder}{\code{str} Path to the main POLIS folder.}
 }
 \value{
 \code{tibble} es.05 SIA data with CDC variables enforced
