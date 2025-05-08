@@ -7011,11 +7011,16 @@ s3_sia_evaluate_unmatched_guids <- function(sia.05, polis_data_folder){
 #' validation steps, including checking for duplicates, validating
 #' ES sites and checking against previous downloads
 #'
+#' @inheritParams preprocess_cdc
 #' @param polis_data_folder `str` Path to the POLIS data folder.
 #' @param latest_folder_in_archive `str` Name of the latest folder in the archive.
 #'
+#' @returns `NULL` silently upon success.
+#'
 #' @export
-s4_fully_process_es_data <- function(polis_data_folder, latest_folder_in_archive){
+s4_fully_process_es_data <- function(polis_folder,
+                                     polis_data_folder = file.path(polis_folder, "data"),
+                                     latest_folder_in_archive){
 
    if (!tidypolis_io(io = "exists.dir",
                     file_path = file.path(polis_data_folder, "Core_Ready_Files"))) {
@@ -7026,11 +7031,16 @@ s4_fully_process_es_data <- function(polis_data_folder, latest_folder_in_archive
                            latest_folder_in_archive = latest_folder_in_archive) |>
     s4_es_data_processing() |>
     s4_es_validate_sites() |>
-    s4_es_create_cdc_vars()
+    s4_es_create_cdc_vars(polis_folder = polis_folder)
 
-  s4_es_check_metadata(es.05 = es.05)
+  s4_es_check_metadata(
+    polis_data_folder = polis_data_folder,
+    es.05 = es.05,
+    latest_folder_in_archive)
 
-  s4_es_write_data(es.05 = es.05)
+
+  s4_es_write_data(polis_data_folder = polis_data_folder,
+                   es.05 = es.05)
 
   rm("es.05")
 
@@ -7040,10 +7050,9 @@ s4_fully_process_es_data <- function(polis_data_folder, latest_folder_in_archive
 
 #' Load and check ES data against previous downloads
 #'
-#' @param polis_data_folder `str` Path to the POLIS data folder.
-#' @param latest_folder_in_archive `str` Time stamp of latest folder in archive
+#' @inheritParams s4_fully_process_es_data
 #'
-#' @returns `tiblle` es.01.new - the latest SIA data quality checked for variable
+#' @returns `tibble` es.01.new - the latest SIA data quality checked for variable
 #' stability against the last download if it exists
 #' @keywords internal
 #'
@@ -7394,11 +7403,12 @@ s4_es_validate_sites <- function(es.02){
 #'
 #' @param es.02 `tibble` The latest ES download with variables checked
 #' against the last download, variables validated and sites checked
+#' @inheritParams s4_fully_process_es_data
 #'
 #' @returns `tibble` es.05 SIA data with CDC variables enforced
 #' @keywords internal
 #'
-s4_es_create_cdc_vars <- function(es.02){
+s4_es_create_cdc_vars <- function(es.02, polis_folder){
 
 
   cli::cli_process_start("Creating ES CDC variables")
@@ -7474,6 +7484,7 @@ s4_es_create_cdc_vars <- function(es.02){
 
 #' Compare ES outputs with metadata from previous output
 #'
+#' @inheritParams s4_fully_process_es_data
 #' @param es.05 `tibble` The latest ES download with variables checked
 #' against the last download, variables validated and sites checked and
 #' CDC variables enforced
@@ -7481,7 +7492,8 @@ s4_es_create_cdc_vars <- function(es.02){
 #' @returns `NULL` invisible return with write out to logs if necessary
 #' @keywords internal
 #'
-s4_es_check_metadata <- function(es.05){
+s4_es_check_metadata <- function(polis_data_folder, es.05,
+                                 latest_folder_in_archive){
 
   cli::cli_process_start("Checking metadata with previous data")
 
@@ -7570,6 +7582,7 @@ s4_es_check_metadata <- function(es.05){
 
 #' Write out final ES data
 #'
+#' @inheritParams s4_fully_process_es_data
 #' @param es.05 `tibble` The latest ES download with variables checked
 #' against the last download, variables validated and sites checked and
 #' CDC variables enforced
@@ -7577,7 +7590,7 @@ s4_es_check_metadata <- function(es.05){
 #' @returns `NULL` invisible return with write out to logs if necessary
 #' @keywords internal
 #'
-s4_es_write_data <- function(es.05){
+s4_es_write_data <- function(polis_data_folder, es.05){
 
   cli::cli_process_start("Writing out ES datasets")
 

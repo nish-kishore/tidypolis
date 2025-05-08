@@ -4,9 +4,11 @@
 \alias{s4_es_write_data}
 \title{Write out final ES data}
 \usage{
-s4_es_write_data(es.05)
+s4_es_write_data(polis_data_folder, es.05)
 }
 \arguments{
+\item{polis_data_folder}{\code{str} Path to the POLIS data folder.}
+
 \item{es.05}{\code{tibble} The latest ES download with variables checked
 against the last download, variables validated and sites checked and
 CDC variables enforced}

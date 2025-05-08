@@ -4,12 +4,21 @@
 \alias{s4_fully_process_es_data}
 \title{Process ES Data Pipeline}
 \usage{
-s4_fully_process_es_data(polis_data_folder, latest_folder_in_archive)
+s4_fully_process_es_data(
+  polis_folder,
+  polis_data_folder = file.path(polis_folder, "data"),
+  latest_folder_in_archive
+)
 }
 \arguments{
+\item{polis_folder}{str: location of the POLIS data folder}
+
 \item{polis_data_folder}{\code{str} Path to the POLIS data folder.}
 
 \item{latest_folder_in_archive}{\code{str} Name of the latest folder in the archive.}
+}
+\value{
+\code{NULL} silently upon success.
 }
 \description{
 This function processes ES data through multiple standardization and
