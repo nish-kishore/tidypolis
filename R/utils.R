@@ -7011,11 +7011,16 @@ s3_sia_evaluate_unmatched_guids <- function(sia.05, polis_data_folder){
 #' validation steps, including checking for duplicates, validating
 #' ES sites and checking against previous downloads
 #'
+#' @inheritParams preprocess_cdc
 #' @param polis_data_folder `str` Path to the POLIS data folder.
 #' @param latest_folder_in_archive `str` Name of the latest folder in the archive.
 #'
+#' @returns `NULL` silently upon success.
+#'
 #' @export
-s4_fully_process_es_data <- function(polis_data_folder, latest_folder_in_archive){
+s4_fully_process_es_data <- function(polis_folder,
+                                     polis_data_folder = file.path(polis_folder, "data"),
+                                     latest_folder_in_archive){
 
    if (!tidypolis_io(io = "exists.dir",
                     file_path = file.path(polis_data_folder, "Core_Ready_Files"))) {
