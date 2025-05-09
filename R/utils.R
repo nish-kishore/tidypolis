@@ -6676,20 +6676,22 @@ s3_sia_check_duplicates <- function(sia.05){
                   `wastage.factor` = as.character(`wastage.factor`),
                   sub.activity.start.date = as.POSIXct(round(as.POSIXct(sub.activity.start.date)),
                                                        format="%Y-%m-%d %H:%M:%S")) |>
-    dplyr::mutate_at(c("admin.1.id",
-                       "admin.2.id",
-                       "unpd.country.population",
-                       "immunized.population",
-                       "targeted.population",
-                       "number.of.doses",
-                       "admin.2.targeted.population",
-                       "admin.2.immunized.population",
-                       "admin2.children.inaccessible",
-                       "number.of.doses.approved",
-                       "children.inaccessible",
-                       "activity.parent.children.inaccessible",
-                       "admin.0.id" ),
-                     as.numeric)
+    dplyr::mutate(
+      dplyr::across(
+        dplyr::any_of(c("admin.1.id",
+                        "admin.2.id",
+                        "unpd.country.population",
+                        "immunized.population",
+                        "targeted.population",
+                        "number.of.doses",
+                        "admin.2.targeted.population",
+                        "admin.2.immunized.population",
+                        "admin2.children.inaccessible",
+                        "number.of.doses.approved",
+                        "children.inaccessible",
+                        "activity.parent.children.inaccessible",
+                        "admin.0.id" )),
+        as.numeric))
   options(scipen = savescipen)
 
   cli::cli_process_done()
