@@ -2034,8 +2034,12 @@ cluster_dates <- function(x,
 #' @import dplyr
 #' @param data tibble the datatable for which we want to check key variable missingness
 #' @param type str "AFP", "ES", or "POS", type of dataset to check missingness
+#' @param output_folder_name str: Name of the output directory where processed
+#'        files will be saved. Defaults to "Core_Ready_Files". For
+#'        region-specific processing, this should be set to
+#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
 check_missingness <- function(data,
-                              type) {
+                              type, output_folder_name) {
 
   if (type == "AFP") {
 
@@ -2053,8 +2057,9 @@ check_missingness <- function(data,
     invisible(capture.output(
       tidypolis_io(io = "write",
                    obj = missing_by_group,
-                   file_path = paste0(Sys.getenv("POLIS_DATA_CACHE"),
-                                      "/Core_Ready_Files/afp_missingness.rds"))
+                   file_path = paste0(Sys.getenv("POLIS_DATA_CACHE"), "/",
+                                      output_folder_name,
+                                      "/afp_missingness.rds"))
     ))
 
 
@@ -2072,8 +2077,8 @@ check_missingness <- function(data,
       invisible(capture.output(
         tidypolis_io(io = "write",
                      obj = missing_by_group,
-                     file_path = paste0(Sys.getenv("POLIS_DATA_CACHE"),
-                                        "/Core_Ready_Files/es_missingness.rds"))
+                     file_path = paste0(Sys.getenv("POLIS_DATA_CACHE"), "/",
+                                        output_folder_name, "/es_missingness.rds"))
       ))
 
 
