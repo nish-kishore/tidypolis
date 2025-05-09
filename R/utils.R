@@ -8055,12 +8055,12 @@ s5_pos_check_duplicates <- function(virus.01, polis_data_folder, output_folder_n
 #' @returns `NULL` quietly upon success.
 #' @keywords internal
 #'
-s5_pos_write_missing_onsets <- function(virus.01, polis_data_folder) {
+s5_pos_write_missing_onsets <- function(virus.01, polis_data_folder, output_folder_name) {
   tidypolis_io(io = "write", obj = virus.01 |>
                  dplyr::select(epid, dateonset) |>
                  dplyr::filter(is.na(dateonset)),
-               file_path = paste0(polis_data_folder,
-                                  "/Core_Ready_Files/virus_missing_onset.csv"))
+               file_path = paste0(polis_data_folder, "/", output_folder_name,
+                                  "/virus_missing_onset.csv"))
 }
 
 #' Process and clean cases in the positives dataset
