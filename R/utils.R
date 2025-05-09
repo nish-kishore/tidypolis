@@ -4336,14 +4336,19 @@ s1_export_final_core_ready_files <- function(polis_data_folder, ts, timestamp,
 #'   validation.
 #' @param timestamp `str` Time stamp
 #' @param latest_folder_in_archive_path `str` The path to the latest archive folder.
+#' @param output_folder_name str: Name of the output directory where processed
+#'        files will be saved. Defaults to "Core_Ready_Files". For
+#'        region-specific processing, this should be set to
+#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
 #'
 #' @export
 s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
                                       long.global.dist.01, timestamp,
-                                      latest_folder_in_archive_path) {
+                                      latest_folder_in_archive_path,
+                                      output_folder_name) {
 
   if (!tidypolis_io(io = "exists.dir",
-                    file_path = file.path(polis_data_folder, "Core_Ready_Files"))) {
+                    file_path = file.path(polis_data_folder, output_folder_name))) {
     cli::cli_abort("Please run Step 1 and create a Core Ready folder before running this step.")
   }
 
@@ -4353,7 +4358,7 @@ s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
   x <- tidypolis_io(
     io = "list",
     file_path = file.path(
-      polis_data_folder, "Core_Ready_Files/Archive",
+      polis_data_folder, output_folder_name, "Archive",
       latest_folder_in_archive_path
     ),
     full_names = TRUE
@@ -4362,7 +4367,7 @@ s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
   # load new data files
   y <- tidypolis_io(
     io = "list",
-    file_path = file.path(polis_data_folder, "Core_Ready_Files"),
+    file_path = file.path(polis_data_folder, output_folder_name),
     full_names = TRUE
   )
 
@@ -4373,7 +4378,7 @@ s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
   # Step 2b: Check for duplicate EPIDs
   has_duplicates <- s2_check_duplicated_epids(
     data = afp_raw_new,
-    polis_data_folder = polis_data_folder)
+    polis_data_folder = polis_data_folder, output_folder_name = output_folder_name)
 
   if (has_duplicates) {
     cli::cli_alert_warning("Please review duplicates!")
@@ -4385,13 +4390,14 @@ s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
   # Step 2d: Write out epids with no dateonset
   s2_export_missing_onsets(
     data = afp_standardized,
-    polis_data_folder = polis_data_folder)
+    polis_data_folder = polis_data_folder, output_folder_name = output_folder_name)
 
   # Step 2e: Check for missingness
   s2_check_missingness(
     data = afp_standardized,
     type = "AFP",
-    polis_data_folder)
+    polis_data_folder,
+    output_folder_name)
 
   # Step 2f: Classify cases
   afp_classified <- s2_classify_afp_cases(
@@ -4412,7 +4418,8 @@ s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
   afp_processed <- s2_process_coordinates(
     data = afp_with_guids,
     polis_data_folder = polis_data_folder,
-    polis_folder = polis_folder
+    polis_folder = polis_folder,
+    output_folder_name = output_folder_name
   )
 
   # Step 2j: Create key AFP variables
@@ -4423,7 +4430,8 @@ s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
     data = afp_final,
     latest_archive = latest_folder_in_archive_path,
     polis_data_folder = polis_data_folder,
-    col_afp_raw = colnames(afp_raw_new)
+    col_afp_raw = colnames(afp_raw_new),
+    output_folder_name = output_folder_name
   )
 
 }
