@@ -1839,10 +1839,12 @@ remove_character_dates <- function(type,
 #' @param polis_data_folder `str` Path to the POLIS data folder.
 #' @returns `tibble` Positives dataset with summary of SIA response variables.
 #' @keywords internal
-create_response_vars <- function(pos, polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")){
+create_response_vars <- function(pos,
+                                 output_folder_name,
+                                 polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")){
 
   #bring in processed SIA data
-  path <- tidypolis_io(io = "list", file_path = file.path(polis_data_folder, "/Core_Ready_Files"), full_names = T)
+  path <- tidypolis_io(io = "list", file_path = file.path(Sys.getenv("POLIS_DATA_CACHE"), output_folder_name), full_names = T)
 
   tryCatch({
     sia <- tidypolis_io(io = "read", file_path = path[grepl("sia_2000", path)])
