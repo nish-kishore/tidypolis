@@ -4165,6 +4165,10 @@ s1_archive_old_files <- function(polis_data_folder, timestamp, output_folder_nam
 #' @param api_subactivity_data `tibble` Cleaned Subactivity table.
 #' @param api_es_data `tibble` Cleaned ES table.
 #' @param api_virus_data `tibble` Cleaned Virus table.
+#' @param output_folder_name str: Name of the output directory where processed
+#'        files will be saved. Defaults to "Core_Ready_Files". For
+#'        region-specific processing, this should be set to
+#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
 #'
 #' @returns `NULL`
 #' @keywords internal
@@ -4173,7 +4177,8 @@ s1_export_final_core_ready_files <- function(polis_data_folder, ts, timestamp,
                                              api_case_data,
                                              api_subactivity_data,
                                              api_es_data,
-                                             api_virus_data) {
+                                             api_virus_data,
+                                             output_folder_name) {
 
   cli::cli_process_start("Writing all final Core Ready files")
 
@@ -4183,7 +4188,7 @@ s1_export_final_core_ready_files <- function(polis_data_folder, ts, timestamp,
       io = "write",
       file_path = file.path(
         polis_data_folder,
-        "Core_Ready_Files",
+        output_folder_name,
         paste0(
           "Human_Detailed_Dataset_",
           timestamp,
@@ -4201,7 +4206,7 @@ s1_export_final_core_ready_files <- function(polis_data_folder, ts, timestamp,
       io = "write",
       file_path = file.path(
         polis_data_folder,
-        "Core_Ready_Files",
+        output_folder_name,
         paste0(
           "Activity_Data_with_All_Sub-Activities_(1_district_per_row)_",
           timestamp,
@@ -4219,7 +4224,7 @@ s1_export_final_core_ready_files <- function(polis_data_folder, ts, timestamp,
       io = "write",
       file_path = file.path(
         polis_data_folder,
-        "Core_Ready_Files",
+        output_folder_name,
         paste0(
           "EnvSamples_Detailed_Dataset_",
           timestamp,
@@ -4237,7 +4242,7 @@ s1_export_final_core_ready_files <- function(polis_data_folder, ts, timestamp,
       io = "write",
       file.path(
         polis_data_folder,
-        "Core_Ready_Files",
+        output_folder_name,
         paste0(
           "Viruses_Detailed_Dataset_",
           timestamp,
