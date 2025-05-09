@@ -8203,7 +8203,7 @@ s5_pos_process_human_virus <- function(virus.01, polis_data_folder) {
 #' @returns `tibble` Cleaned positives dataset containing environmental samples only.
 #' @keywords internal
 #'
-s5_pos_process_es_virus <- function(virus.01, polis_data_folder) {
+s5_pos_process_es_virus <- function(virus.01, polis_data_folder, output_folder_name) {
 
   ### ENV data from virus table
   env.virus.01 <- virus.01 |>
@@ -8213,10 +8213,11 @@ s5_pos_process_es_virus <- function(virus.01, polis_data_folder) {
   cli::cli_process_start("Adding in ES data")
 
   # read in ES files from cleaned ENV linelist
-  env.files.01 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path = file.path(polis_data_folder, "Core_Ready_Files"), full_names = T)) |>
-    dplyr::mutate(short_name = stringr::str_replace(name, paste0(polis_data_folder, "/Core_Ready_Files/"), "")) |>
+  env.files.01 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path = file.path(polis_data_folder, output_folder_name), full_names = T)) |>
+    dplyr::mutate(short_name = stringr::str_replace(name, paste0(polis_data_folder, "/", output_folder_name, "/"), "")) |>
     dplyr::filter(grepl("^(es).*(.rds)$", short_name)) |>
     dplyr::pull(name)
+
   tryCatch({
     es.01 <- purrr::map_df(env.files.01, ~ tidypolis_io(io = "read", file_path = .x)) |>
       dplyr::ungroup() |>
