@@ -6182,21 +6182,26 @@ s2_compare_with_archive <- function(data,
 #' @param polis_data_folder `str` Path to the POLIS data folder.
 #' @param latest_folder_in_archive `str` Name of the latest folder in the archive.
 #' @param timestamp `str` The time stamp.
+#' @param output_folder_name str: Name of the output directory where processed
+#'        files will be saved. Defaults to "Core_Ready_Files". For
+#'        region-specific processing, this should be set to
+#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
 #'
 #'
 #' @export
 s3_fully_process_sia_data <- function(long.global.dist.01, polis_data_folder,
-                                      latest_folder_in_archive, timestamp){
+                                      latest_folder_in_archive, timestamp,
+                                      output_folder_name){
 
   if (!tidypolis_io(io = "exists.dir",
-                    file_path = file.path(polis_data_folder, "Core_Ready_Files"))) {
+                    file_path = file.path(polis_data_folder, output_folder_name))) {
     cli::cli_abort("Please run Step 1 and create a Core Ready folder before running this step.")
   }
 
   #dataset used to check mismatched guids and create sia.06
   sia.05 <- s3_sia_load_data(
     polis_data_folder = polis_data_folder,
-    latest_folder_in_archive = latest_folder_in_archive) |>
+    latest_folder_in_archive = latest_folder_in_archive, output_folder_name) |>
     s3_sia_create_cdc_vars() |>
     s3_sia_check_guids(long.global.dist.01 = long.global.dist.01)
 
@@ -6206,11 +6211,13 @@ s3_fully_process_sia_data <- function(long.global.dist.01, polis_data_folder,
   #checks metadata of near final output
   s3_sia_check_metadata(sia.06 = sia.06,
                         polis_data_folder = polis_data_folder,
-                        latest_folder_in_archive = latest_folder_in_archive)
+                        latest_folder_in_archive = latest_folder_in_archive,
+                        output_folder_name = output_folder_name)
 
   #writes our partially processed data into cache
   s3_sia_write_precluster_data(sia.06 = sia.06,
-                               polis_data_folder = polis_data_folder)
+                               polis_data_folder = polis_data_folder,
+                               output_folder_name = output_folder_name)
 
   #final clean dataset
   sia.clean.01 <- s3_sia_combine_historical_data(sia.new = sia.06, polis_data_folder)
@@ -6219,10 +6226,12 @@ s3_fully_process_sia_data <- function(long.global.dist.01, polis_data_folder,
   s3_sia_cluster_dates(sia.clean.01)
 
   #merged data with clustered data
-  s3_sia_merge_cluster_dates_final_data(sia.clean.01 = sia.clean.01)
+  s3_sia_merge_cluster_dates_final_data(sia.clean.01 = sia.clean.01,
+                                        output_folder_name = output_folder_name)
 
   #evaluate unmatched GUIDs
-  s3_sia_evaluate_unmatched_guids(sia.05 = sia.05, polis_data_folder)
+  s3_sia_evaluate_unmatched_guids(sia.05 = sia.05, polis_data_folder,
+                                  output_folder_name = output_folder_name)
 
   update_polis_log(.event = "SIA Finished",
                    .event_type = "PROCESS")
