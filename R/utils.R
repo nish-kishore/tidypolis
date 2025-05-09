@@ -7889,6 +7889,11 @@ s4_es_write_data <- function(polis_data_folder, es.05, output_folder_name){
 #' @param latest_folder_in_archive `str` Name of the latest folder in the archive, if one exists.
 #' @param long.global.dist.01 `sf` Global district lookup table for GUID
 #' @param polis_data_folder `str` The data folder within the POLIS folder.
+#' @param output_folder_name str: Name of the output directory where processed
+#'        files will be saved. Defaults to "Core_Ready_Files". For
+#'        region-specific processing, this should be set to
+#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#'
 #'   validation.
 #' @returns `NULL` quietly upon success.
 #'
@@ -7896,27 +7901,37 @@ s4_es_write_data <- function(polis_data_folder, es.05, output_folder_name){
 s5_fully_process_pos_data <- function(polis_folder,
                                       latest_folder_in_archive,
                                       long.global.dist.01,
-                                      polis_data_folder = file.path(polis_folder, "data")) {
+                                      polis_data_folder = file.path(polis_folder, "data"),
+                                      output_folder_name) {
 
-  virus.raw.new <- s5_pos_load_data(polis_data_folder, latest_folder_in_archive)
+  virus.raw.new <- s5_pos_load_data(polis_data_folder, latest_folder_in_archive,
+                                    output_folder_name)
   virus.01 <- s5_pos_create_cdc_vars(virus.raw.new, polis_folder, polis_data_folder)
 
-  s5_pos_check_duplicates(virus.01, polis_data_folder)
-  s5_pos_write_missing_onsets(virus.01, polis_data_folder)
+  s5_pos_check_duplicates(virus.01, polis_data_folder, output_folder_name)
+  s5_pos_write_missing_onsets(virus.01, polis_data_folder, output_folder_name)
 
-  human.virus.05 <- s5_pos_process_human_virus(virus.01, polis_data_folder)
-  env.virus.04 <- s5_pos_process_es_virus(virus.01, polis_data_folder)
+  human.virus.05 <- s5_pos_process_human_virus(virus.01, polis_data_folder,
+                                               output_folder_name)
+
+  env.virus.04 <- s5_pos_process_es_virus(virus.01, polis_data_folder,
+                                          output_folder_name)
 
   afp.es.virus.01 <- s5_pos_create_final_virus_data(human.virus.05, env.virus.04)
-  afp.es.virus.02 <- remove_character_dates(type = "POS", df = afp.es.virus.01)
-  afp.es.virus.03 <- create_response_vars(afp.es.virus.02)
+  afp.es.virus.02 <- remove_character_dates(type = "POS", df = afp.es.virus.01,
+                                            output_folder_name = output_folder_name)
+  afp.es.virus.03 <- create_response_vars(pos = afp.es.virus.02,
+                                          output_folder_name = output_folder_name)
 
   rm(afp.es.virus.02)
 
   s5_pos_compare_with_archive(afp.es.virus.01, afp.es.virus.03,
-                              polis_data_folder, latest_folder_in_archive)
+                              polis_data_folder, latest_folder_in_archive,
+                              output_folder_name = output_folder_name)
 
-  s5_pos_evaluate_unmatched_guids(afp.es.virus.03, long.global.dist.01, polis_data_folder)
+  s5_pos_evaluate_unmatched_guids(afp.es.virus.03, long.global.dist.01,
+                                  polis_data_folder,
+                                  output_folder_name = output_folder_name)
 
   update_polis_log(.event = "Positives file finished",
                    .event_type = "PROCESS")
