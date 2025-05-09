@@ -8484,7 +8484,7 @@ s5_pos_compare_with_archive <- function(afp.es.virus.01, afp.es.virus.03, polis_
 #' @returns `NULL` quietly upon success.
 #' @keywords internal
 #'
-s5_pos_evaluate_unmatched_guids <- function(afp.es.virus.03, long.global.dist.01, polis_data_folder) {
+s5_pos_evaluate_unmatched_guids <- function(afp.es.virus.03, long.global.dist.01, polis_data_folder, output_folder_name) {
   cli::cli_process_start("Checking for positives that don't match to GUIDs")
 
   # AFP and ES that do not match to shape file
@@ -8495,7 +8495,7 @@ s5_pos_evaluate_unmatched_guids <- function(afp.es.virus.03, long.global.dist.01
 
   tidypolis_io(obj = unmatched.afp.es.viruses.01,
                io = "write",
-               file_path = paste(polis_data_folder, "/Core_Ready_Files/",
+               file_path = paste(polis_data_folder, "/", output_folder_name, "/",
                                  paste("unmatch_positives", min(unmatched.afp.es.viruses.01$yronset, na.rm = T),
                                        max(unmatched.afp.es.viruses.01$yronset, na.rm = T),
                                        sep = "_"
