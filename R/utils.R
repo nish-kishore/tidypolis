@@ -3769,7 +3769,8 @@ s1_clean_activity_table <- function(path, subactivity_path, crosswalk,
     rename_via_crosswalk(api_data = api_activity_sub1,
                          crosswalk = crosswalk,
                          table_name = "Activity") |>
-    dplyr::select(SIASubActivityCode, crosswalk$Web_Name[crosswalk$Table == "Activity"]) |>
+    dplyr::select(SIASubActivityCode, WHORegion,
+                  crosswalk$Web_Name[crosswalk$Table == "Activity"]) |>
     dplyr::select(-c("Admin 0 Id"))
   cli::cli_process_done()
 
@@ -3913,7 +3914,7 @@ s1_clean_subactivity_table <- function(path, activity_table, crosswalk,
                                          !is.na(crosswalk$Web_Name)],
                     crosswalk$API_Name[crosswalk$Table %in% c("SubActivity") &
                                          is.na(crosswalk$Web_Name) &
-                                         crosswalk$API_Name != "ActivityAdminCoveragePercentage"]))
+                                         crosswalk$API_Name != "ActivityAdminCoveragePercentage"]), WHORegion)
   cli::cli_process_done()
 
   rm(api_subactivity_sub3)
