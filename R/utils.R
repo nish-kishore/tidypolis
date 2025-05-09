@@ -6635,11 +6635,15 @@ s3_sia_check_duplicates <- function(sia.05){
 #' deduplicated
 #' @param polis_data_folder `str` Path to the POLIS data folder.
 #' @param latest_folder_in_archive `str` Time stamp of latest folder in archive
-#'
+#' @param output_folder_name str: Name of the output directory where processed
+#'        files will be saved. Defaults to "Core_Ready_Files". For
+#'        region-specific processing, this should be set to
+#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
 #' @returns NULL
 #' @keywords internal
 #'
-s3_sia_check_metadata <- function(sia.06, polis_data_folder, latest_folder_in_archive){
+s3_sia_check_metadata <- function(sia.06, polis_data_folder, latest_folder_in_archive,
+                                  output_folder_name){
 
   cli::cli_process_start("Checking metadata")
   # This is the final SIA file which would be used for analysis.
@@ -6648,13 +6652,14 @@ s3_sia_check_metadata <- function(sia.06, polis_data_folder, latest_folder_in_ar
 
   x <- tidypolis_io(io = "list",
                     file_path = file.path(polis_data_folder,
-                                          "Core_Ready_Files/Archive",
+                                          output_folder_name,
+                                          "Archive",
                                           latest_folder_in_archive),
                     full_names = T)
 
   y <- tidypolis_io(io = "list",
                     file_path = file.path(polis_data_folder,
-                                          "Core_Ready_Files"),
+                                          output_folder_name),
                     full_names = T)
 
   sia.06 <- sia.06 |>
