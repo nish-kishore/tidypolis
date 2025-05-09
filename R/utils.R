@@ -3254,12 +3254,20 @@ check_missing_static_files <- function(core_files_folder_path,
 #' @param long.global.dist.01 `sf` Long global district shapefile.
 #' @param ts `str` Time stamp from [Sys.time()].
 #' @param timestamp `str` Formatted time stamp.
+#' @param who_region str: optional WHO region to filter data
+#'      Available inputs include AFRO, AMRO, EMRO, EURO, SEARO and  WPRO.
 #'
 #' @returns `NULL` quietly upon success.
 #' @export
 #'
 s1_prep_polis_tables <- function(polis_folder, polis_data_folder,
-                                 long.global.dist.01, ts, timestamp) {
+                                 long.global.dist.01, ts, timestamp, who_region) {
+
+  if (!is.null(who_region)) {
+    # Set region-specific folder name
+    output_folder_name <- paste0("Core_Ready_Files_", who_region)
+  }
+
   # update log for start of creation of CORE ready datasets
   update_polis_log(.event = "Beginning Preprocessing - Creation of CORE Ready Datasets",
                    .event_type = "START")
@@ -3272,16 +3280,46 @@ s1_prep_polis_tables <- function(polis_folder, polis_data_folder,
     path = file.path(polis_data_folder, "case.rds"),
     crosswalk = crosswalk_data)
 
+  if (!is.null(who_region)) {
+    api_case_data <- api_case_data |>
+      dplyr::filter(`WHO Region` == who_region)
+    cli::cli_alert_success(
+      paste0("Filtered case data to region: ", who_region))
+  } else {
+    cli::cli_alert_warning(
+      "Could not find WHO region column in case data. No filtering applied.")
+  }
+
   cli::cli_h2("Environmental Samples")
   api_es_data <- s1_clean_es_table(
     path = file.path(polis_data_folder, "environmental_sample.rds"),
     crosswalk = crosswalk_data
   )
 
+  if (!is.null(who_region)) {
+    api_es_data <- api_es_data |>
+      dplyr::filter(`WHO Region` == who_region)
+    cli::cli_alert_success(
+      paste0("Filtered ES data to region: ", who_region))
+  } else {
+    cli::cli_alert_warning(
+      "Could not find WHO region column in ES data. No filtering applied.")
+  }
+
   cli::cli_h2("Virus")
   api_virus_data <- s1_clean_virus_table(
     path = file.path(polis_data_folder, "virus.rds"),
     crosswalk = crosswalk_data)
+
+  if (!is.null(who_region)) {
+    api_virus_data <- api_virus_data |>
+      dplyr::filter(`WHO Region` == who_region)
+    cli::cli_alert_success(
+      paste0("Filtered Virus data to region: ", who_region))
+  } else {
+    cli::cli_alert_warning(
+      "Could not find WHO region column in Virus data. No filtering applied.")
+  }
 
   cli::cli_h2("Activity")
   api_activity_data <- s1_clean_activity_table(
@@ -3289,6 +3327,16 @@ s1_prep_polis_tables <- function(polis_folder, polis_data_folder,
     subactivity_path = file.path(polis_data_folder, "sub_activity.rds"),
     crosswalk = crosswalk_data
   )
+
+  if (!is.null(who_region)) {
+    api_activity_data <- api_activity_data |>
+      dplyr::filter(`WHORegion` == who_region)
+    cli::cli_alert_success(
+      paste0("Filtered Activity data to region: ", who_region))
+  } else {
+    cli::cli_alert_warning(
+      "Could not find WHO region column in Activity data. No filtering applied.")
+  }
 
   cli::cli_h2("Sub-activity")
   api_subactivity_data <- s1_clean_subactivity_table(
@@ -3298,6 +3346,16 @@ s1_prep_polis_tables <- function(polis_folder, polis_data_folder,
     long.global.dist.01
   )
 
+  if (!is.null(who_region)) {
+    api_subactivity_data <- api_subactivity_data |>
+      dplyr::filter(WHORegion == who_region)
+    cli::cli_alert_success(
+      paste0("Filtered Sub-activity data to region: ", who_region))
+  } else {
+    cli::cli_alert_warning(
+      "Could not find WHO region column in Sub-activity data. No filtering applied.")
+  }
+
   rm(crosswalk_data)
 
   invisible(capture.output(gc()))
@@ -3306,7 +3364,7 @@ s1_prep_polis_tables <- function(polis_folder, polis_data_folder,
   cli::cli_h2("Creating change log and exporting data")
 
   # create directory for the Archive and Changelogs
-  s1_create_core_ready_dir(polis_data_folder, timestamp)
+  s1_create_core_ready_dir(polis_data_folder, timestamp, output_folder_name)
 
   # Get list of most recent files
   most_recent_file_patterns <- c(
@@ -3316,7 +3374,8 @@ s1_prep_polis_tables <- function(polis_folder, polis_data_folder,
     "Viruses_Detailed"
   )
   most_recent_files <- s1_get_most_recent_files(polis_data_folder,
-                                                most_recent_file_patterns)
+                                                most_recent_file_patterns,
+                                                output_folder_name = output_folder_name)
 
   if (length(most_recent_files) > 0) {
     for (i in most_recent_files) {
@@ -3324,7 +3383,8 @@ s1_prep_polis_tables <- function(polis_folder, polis_data_folder,
                            api_case_data,
                            api_es_data,
                            api_virus_data,
-                           api_subactivity_data)
+                           api_subactivity_data,
+                           output_folder_name = output_folder_name)
     }
   } else {
     cli::cli_alert_info("No previous main Core Ready Files found, creating new files")
@@ -3333,7 +3393,8 @@ s1_prep_polis_tables <- function(polis_folder, polis_data_folder,
   invisible(capture.output(gc()))
 
   # Move files from the current POLIS data folder into the archive
-  s1_archive_old_files(polis_data_folder, timestamp)
+  s1_archive_old_files(polis_data_folder, timestamp,
+                       output_folder_name = output_folder_name)
 
   invisible(capture.output(gc()))
 
@@ -3345,7 +3406,8 @@ s1_prep_polis_tables <- function(polis_folder, polis_data_folder,
     api_case_data = api_case_data,
     api_subactivity_data = api_subactivity_data,
     api_es_data = api_es_data,
-    api_virus_data = api_virus_data)
+    api_virus_data = api_virus_data,
+    output_folder_name = output_folder_name)
 
   rm(api_case_data, api_es_data, api_virus_data, api_activity_data,
      api_subactivity_data)
