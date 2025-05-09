@@ -4,12 +4,18 @@
 \alias{s5_pos_process_human_virus}
 \title{Process and clean cases in the positives dataset}
 \usage{
-s5_pos_process_human_virus(virus.01, polis_data_folder)
+s5_pos_process_human_virus(virus.01, polis_data_folder, output_folder_name)
 }
 \arguments{
 \item{virus.01}{\code{tibble} Output of \code{\link[=s5_pos_create_cdc_vars]{s5_pos_create_cdc_vars()}}.}
 
-\item{polis_data_folder}{\code{str} The data folder within the POLIS folder.
+\item{polis_data_folder}{\code{str} The data folder within the POLIS folder.}
+
+\item{output_folder_name}{str: Name of the output directory where processed
+files will be saved. Defaults to "Core_Ready_Files". For
+region-specific processing, this should be set to
+"Core_Ready_Files_\link{REGION}" (e.g., "Core_Ready_Files_AFRO").
+
 validation.}
 
 \item{startyr}{\code{int} Start year to process the positives dataset.}

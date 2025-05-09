@@ -4,7 +4,12 @@
 \alias{s2_process_coordinates}
 \title{Process GPS coordinates for AFP cases}
 \usage{
-s2_process_coordinates(data, polis_data_folder, polis_folder)
+s2_process_coordinates(
+  data,
+  polis_data_folder,
+  polis_folder,
+  output_folder_name
+)
 }
 \arguments{
 \item{data}{\code{tibble} A data frame containing AFP data with admin GUIDs}
@@ -13,6 +18,11 @@ s2_process_coordinates(data, polis_data_folder, polis_folder)
 Core_Ready_Files.}
 
 \item{polis_folder}{\code{str} Path to the main POLIS folder.}
+
+\item{output_folder_name}{str: Name of the output directory where processed
+files will be saved. Defaults to "Core_Ready_Files". For
+region-specific processing, this should be set to
+"Core_Ready_Files_\link{REGION}" (e.g., "Core_Ready_Files_AFRO").}
 }
 \value{
 A tibble with processed coordinate data

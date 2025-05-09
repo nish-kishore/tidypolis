@@ -4,12 +4,17 @@
 \alias{s1_archive_old_files}
 \title{Archives the old files in the data folder}
 \usage{
-s1_archive_old_files(polis_data_folder, timestamp)
+s1_archive_old_files(polis_data_folder, timestamp, output_folder_name)
 }
 \arguments{
 \item{polis_data_folder}{\code{str} Path to the POLIS data folder}
 
 \item{timestamp}{\code{str} Time stamp folder name}
+
+\item{output_folder_name}{str: Name of the output directory where processed
+files will be saved. Defaults to "Core_Ready_Files". For
+region-specific processing, this should be set to
+"Core_Ready_Files_\link{REGION}" (e.g., "Core_Ready_Files_AFRO").}
 }
 \description{
 Archives the old files in the data folder

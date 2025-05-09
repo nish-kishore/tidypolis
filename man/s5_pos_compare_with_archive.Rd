@@ -8,7 +8,8 @@ s5_pos_compare_with_archive(
   afp.es.virus.01,
   afp.es.virus.03,
   polis_data_folder,
-  latest_folder_in_archive
+  latest_folder_in_archive,
+  output_folder_name
 )
 }
 \arguments{
@@ -17,10 +18,16 @@ s5_pos_compare_with_archive(
 \item{afp.es.virus.03}{\code{tibble} Output of \code{\link[=s5_pos_create_final_virus]{s5_pos_create_final_virus()}} but processed
 further using \code{\link[=remove_character_dates]{remove_character_dates()}} and \code{\link[=create_response_vars]{create_response_vars()}}.}
 
-\item{polis_data_folder}{\code{str} The data folder within the POLIS folder.
-validation.}
+\item{polis_data_folder}{\code{str} The data folder within the POLIS folder.}
 
 \item{latest_folder_in_archive}{\code{str} Name of the latest folder in the archive, if one exists.}
+
+\item{output_folder_name}{str: Name of the output directory where processed
+files will be saved. Defaults to "Core_Ready_Files". For
+region-specific processing, this should be set to
+"Core_Ready_Files_\link{REGION}" (e.g., "Core_Ready_Files_AFRO").
+
+validation.}
 }
 \value{
 \code{NULL} quietly upon success.

@@ -9,7 +9,8 @@ s2_fully_process_afp_data(
   polis_folder,
   long.global.dist.01,
   timestamp,
-  latest_folder_in_archive_path
+  latest_folder_in_archive_path,
+  output_folder_name
 )
 }
 \arguments{
@@ -24,6 +25,11 @@ validation.}
 \item{timestamp}{\code{str} Time stamp}
 
 \item{latest_folder_in_archive_path}{\code{str} The path to the latest archive folder.}
+
+\item{output_folder_name}{str: Name of the output directory where processed
+files will be saved. Defaults to "Core_Ready_Files". For
+region-specific processing, this should be set to
+"Core_Ready_Files_\link{REGION}" (e.g., "Core_Ready_Files_AFRO").}
 }
 \description{
 This function processes AFP data through multiple standardization and

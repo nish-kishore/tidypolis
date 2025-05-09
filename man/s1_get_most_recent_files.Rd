@@ -4,12 +4,15 @@
 \alias{s1_get_most_recent_files}
 \title{Gets the most recent files in the Core Ready folder}
 \usage{
-s1_get_most_recent_files(polis_data_folder, patterns)
+s1_get_most_recent_files(polis_data_folder, patterns, output_folder_name)
 }
 \arguments{
 \item{polis_data_folder}{\code{str} Location of the POLIS data folder.}
 
-\item{patterns}{\code{list} A list of patterns to select files.}
+\item{output_folder_name}{str: Name of the output directory where processed
+files will be saved. Defaults to "Core_Ready_Files". For
+region-specific processing, this should be set to
+"Core_Ready_Files_\link{REGION}" (e.g., "Core_Ready_Files_AFRO").}
 }
 \value{
 \code{list} With names of the most recent files that matches the patterns.

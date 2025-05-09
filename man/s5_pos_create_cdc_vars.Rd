@@ -11,8 +11,7 @@ s5_pos_create_cdc_vars(virus.raw.new, polis_folder, polis_data_folder)
 
 \item{polis_folder}{\code{str} Path to the main POLIS folder.}
 
-\item{polis_data_folder}{\code{str} The data folder within the POLIS folder.
-validation.}
+\item{polis_data_folder}{\code{str} The data folder within the POLIS folder.}
 }
 \value{
 \code{tibble} Raw virus data with additional CDC columns.

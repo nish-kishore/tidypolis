@@ -4,12 +4,17 @@
 \alias{s2_check_duplicated_epids}
 \title{Check for Duplicated EPIDs in AFP Data}
 \usage{
-s2_check_duplicated_epids(data, polis_data_folder)
+s2_check_duplicated_epids(data, polis_data_folder, output_folder_name)
 }
 \arguments{
 \item{data}{A dataframe containing AFP surveillance data}
 
 \item{polis_data_folder}{String path to the POLIS data folder}
+
+\item{output_folder_name}{str: Name of the output directory where processed
+files will be saved. Defaults to "Core_Ready_Files". For
+region-specific processing, this should be set to
+"Core_Ready_Files_\link{REGION}" (e.g., "Core_Ready_Files_AFRO").}
 }
 \value{
 Logical. TRUE if duplicates found, FALSE if no duplicates

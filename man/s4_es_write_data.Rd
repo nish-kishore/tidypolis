@@ -4,7 +4,7 @@
 \alias{s4_es_write_data}
 \title{Write out final ES data}
 \usage{
-s4_es_write_data(polis_data_folder, es.05)
+s4_es_write_data(polis_data_folder, es.05, output_folder_name)
 }
 \arguments{
 \item{polis_data_folder}{\code{str} Path to the POLIS data folder.}
@@ -12,6 +12,11 @@ s4_es_write_data(polis_data_folder, es.05)
 \item{es.05}{\code{tibble} The latest ES download with variables checked
 against the last download, variables validated and sites checked and
 CDC variables enforced}
+
+\item{output_folder_name}{str: Name of the output directory where processed
+files will be saved. Defaults to "Core_Ready_Files". For
+region-specific processing, this should be set to
+"Core_Ready_Files_\link{REGION}" (e.g., "Core_Ready_Files_AFRO").}
 }
 \value{
 \code{NULL} invisible return with write out to logs if necessary

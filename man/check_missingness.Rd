@@ -4,12 +4,17 @@
 \alias{check_missingness}
 \title{Function to create summary of key variable missingness in CORE datafiles}
 \usage{
-check_missingness(data, type)
+check_missingness(data, type, output_folder_name)
 }
 \arguments{
 \item{data}{tibble the datatable for which we want to check key variable missingness}
 
 \item{type}{str "AFP", "ES", or "POS", type of dataset to check missingness}
+
+\item{output_folder_name}{str: Name of the output directory where processed
+files will be saved. Defaults to "Core_Ready_Files". For
+region-specific processing, this should be set to
+"Core_Ready_Files_\link{REGION}" (e.g., "Core_Ready_Files_AFRO").}
 }
 \description{
 a function to assess key variable missingness

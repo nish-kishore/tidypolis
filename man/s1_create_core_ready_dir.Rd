@@ -4,12 +4,17 @@
 \alias{s1_create_core_ready_dir}
 \title{Helper function to create Core Ready Archive and Change Log}
 \usage{
-s1_create_core_ready_dir(polis_data_folder, timestamp)
+s1_create_core_ready_dir(polis_data_folder, timestamp, output_folder_name)
 }
 \arguments{
 \item{polis_data_folder}{\code{str} Location of the POLIS data folder.}
 
 \item{timestamp}{\code{str} Folder name as the timestamp.}
+
+\item{output_folder_name}{str: Name of the output directory where processed
+files will be saved. Defaults to "Core_Ready_Files". For
+region-specific processing, this should be set to
+"Core_Ready_Files_\link{REGION}" (e.g., "Core_Ready_Files_AFRO").}
 }
 \description{
 Helper function to create Core Ready Archive and Change Log

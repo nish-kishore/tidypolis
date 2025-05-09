@@ -9,7 +9,8 @@ s1_prep_polis_tables(
   polis_data_folder,
   long.global.dist.01,
   ts,
-  timestamp
+  timestamp,
+  who_region
 )
 }
 \arguments{
@@ -22,6 +23,9 @@ s1_prep_polis_tables(
 \item{ts}{\code{str} Time stamp from \code{\link[=Sys.time]{Sys.time()}}.}
 
 \item{timestamp}{\code{str} Formatted time stamp.}
+
+\item{who_region}{str: optional WHO region to filter data
+Available inputs include AFRO, AMRO, EMRO, EURO, SEARO and  WPRO.}
 }
 \value{
 \code{NULL} quietly upon success.

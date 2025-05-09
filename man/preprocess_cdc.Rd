@@ -4,10 +4,16 @@
 \alias{preprocess_cdc}
 \title{Preprocess data process data in the CDC style}
 \usage{
-preprocess_cdc(polis_folder = Sys.getenv("POLIS_DATA_FOLDER"))
+preprocess_cdc(
+  polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
+  who_region = NULL
+)
 }
 \arguments{
 \item{polis_folder}{str: location of the POLIS data folder}
+
+\item{who_region}{str: optional WHO region to filter data
+Available inputs include AFRO, AMRO, EMRO, EURO, SEARO and  WPRO.}
 }
 \value{
 Outputs intermediary core ready files

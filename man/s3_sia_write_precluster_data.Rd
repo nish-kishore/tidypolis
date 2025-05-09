@@ -4,7 +4,7 @@
 \alias{s3_sia_write_precluster_data}
 \title{Write out SIA data}
 \usage{
-s3_sia_write_precluster_data(sia.06, polis_data_folder)
+s3_sia_write_precluster_data(sia.06, polis_data_folder, output_folder_name)
 }
 \arguments{
 \item{sia.06}{\code{tibble} The latest SIA download with variables checked and
@@ -12,6 +12,11 @@ against the last download, CDC variables created, GUIDs validated and
 deduplicated}
 
 \item{polis_data_folder}{\code{str} Path to the POLIS data folder.}
+
+\item{output_folder_name}{str: Name of the output directory where processed
+files will be saved. Defaults to "Core_Ready_Files". For
+region-specific processing, this should be set to
+"Core_Ready_Files_\link{REGION}" (e.g., "Core_Ready_Files_AFRO").}
 }
 \description{
 Write out SIA data

@@ -11,7 +11,8 @@ s1_export_final_core_ready_files(
   api_case_data,
   api_subactivity_data,
   api_es_data,
-  api_virus_data
+  api_virus_data,
+  output_folder_name
 )
 }
 \arguments{
@@ -28,6 +29,11 @@ s1_export_final_core_ready_files(
 \item{api_es_data}{\code{tibble} Cleaned ES table.}
 
 \item{api_virus_data}{\code{tibble} Cleaned Virus table.}
+
+\item{output_folder_name}{str: Name of the output directory where processed
+files will be saved. Defaults to "Core_Ready_Files". For
+region-specific processing, this should be set to
+"Core_Ready_Files_\link{REGION}" (e.g., "Core_Ready_Files_AFRO").}
 }
 \value{
 \code{NULL}
