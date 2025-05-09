@@ -7660,11 +7660,15 @@ s4_es_check_metadata <- function(polis_data_folder, es.05,
 #' @param es.05 `tibble` The latest ES download with variables checked
 #' against the last download, variables validated and sites checked and
 #' CDC variables enforced
+#' @param output_folder_name str: Name of the output directory where processed
+#'        files will be saved. Defaults to "Core_Ready_Files". For
+#'        region-specific processing, this should be set to
+#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
 #'
 #' @returns `NULL` invisible return with write out to logs if necessary
 #' @keywords internal
 #'
-s4_es_write_data <- function(polis_data_folder, es.05){
+s4_es_write_data <- function(polis_data_folder, es.05, output_folder_name){
 
   cli::cli_process_start("Writing out ES datasets")
 
@@ -7674,7 +7678,9 @@ s4_es_write_data <- function(polis_data_folder, es.05){
       io = "write",
       file_path = paste(
         polis_data_folder,
-        "/Core_Ready_Files/",
+        "/",
+        output_folder_name,
+        "/",
         paste("es", min(es.05$collect.date, na.rm = T),
               max(es.05$collect.date, na.rm = T), sep = "_"),
         ".rds",
