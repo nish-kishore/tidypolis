@@ -4461,6 +4461,10 @@ s2_read_afp_data <- function(file_path) {
 #'
 #' @param data A dataframe containing AFP surveillance data
 #' @param polis_data_folder String path to the POLIS data folder
+#' @param output_folder_name str: Name of the output directory where processed
+#'        files will be saved. Defaults to "Core_Ready_Files". For
+#'        region-specific processing, this should be set to
+#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
 #'
 #' @return Logical. TRUE if duplicates found, FALSE if no duplicates
 #'
@@ -4476,7 +4480,7 @@ s2_read_afp_data <- function(file_path) {
 #' \dontrun{
 #' s2_check_duplicated_epids(afp_data, "path/to/polis/folder")
 #' }
-s2_check_duplicated_epids <- function(data, polis_data_folder) {
+s2_check_duplicated_epids <- function(data, polis_data_folder, output_folder_name) {
   cli::cli_process_start("Checking for duplicated EPIDs")
 
   afp_dup <- data |>
@@ -4501,37 +4505,37 @@ s2_check_duplicated_epids <- function(data, polis_data_folder) {
   if (nrow(afp_dup) >= 1) {
     # Export duplicate afp cases in the CSV file:
     invisible(capture.output(
-          tidypolis_io(
-            io = "write",
-            obj = afp_dup,
-            paste0(
-              polis_data_folder,
-              "/Core_Ready_Files/",
-              paste(
-                "duplicate_AFPcases_Polis",
-                min(afp_dup$yronset, na.rm = TRUE),
-                max(afp_dup$yronset, na.rm = TRUE),
-                sep = "_"
-              ),
-              ".csv"
-            )
-          )
+      tidypolis_io(
+        io = "write",
+        obj = afp_dup,
+        paste0(
+          polis_data_folder,
+          "/", output_folder_name, "/",
+          paste(
+            "duplicate_AFPcases_Polis",
+            min(afp_dup$yronset, na.rm = TRUE),
+            max(afp_dup$yronset, na.rm = TRUE),
+            sep = "_"
+          ),
+          ".csv"
+        )
+      )
     ))
 
     cli::cli_alert_info(
       paste0(
         "Duplicate AFP case. Check the data for duplicate records located at:\n",
-                    paste0(
-              polis_data_folder,
-              "/Core_Ready_Files/",
-              paste(
-                "duplicate_AFPcases_Polis",
-                min(afp_dup$yronset, na.rm = TRUE),
-                max(afp_dup$yronset, na.rm = TRUE),
-                sep = "_"
-              ),
-              ".csv"
-            ), "\n",
+        paste0(
+          polis_data_folder,
+          "/", output_folder_name, "/",
+          paste(
+            "duplicate_AFPcases_Polis",
+            min(afp_dup$yronset, na.rm = TRUE),
+            max(afp_dup$yronset, na.rm = TRUE),
+            sep = "_"
+          ),
+          ".csv"
+        ), "\n",
         "If they are exact same, then contact POLIS"
       )
     )
@@ -4539,7 +4543,7 @@ s2_check_duplicated_epids <- function(data, polis_data_folder) {
     update_polis_log(
       .event = paste0(
         "Duplicate AFP cases output in ",
-        "duplicate_AFPcases_Polis within Core_Ready_files"
+        "duplicate_AFPcases_Polis within ", output_folder_name,
       ),
       .event_type = "ALERT"
     )
