@@ -6727,14 +6727,19 @@ s3_sia_check_metadata <- function(sia.06, polis_data_folder, latest_folder_in_ar
 #' against the last download, CDC variables created, GUIDs validated and
 #' deduplicated
 #' @param polis_data_folder `str` Path to the POLIS data folder.
+#' @param output_folder_name str: Name of the output directory where processed
+#'        files will be saved. Defaults to "Core_Ready_Files". For
+#'        region-specific processing, this should be set to
+#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
 #'
 #' @returns NULL
 #' @keywords internal
 #'
-s3_sia_write_precluster_data <- function(sia.06, polis_data_folder){
+s3_sia_write_precluster_data <- function(sia.06, polis_data_folder,
+                                         output_folder_name){
   cli::cli_process_start("Writing out SIA file")
   # Write final SIA file to RDS file
-  sia.file.path <- paste(polis_data_folder, "/Core_Ready_Files/", sep = "")
+  sia.file.path <- paste(polis_data_folder, "/", output_folder_name, "/", sep = "")
 
   invisible(capture.output(
     tidypolis_io(obj = sia.06, io = "write",
