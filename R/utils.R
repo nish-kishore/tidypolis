@@ -8339,15 +8339,15 @@ s5_pos_create_final_virus_data <- function(human.virus.05, env.virus.04) {
 #' @returns `NULL` quietly upon success.
 #' @keywords internal
 #'
-s5_pos_compare_with_archive <- function(afp.es.virus.01, afp.es.virus.03, polis_data_folder, latest_folder_in_archive) {
+s5_pos_compare_with_archive <- function(afp.es.virus.01, afp.es.virus.03, polis_data_folder, latest_folder_in_archive, output_folder_name) {
   cli::cli_process_start("Checking for variables that don't match last weeks pull")
 
   #Compare the final file to last week's final file to identify any differences in var_names, var_classes, or categorical responses
   new_table_metadata <- f.summarise.metadata(afp.es.virus.03)
 
-  x <- tidypolis_io(io = "list", file_path = file.path(polis_data_folder, "Core_Ready_Files/Archive", latest_folder_in_archive), full_names = T)
+  x <- tidypolis_io(io = "list", file_path = file.path(polis_data_folder, output_folder_name, "Archive", latest_folder_in_archive), full_names = T)
 
-  y <- tidypolis_io(io = "list", file_path = file.path(polis_data_folder, "Core_Ready_Files"), full_names = T)
+  y <- tidypolis_io(io = "list", file_path = file.path(polis_data_folder, output_folder_name), full_names = T)
 
   old.file <- x[grepl("positives_2001-01-01", x)]
 
@@ -8416,7 +8416,7 @@ s5_pos_compare_with_archive <- function(afp.es.virus.01, afp.es.virus.03, polis_
       # Export records for which virus type has changed from last week to this week in the CSV file:
       tidypolis_io(obj = pos_changed_virustype,
                    io = "write",
-                   file_path = paste0(polis_data_folder, "/Core_Ready_Files/Changed_virustype_virusTableData.csv"))
+                   file_path = paste0(polis_data_folder, "/", output_folder_name, "/Changed_virustype_virusTableData.csv"))
 
     }
 
@@ -8428,7 +8428,7 @@ s5_pos_compare_with_archive <- function(afp.es.virus.01, afp.es.virus.03, polis_
       # Export records for which virus type has changed from last week to this week in the CSV file:
       tidypolis_io(obj = in_new_not_old,
                    io = "write",
-                   file_path = paste0(polis_data_folder, "/Core_Ready_Files/in_new_not_old_virusTableData.csv"))
+                   file_path = paste0(polis_data_folder, "/", output_folder_name, "/in_new_not_old_virusTableData.csv"))
     }
 
   }else{
@@ -8448,7 +8448,9 @@ s5_pos_compare_with_archive <- function(afp.es.virus.01, afp.es.virus.03, polis_
   if(nrow(class.updated > 0)){
     tidypolis_io(obj = class.updated,
                  io = "write",
-                 file_path = paste0(polis_data_folder, "/Core_Ready_Files/virus_class_changed_date.csv"))
+                 file_path = paste0(polis_data_folder, "/",
+                                    output_folder_name,
+                                    "/virus_class_changed_date.csv"))
   }
 
   update_polis_log(.event = paste0("POS New Records: ", nrow(in_new_not_old), "; ",
@@ -8459,7 +8461,7 @@ s5_pos_compare_with_archive <- function(afp.es.virus.01, afp.es.virus.03, polis_
 
   tidypolis_io(obj = afp.es.virus.03,
                io = "write",
-               file_path = paste(polis_data_folder, "/Core_Ready_Files/",
+               file_path = paste(polis_data_folder, "/", output_folder_name, "/",
                                  paste("positives", min(afp.es.virus.03$dateonset, na.rm = T),
                                        max(afp.es.virus.03$dateonset, na.rm = T),
                                        sep = "_"
