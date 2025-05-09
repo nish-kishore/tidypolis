@@ -8076,7 +8076,7 @@ s5_pos_write_missing_onsets <- function(virus.01, polis_data_folder, output_fold
 #' @returns `tibble` Cleaned positives dataset containing human cases only.
 #' @keywords internal
 #'
-s5_pos_process_human_virus <- function(virus.01, polis_data_folder) {
+s5_pos_process_human_virus <- function(virus.01, polis_data_folder, output_folder_name) {
 
   startyr <- 2000
   endyr <- year(format(Sys.time()))
@@ -8087,8 +8087,10 @@ s5_pos_process_human_virus <- function(virus.01, polis_data_folder) {
     dplyr::filter(!virustype %in% c("VACCINE 1", "VACCINE 3"))
 
   cli::cli_process_start("Processing and cleaning AFP/non-AFP files")
-  afp.files.01 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path = file.path(polis_data_folder, "Core_Ready_Files"), full_names = T)) |>
-    dplyr::mutate(short_name = stringr::str_replace(name, paste0(polis_data_folder, "/Core_Ready_Files/"), "")) |>
+  afp.files.01 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path = file.path(polis_data_folder, output_folder_name), full_names = T)) |>
+    dplyr::mutate(short_name = stringr::str_replace(name, paste0(polis_data_folder, "/",
+                                                                 output_folder_name,
+                                                                 "/"), "")) |>
     dplyr::filter(grepl("^(afp_linelist_2001-01-01_2025).*(.rds)$", short_name)) |>
     dplyr::pull(name)
 
@@ -8102,29 +8104,49 @@ s5_pos_process_human_virus <- function(virus.01, polis_data_folder) {
     cli::cli_abort("Please run Step 2 of preprocessing before Step 5.")
   })
 
-  non.afp.files.01 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path = file.path(polis_data_folder, "Core_Ready_Files"), full_names = T)) |>
-    dplyr::mutate(short_name = stringr::str_replace(name, paste0(polis_data_folder, "/Core_Ready_Files/"), "")) |>
+
+  non.afp.files.01 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path = file.path(polis_data_folder, output_folder_name), full_names = T)) |>
+    dplyr::mutate(short_name = stringr::str_replace(name, paste0(polis_data_folder, "/", output_folder_name, "/"), "")) |>
     dplyr::filter(grepl("^(other_surveillance_type_linelist_2016_2025).*(.rds)$", short_name)) |>
     dplyr::pull(name)
 
-  tryCatch({
-    non.afp.01 <- purrr::map_df(non.afp.files.01, ~ tidypolis_io(io = "read", file_path = .x)) |>
-      dplyr::ungroup() |>
-      dplyr::distinct(.keep_all = T) |>
-      dplyr::filter(dplyr::between(yronset, startyr, endyr))
-  }, error = \(e) {
-    cli::cli_abort("Please run Step 2 of preprocessing before Step 5.")
-  })
 
+  if (output_folder_name == "Core_Ready_Files" ||
+      length(non.afp.files.01) > 0) {
+    tryCatch({
+      non.afp.01 <- purrr::map_df(
+        non.afp.files.01,
+        ~ tidypolis_io(io = "read", file_path = .x)
+      ) |>
+        dplyr::ungroup() |>
+        dplyr::distinct(.keep_all = TRUE) |>
+        dplyr::filter(dplyr::between(yronset, startyr, endyr))
+    }, error = \(e) {
+      cli::cli_abort("Please run Step 2 of preprocessing before Step 5.")
+    })
+  } else {
+    region <- sub("^Core_Ready_Files_", "", output_folder_name)
+    cli::cli_warn(
+      "No contact or community sampling surveillance data found for {region}"
+    )
+    non.afp.01 <- tibble::tibble(
+      epid = character(),
+      lat = numeric(),
+      lon = numeric(),
+      datenotificationtohq = character()
+    )
+  }
   # deleting any duplicate records in afp.01.
   afp.01 <- afp.01[!duplicated(afp.01$epid), ] |>
     dplyr::select(epid, dateonset,  place.admin.0, place.admin.1, place.admin.2, admin0guid, yronset, admin1guid, admin2guid, cdc.classification.all,
                   whoregion, nt.changes, emergence.group, virus.cluster, surveillancetypename, lat, lon, vtype.fixed, datenotificationtohq)
 
-  # deleting any duplicate records in non.afp.files.01.
-  non.afp.01 <- non.afp.01[!duplicated(non.afp.01$epid), ] |>
-    dplyr::select(epid, dateonset,  place.admin.0, place.admin.1, place.admin.2, admin0guid, yronset, admin1guid, admin2guid, cdc.classification.all,
-                  whoregion, nt.changes, emergence.group, virus.cluster, surveillancetypename, lat, lon, vtype.fixed, datenotificationtohq)
+  if (length(non.afp.files.01) > 0) {
+    # deleting any duplicate records in non.afp.files.01.
+    non.afp.01 <- non.afp.01[!duplicated(non.afp.01$epid), ] |>
+      dplyr::select(epid, dateonset,  place.admin.0, place.admin.1, place.admin.2, admin0guid, yronset, admin1guid, admin2guid, cdc.classification.all,
+                    whoregion, nt.changes, emergence.group, virus.cluster, surveillancetypename, lat, lon, vtype.fixed, datenotificationtohq)
+  }
 
 
   #Combine AFP and other surveillance type cases
