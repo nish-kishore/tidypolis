@@ -5999,6 +5999,10 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
 #' @param col_afp_raw Names of columns in the original raw AFP data
 #' @param start_year Integer. Start year for filtering (default: 2020)
 #' @param end_year Integer. End year for filtering (default: current year)
+#' @param output_folder_name str: Name of the output directory where processed
+#'        files will be saved. Defaults to "Core_Ready_Files". For
+#'        region-specific processing, this should be set to
+#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
 #'
 #' @return A list containing comparison results:
 #'   - metadata_comparison: Structural differences between datasets
@@ -6019,7 +6023,8 @@ s2_compare_with_archive <- function(data,
                                     latest_archive,
                                     col_afp_raw,
                                     start_year = 2020,
-                                    end_year = lubridate::year(Sys.Date())) {
+                                    end_year = lubridate::year(Sys.Date()),
+                                    output_folder_name) {
   cli::cli_process_start("Comparing data with last AFP dataset")
 
   # Prepare data for comparison by standardizing types
@@ -6035,7 +6040,7 @@ s2_compare_with_archive <- function(data,
     archive_files <- tidypolis_io(
       io = "list",
       file_path = paste0(
-        polis_data_folder, "/Core_Ready_Files/Archive/",
+        polis_data_folder, "/", output_folder_name, "/Archive/",
         latest_archive
       ),
       full_names = TRUE
