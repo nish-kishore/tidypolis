@@ -3902,16 +3902,21 @@ s1_create_core_ready_dir <- function(polis_data_folder, timestamp,
 #' Gets the most recent files in the Core Ready folder
 #'
 #' @param polis_data_folder `str` Location of the POLIS data folder.
-#' @param patterns `list` A list of patterns to select files.
+#' @param output_folder_name str: Name of the output directory where processed
+#'        files will be saved. Defaults to "Core_Ready_Files". For
+#'        region-specific processing, this should be set to
+#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
 #'
 #' @returns `list` With names of the most recent files that matches the patterns.
 #' @keywords internal
 #'
-s1_get_most_recent_files <- function(polis_data_folder, patterns) {
+s1_get_most_recent_files <- function(polis_data_folder, patterns,
+                                     output_folder_name) {
   files <- tidypolis_io(
     io = "list",
-    file_path = file.path(polis_data_folder, "Core_Ready_Files")
+    file_path = file.path(polis_data_folder, output_folder_name)
   )
+
   files <- files[grepl(paste(patterns, collapse = "|"), files)]
 
   return(files)
