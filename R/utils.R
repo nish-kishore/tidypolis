@@ -4376,6 +4376,10 @@ s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
 #' @param polis_data_folder `str` specifying the path to the main
 #' data folder containing Core Ready Files
 #' @param timestamp `str` Time stamp
+#' @param output_folder_name str: Name of the output directory where processed
+#'        files will be saved. Defaults to "Core_Ready_Files". For
+#'        region-specific processing, this should be set to
+#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
 #'
 #' @return `str` containing either the name of the most recent
 #'   archive folder or the current timestamp if no archives exist
@@ -4392,10 +4396,10 @@ s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
 #' latest_archive <- find_latest_archive("path/to/polis/data")
 #' }
 #' @keywords internal
-s2_find_latest_archive <- function(polis_data_folder, timestamp) {
+s2_find_latest_archive <- function(polis_data_folder, timestamp, output_folder_name) {
   latest_folder_in_archive <- tidypolis_io(
     io = "list",
-    file_path = paste0(polis_data_folder, "/Core_Ready_Files/Archive")
+    file_path = paste0(polis_data_folder, "/", output_folder_name, "/Archive")
   ) |>
     dplyr::tibble() |>
     dplyr::rename(name = 1) |>
