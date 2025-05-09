@@ -4717,14 +4717,20 @@ s2_export_missing_onsets <- function(data, polis_data_folder, output_folder_name
 #' @param data A data frame containing AFP surveillance data
 #' @param type String indicating the type of data (e.g., "AFP")
 #' @param polis_data_folder String path to the POLIS data folder
+#' @param output_folder_name str: Name of the output directory where processed
+#'        files will be saved. Defaults to "Core_Ready_Files". For
+#'        region-specific processing, this should be set to
+#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
 #'
 #' @return Invisibly returns the missingness summary
 #' @export
-s2_check_missingness <- function(data, type = "AFP", polis_data_folder) {
+s2_check_missingness <- function(data, type = "AFP", polis_data_folder,
+                                 output_folder_name) {
   cli::cli_process_start("Checking for missingness in key variables")
 
   # Call the existing check_missingness function
-  result <- check_missingness(data = data, type = type)
+  result <- check_missingness(data = data, type = type,
+                              output_folder_name = output_folder_name)
 
   cli::cli_process_done(
     paste0(
