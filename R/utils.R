@@ -7021,13 +7021,19 @@ s3_sia_cluster_dates_by_vax_type <- function(data,
 #' @param sia.clean.01 `tibble` all cleaned and historical SIA data without rounds
 #' @param polis_folder `str` Path to the POLIS folder.
 #' @param polis_data_folder `str` Path to the POLIS data folder.
+#' @param output_folder_name str: Name of the output directory where processed
+#'        files will be saved. Defaults to "Core_Ready_Files". For
+#'        region-specific processing, this should be set to
+#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#'
 #' @returns `NULL` silently.
 #' @keywords internal
 #'
 s3_sia_merge_cluster_dates_final_data <- function(
     sia.clean.01,
     polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
-    polis_data_folder = file.path(polis_folder, "data")
+    polis_data_folder = file.path(polis_folder, "data"),
+    output_folder_name
 ){
 
   cli::cli_process_start("Reading in cached SIA cluster data")
@@ -7081,7 +7087,7 @@ s3_sia_merge_cluster_dates_final_data <- function(
                  io = "write",
                  file_path = paste(
                    polis_data_folder,
-                   "/Core_Ready_Files/",
+                   "/", output_folder_name, "/",
                    paste("sia", min(sia.clean.02$yr.sia, na.rm = T),
                          max(sia.clean.02$yr.sia, na.rm = T),
                          sep = "_"),
