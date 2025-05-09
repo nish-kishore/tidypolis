@@ -5673,11 +5673,15 @@ s2_create_afp_variables <- function(data) {
 #' @param latest_archive String containing the name of the latest archive folder
 #' @param polis_data_folder String path to the POLIS data folder
 #' @param col_afp_raw Names of original columns for comparison
+#' @param output_folder_name str: Name of the output directory where processed
+#'        files will be saved. Defaults to "Core_Ready_Files". For
+#'        region-specific processing, this should be set to
+#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
 #'
 #' @return Invisibly returns NULL
 #' @export
 s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
-                                  col_afp_raw) {
+                                  col_afp_raw, output_folder_name) {
 
   cli::cli_process_start("Exporting AFP outputs",
                          msg_done = "Exported AFP outputs")
@@ -5709,27 +5713,29 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
 
   # Export missing guid files
   invisible(capture.output(
-      tidypolis_io(
-        obj = afp_missing_count,
-        io = "write",
-        file_path = paste0(
-          polis_data_folder, "/Core_Ready_Files/afp_missing_guid_count_",
-          min(data$dateonset, na.rm = TRUE), "_",
-          max(data$dateonset, na.rm = TRUE), ".csv"
-        )
+    tidypolis_io(
+      obj = afp_missing_count,
+      io = "write",
+      file_path = paste0(
+        polis_data_folder, "/", output_folder_name,
+        "/afp_missing_guid_count_",
+        min(data$dateonset, na.rm = TRUE), "_",
+        max(data$dateonset, na.rm = TRUE), ".csv"
       )
+    )
   ))
 
   invisible(capture.output(
-      tidypolis_io(
-        obj = afp_missing_epids,
-        io = "write",
-        file_path = paste0(
-          polis_data_folder, "/Core_Ready_Files/afp_missing_guid_epids_",
-          min(data$dateonset, na.rm = TRUE), "_",
-          max(data$dateonset, na.rm = TRUE), ".csv"
-        )
+    tidypolis_io(
+      obj = afp_missing_epids,
+      io = "write",
+      file_path = paste0(
+        polis_data_folder, "/",  output_folder_name,
+        "/afp_missing_guid_epids_",
+        min(data$dateonset, na.rm = TRUE), "_",
+        max(data$dateonset, na.rm = TRUE), ".csv"
       )
+    )
   ))
 
   # Prepare data for export
@@ -5745,20 +5751,22 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
     data = afp_data,
     polis_data_folder = polis_data_folder,
     latest_archive = latest_archive,
-    col_afp_raw = col_afp_raw
+    col_afp_raw = col_afp_raw,
+    output_folder_name = output_folder_name
   )
 
   # Export AFP linelist
   invisible(capture.output(
-      tidypolis_io(
-        obj = afp_data,
-        io = "write",
-        file_path = paste0(
-          polis_data_folder, "/Core_Ready_Files/afp_linelist_",
-          min(afp_data$dateonset, na.rm = TRUE), "_",
-          max(afp_data$dateonset, na.rm = TRUE), ".rds"
-        )
+    tidypolis_io(
+      obj = afp_data,
+      io = "write",
+      file_path = paste0(
+        polis_data_folder, "/",
+        output_folder_name, "/afp_linelist_",
+        min(afp_data$dateonset, na.rm = TRUE), "_",
+        max(afp_data$dateonset, na.rm = TRUE), ".rds"
       )
+    )
   ))
 
 
@@ -5771,15 +5779,15 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
     )
 
   invisible(capture.output(
-      tidypolis_io(
-        obj = afp_latlong,
-        io = "write",
-        file_path = paste0(
-          polis_data_folder, "/Core_Ready_Files/afp_lat_long_",
-          min(afp_latlong$dateonset, na.rm = TRUE), "_",
-          max(afp_latlong$dateonset, na.rm = TRUE), ".csv"
-        )
+    tidypolis_io(
+      obj = afp_latlong,
+      io = "write",
+      file_path = paste0(
+        polis_data_folder, "/", output_folder_name, "/afp_lat_long_",
+        min(afp_latlong$dateonset, na.rm = TRUE), "_",
+        max(afp_latlong$dateonset, na.rm = TRUE), ".csv"
       )
+    )
   ))
 
 
@@ -5790,7 +5798,7 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
   # Find all AFP files in Core_Ready_Files and core_files_to_combine
   afp_files_main <- dplyr::tibble("name" = tidypolis_io(
     io = "list",
-    file_path = paste0(polis_data_folder, "/Core_Ready_Files"),
+    file_path = paste0(polis_data_folder, "/", output_folder_name),
     full_names = TRUE
   )) |>
     dplyr::filter(grepl("^.*(afp_linelist).*(.rds)$", name)) |>
@@ -5836,7 +5844,7 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
         io = "write",
         file_path = paste0(
           polis_data_folder,
-          "/Core_Ready_Files/",
+          "/", output_folder_name, "/",
           "afp_linelist_",
           min(afp_combined$dateonset, na.rm = TRUE),
           "_",
@@ -5857,8 +5865,8 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
         io = "write",
         file_path = paste0(
           polis_data_folder,
-          "/Core_Ready_Files/",
-          "afp_linelist_",
+          "/", output_folder_name,
+          "/afp_linelist_",
           min(afp_light$dateonset, na.rm = TRUE),
           "_",
           max(afp_light$dateonset, na.rm = TRUE),
@@ -5890,7 +5898,8 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
         io = "write",
         file_path = paste0(
           polis_data_folder,
-          "/Core_Ready_Files/other_surveillance_type_linelist_",
+          "/", output_folder_name,
+          "/other_surveillance_type_linelist_",
           min(other_surv$yronset, na.rm = TRUE), "_",
           max(other_surv$yronset, na.rm = TRUE), ".rds"
         )
@@ -5904,7 +5913,7 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
     # Find all other surveillance files in Core_Ready_Files and core_files_to_combine
     other_files_main <- dplyr::tibble("name" = tidypolis_io(
       io = "list",
-      file_path = paste0(polis_data_folder, "/Core_Ready_Files"),
+      file_path = paste0(polis_data_folder, "/", output_folder_name),
       full_names = TRUE
     )) |>
       dplyr::filter(grepl("^.*(other_surveillance).*(.rds)$", name)) |>
@@ -5927,21 +5936,21 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
         ))
       ))
 
-     other_to_combine <- other_to_combine |>
-      dplyr::mutate(
-        stool1tostool2 = as.numeric(stool1tostool2),
-        datenotificationtohq = lubridate::parse_date_time(
-          datenotificationtohq,
-          c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S")
+      other_to_combine <- other_to_combine |>
+        dplyr::mutate(
+          stool1tostool2 = as.numeric(stool1tostool2),
+          datenotificationtohq = lubridate::parse_date_time(
+            datenotificationtohq,
+            c("dmY", "bY", "Ymd", "%Y-%m-%d %H:%M:%S")
+          )
         )
-      )
 
-     invisible(capture.output(
-       other_new <- purrr::map_df(
-         other_files_main,
-         ~ tidypolis_io(io = "read", file_path = .x)
-       )
-     ))
+      invisible(capture.output(
+        other_new <- purrr::map_df(
+          other_files_main,
+          ~ tidypolis_io(io = "read", file_path = .x)
+        )
+      ))
 
       other_combined <- dplyr::bind_rows(other_new, other_to_combine)
 
@@ -5952,8 +5961,8 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
           io = "write",
           file_path = paste0(
             polis_data_folder,
-            "/Core_Ready_Files/",
-            "other_surveillance_type_linelist_",
+            "/", output_folder_name,
+            "/other_surveillance_type_linelist_",
             min(other_combined$yronset, na.rm = TRUE),
             "_",
             max(other_combined$yronset, na.rm = TRUE),
@@ -5962,19 +5971,19 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
         )
       ))
 
+      cli::cli_process_done()
+    }
+
+    update_polis_log(
+      .event = "AFP and Other Surveillance Linelists Finished",
+      .event_type = "PROCESS"
+    )
+
     cli::cli_process_done()
-  }
 
-  update_polis_log(
-    .event = "AFP and Other Surveillance Linelists Finished",
-    .event_type = "PROCESS"
-  )
+    gc(full = TRUE)
 
-  cli::cli_process_done()
-
-  gc(full = TRUE)
-
-  invisible(NULL)
+    invisible(NULL)
   }
 }
 
