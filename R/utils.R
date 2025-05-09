@@ -7477,12 +7477,16 @@ s4_es_validate_sites <- function(es.02){
 #'
 #' @param es.02 `tibble` The latest ES download with variables checked
 #' against the last download, variables validated and sites checked
-#' @inheritParams s4_fully_process_es_data
+#' @param polis_folder `str` Path to the main POLIS folder.
+#' @param output_folder_name str: Name of the output directory where processed
+#'        files will be saved. Defaults to "Core_Ready_Files". For
+#'        region-specific processing, this should be set to
+#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
 #'
 #' @returns `tibble` es.05 SIA data with CDC variables enforced
 #' @keywords internal
 #'
-s4_es_create_cdc_vars <- function(es.02, polis_folder){
+s4_es_create_cdc_vars <- function(es.02, polis_folder, output_folder_name){
 
 
   cli::cli_process_start("Creating ES CDC variables")
@@ -7501,25 +7505,25 @@ s4_es_create_cdc_vars <- function(es.02, polis_folder){
 
   invisible(capture.output(
     global.ctry.01 <- switch(Sys.getenv("POLIS_EDAV_FLAG"),
-    "TRUE" = {
-      sirfunctions::load_clean_ctry_sp(fp = file.path(
-        "GID/PEB/SIR",
-        polis_folder,
-        "misc",
-        "global.ctry.rds"
-      ))
-    },
-    "FALSE" = {
-      sirfunctions::load_clean_ctry_sp(
-        fp = file.path(
-          polis_folder,
-          "misc",
-          "global.ctry.rds"
-        ),
-        edav = FALSE
-      )
-    })
-    ))
+                             "TRUE" = {
+                               sirfunctions::load_clean_ctry_sp(fp = file.path(
+                                 "GID/PEB/SIR",
+                                 polis_folder,
+                                 "misc",
+                                 "global.ctry.rds"
+                               ))
+                             },
+                             "FALSE" = {
+                               sirfunctions::load_clean_ctry_sp(
+                                 fp = file.path(
+                                   polis_folder,
+                                   "misc",
+                                   "global.ctry.rds"
+                                 ),
+                                 edav = FALSE
+                               )
+                             })
+  ))
 
   sf::sf_use_s2(F)
   shape.name.01 <- global.ctry.01 |>
@@ -7546,7 +7550,8 @@ s4_es_create_cdc_vars <- function(es.02, polis_folder){
                      ~as.numeric(.)) |>
     dplyr::distinct()
 
-  es.05 <- remove_character_dates(type = "ES", df = es.04)
+  es.05 <- remove_character_dates(type = "ES", df = es.04,
+                                  output_folder_name = output_folder_name)
 
   options(scipen = savescipen)
 
