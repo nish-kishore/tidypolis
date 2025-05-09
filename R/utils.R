@@ -3867,19 +3867,25 @@ s1_clean_subactivity_table <- function(path, activity_table, crosswalk,
 #'
 #' @param polis_data_folder `str` Location of the POLIS data folder.
 #' @param timestamp `str` Folder name as the timestamp.
+#' @param output_folder_name str: Name of the output directory where processed
+#'        files will be saved. Defaults to "Core_Ready_Files". For
+#'        region-specific processing, this should be set to
+#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
 #'
 #' @returns NULL
 #' @keywords internal
 #'
-s1_create_core_ready_dir <- function(polis_data_folder, timestamp) {
+s1_create_core_ready_dir <- function(polis_data_folder, timestamp,
+                                     output_folder_name) {
+
   cli_process_start("Checking on requisite file structure")
 
   dirs <- c(
-    file.path(polis_data_folder, "Core_Ready_Files"),
-    file.path(polis_data_folder, "Core_Ready_Files", "Archive"),
-    file.path(polis_data_folder, "Core_Ready_Files", "Archive", timestamp),
-    file.path(polis_data_folder, "Core_Ready_Files", "Change Log"),
-    file.path(polis_data_folder, "Core_Ready_Files", "Change Log", timestamp)
+    file.path(polis_data_folder, output_folder_name),
+    file.path(polis_data_folder, output_folder_name, "Archive"),
+    file.path(polis_data_folder, output_folder_name, "Archive", timestamp),
+    file.path(polis_data_folder, output_folder_name, "Change Log"),
+    file.path(polis_data_folder, output_folder_name, "Change Log", timestamp)
   )
 
   sapply(dirs, function(x) {
