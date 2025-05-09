@@ -7180,11 +7180,15 @@ s3_sia_merge_cluster_dates_final_data <- function(
 #'
 #' @param sia.05 `tibble` the output of s3_sia_check_guids()
 #' @param polis_data_folder The POLIS data folder.
+#' @param output_folder_name str: Name of the output directory where processed
+#'        files will be saved. Defaults to "Core_Ready_Files". For
+#'        region-specific processing, this should be set to
+#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
 #'
 #' @returns `NULL` silently.
 #' @keywords internal
 #'
-s3_sia_evaluate_unmatched_guids <- function(sia.05, polis_data_folder){
+s3_sia_evaluate_unmatched_guids <- function(sia.05, polis_data_folder, output_folder_name){
 
   cli::cli_process_start("Evaluating unmatched SIAs")
 
@@ -7208,7 +7212,7 @@ s3_sia_evaluate_unmatched_guids <- function(sia.05, polis_data_folder){
                  io = "write",
                  file_path = paste(
                    polis_data_folder,
-                   "/Core_Ready_Files/",
+                   "/", output_folder_name, "/",
                    paste("ctry_sia_mismatch",
                          min(cty.yr.mismatch$yr.sia, na.rm = T),
                          max(cty.yr.mismatch$yr.sia, na.rm = T),
