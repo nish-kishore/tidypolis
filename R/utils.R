@@ -2092,10 +2092,13 @@ check_missingness <- function(data,
 #' Process POLIS data into analytic datasets needed for CDC
 #' @import cli sirfunctions dplyr readr lubridate stringr tidyr stringi
 #' @param polis_folder str: location of the POLIS data folder
+#' @param who_region str: optional WHO region to filter data
+#'      Available inputs include AFRO, AMRO, EMRO, EURO, SEARO and  WPRO.
 #' @returns Outputs intermediary core ready files
 #' @keywords internal
 #'
-preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
+preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
+                           who_region = NULL) {
 
   # Static global variables used in some part of our code
   polis_data_folder <- file.path(polis_folder, "data")
@@ -2110,8 +2113,11 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
     round(lubridate::second(ts), 0)
   )
 
-  latest_folder_in_archive <- s2_find_latest_archive(
-    polis_data_folder = polis_data_folder, timestamp = timestamp)
+  suppressMessages(
+    latest_folder_in_archive <- s2_find_latest_archive(
+      polis_data_folder = polis_data_folder, timestamp = timestamp,
+      output_folder_name = "Core_Ready_Files")
+  )
 
   if (!requireNamespace("purrr", quietly = TRUE)) {
     stop('Package "purrr" must be installed to use this function.',
@@ -2161,33 +2167,56 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
   cli::cli_process_done()
 
   #Step 0 - create a CORE datafiles to combine folder and check for datasets before continuing with pre-p =========
-  core_files_folder_path <- file.path(polis_data_folder, "core_files_to_combine")
 
+
+  core_files_folder_path <- file.path(polis_data_folder, "core_files_to_combine")
   if (!tidypolis_io(io = "exists.dir", file_path = core_files_folder_path)) {
     tidypolis_io(io = "create", file_path = core_files_folder_path)
   }
 
+  # Check for required static files
   missing_static_files <- check_missing_static_files(core_files_folder_path)
-  # if on EDAV, create files to combine folder and write datasets into it
   if (length(missing_static_files) > 0) {
     cli::cli_alert_warning(paste0(
       "Please request the following file(s) from the SIR team",
       "and move them into: ", core_files_folder_path
     ))
-
     for (file in missing_static_files) {
       cli::cli_alert_info(paste0(file, "\n"))
     }
     cli::cli_abort("Halting execution of preprocessing due to missing files.")
   }
-
   rm(core_files_folder_path, missing_static_files)
+
+
+  # WHO Region set-up and validation ------------------------------------------
+  # Default output folder name
+  output_folder_name <- "Core_Ready_Files"
+
+  # If a WHO region is provided:
+  if (!is.null(who_region)) {
+    # 2a. Validate region code
+    valid <- c("AFRO","AMRO","EMRO","EURO","SEARO","WPRO")
+    if (!who_region %in% valid) {
+      cli::cli_abort("‘{who_region}’ is not a valid WHO region.")
+    }
+
+    # Set region-specific folder name
+    output_folder_name <- paste0("Core_Ready_Files_", who_region)
+
+    # Locate latest archive folder
+    latest_folder_in_archive <-
+      s2_find_latest_archive(polis_data_folder, timestamp,
+                             output_folder_name)
+
+  }
 
   #Step 1 - Basic cleaning and crosswalk ======
   cli::cli_h1("Step 1/5: Basic cleaning and crosswalk across datasets")
 
   s1_prep_polis_tables(polis_folder, polis_data_folder,
-                       long.global.dist.01, ts, timestamp)
+                       long.global.dist.01, ts, timestamp,
+                       who_region)
 
   # Step 2 - Creating AFP and EPI datasets =====================================
 
@@ -2203,7 +2232,8 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
     polis_folder = polis_folder,
     long.global.dist.01 = long.global.dist.01,
     timestamp = timestamp,
-    latest_folder_in_archive_path = latest_folder_in_archive)
+    latest_folder_in_archive_path = latest_folder_in_archive,
+    output_folder_name = output_folder_name)
 
   invisible(gc())
 
@@ -2215,7 +2245,8 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
     long.global.dist.01,
     polis_data_folder,
     latest_folder_in_archive,
-    timestamp
+    timestamp,
+    output_folder_name = output_folder_name
   )
 
   invisible(gc())
@@ -2226,13 +2257,19 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
 
   cli::cli_h1("Step 4/5 - Creating ES analytic datasets")
 
-  s4_fully_process_es_data(polis_data_folder = polis_data_folder,
-                           latest_folder_in_archive = latest_folder_in_archive)
+  s4_fully_process_es_data(polis_folder = polis_folder,
+                           polis_data_folder = polis_data_folder,
+                           latest_folder_in_archive = latest_folder_in_archive,
+                           output_folder_name = output_folder_name)
 
   #Step 5 - Creating Virus datasets ====
   cli::cli_h1("Step 5/5 - Creating Virus datasets")
 
-  s5_fully_process_pos_data(polis_folder, latest_folder_in_archive, long.global.dist.01)
+  s5_fully_process_pos_data(polis_folder = polis_folder,
+                            polis_data_folder = polis_data_folder,
+                            latest_folder_in_archive,
+                            long.global.dist.01,
+                            output_folder_name = output_folder_name)
 
   update_polis_log(.event = "Processing of CORE datafiles complete",
                    .event_type = "END")
