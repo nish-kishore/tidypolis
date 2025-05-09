@@ -6247,24 +6247,29 @@ s3_fully_process_sia_data <- function(long.global.dist.01, polis_data_folder,
 #'
 #' @param polis_data_folder `str` Path to the POLIS data folder.
 #' @param latest_folder_in_archive `str` Time stamp of latest folder in archive
+#' @param output_folder_name str: Name of the output directory where processed
+#'        files will be saved. Defaults to "Core_Ready_Files". For
+#'        region-specific processing, this should be set to
+#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
 #'
 #' @returns `tiblle` sia.01.new - the latest SIA data quality checked for variable
 #' stability against the last download if it exists
 #' @keywords internal
 #'
 s3_sia_load_data <- function(polis_data_folder,
-                             latest_folder_in_archive){
+                             latest_folder_in_archive,
+                             output_folder_name){
 
   # Step 1: Read in "old" data file (System to find "Old" data file)
   x <- tidypolis_io(io = "list",
                     file_path = file.path(polis_data_folder,
-                                          "Core_Ready_Files/Archive",
+                                          output_folder_name, "Archive",
                                           latest_folder_in_archive),
                     full_names = T)
 
   y <- tidypolis_io(io = "list",
                     file_path = file.path(polis_data_folder,
-                                          "Core_Ready_Files"),
+                                          output_folder_name),
                     full_names = T)
 
 
@@ -6362,10 +6367,14 @@ s3_sia_load_data <- function(polis_data_folder,
     cli::cli_process_start("Comparing downloaded variables")
     # Exclude the variables from
     sia.01.old.compare <- sia.01.old |>
-      dplyr::select(-var.list.01)
+      dplyr::select(
+        dplyr::any_of(var.list.01)
+      )
 
     sia.01.new.compare <- sia.01.new |>
-      dplyr::select(-var.list.01)
+      dplyr::select(
+        dplyr::any_of(var.list.01)
+      )
 
     new.var.sia.01 <- f.download.compare.01(sia.01.old.compare, sia.01.new.compare)
 
