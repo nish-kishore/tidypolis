@@ -4111,15 +4111,20 @@ s1_create_change_log <- function(polis_data_folder,
 #'
 #' @param polis_data_folder `str` Path to the POLIS data folder
 #' @param timestamp `str` Time stamp folder name
+#' @param output_folder_name str: Name of the output directory where processed
+#'        files will be saved. Defaults to "Core_Ready_Files". For
+#'        region-specific processing, this should be set to
+#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
 #'
 #' @returns NULL
 #' @keywords internal
 #'
-s1_archive_old_files <- function(polis_data_folder, timestamp) {
+s1_archive_old_files <- function(polis_data_folder, timestamp, output_folder_name) {
 
   cli_process_start("Archiving old files")
   most_recent_files_01 <- s1_get_most_recent_files(polis_data_folder,
-                                                   c(".rds", ".csv", ".xlsx"))
+                                                   c(".rds", ".csv", ".xlsx"),
+                                                   output_folder_name)
 
   if (length(most_recent_files_01) > 0) {
     for (file in most_recent_files_01) {
@@ -4128,11 +4133,11 @@ s1_archive_old_files <- function(polis_data_folder, timestamp) {
       invisible(capture.output(
         tidypolis_io(
           io = "read",
-          file_path = file.path(polis_data_folder, "Core_Ready_Files", file)
+          file_path = file.path(polis_data_folder, output_folder_name, file)
         ) %>%
           tidypolis_io(
             io = "write",
-            file_path = file.path(polis_data_folder, "Core_Ready_Files", "Archive",
+            file_path = file.path(polis_data_folder, output_folder_name, "Archive",
                                   timestamp, file)
           )
       ))
@@ -4140,7 +4145,7 @@ s1_archive_old_files <- function(polis_data_folder, timestamp) {
       invisible(capture.output(
         tidypolis_io(
           io = "delete",
-          file_path = file.path(polis_data_folder, "Core_Ready_Files", file)
+          file_path = file.path(polis_data_folder, output_folder_name, file)
         )
       ))
 
