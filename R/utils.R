@@ -1790,11 +1790,17 @@ archive_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
 #' @param type str: the table on which to remove original date vars, "AFP", "ES", "POS"
 #' @param df tibble: the dataframe from which to remove character formatted dates
 #' @param polis_data_folder str:  location of user's polis data folder
+#' @param output_folder_name str: Name of the output directory where processed
+#'        files will be saved. Defaults to "Core_Ready_Files". For
+#'        region-specific processing, this should be set to
+#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#'
 #' @return outputs a saved reference table of original date vars and a smaller
 #' core ready file without character dates
 remove_character_dates <- function(type,
                                    df,
-                                   polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")){
+                                   polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
+                                   output_folder_name){
 
   if(type %in% c("AFP", "POS")){
     df.01 <- df |>
@@ -1818,7 +1824,7 @@ remove_character_dates <- function(type,
 
   }
 
-  tidypolis_io(io = "write", obj = df.01, file_path = paste0(polis_data_folder, "/Core_Ready_Files/", type, "_orig_char_dates.rds"))
+  tidypolis_io(io = "write", obj = df.01, file_path = paste0(polis_data_folder, "/", output_folder_name, "/", type, "_orig_char_dates.rds"))
 
   return(df.02)
 }
