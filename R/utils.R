@@ -7951,7 +7951,8 @@ s5_fully_process_pos_data <- function(polis_folder,
 #' @returns `tibble` New virus dataset.
 #' @keywords internal
 #'
-s5_pos_load_data <- function(polis_data_folder, latest_folder_in_archive) {
+s5_pos_load_data <- function(polis_data_folder, latest_folder_in_archive,
+                             output_folder_name) {
   update_polis_log(.event = "Creating Positives analytic datasets",
                    .event_type = "PROCESS")
 
@@ -7960,13 +7961,13 @@ s5_pos_load_data <- function(polis_data_folder, latest_folder_in_archive) {
   # Step 1: Read in "old" data file (System to find "Old" data file)
   x <- tidypolis_io(io = "list",
                     file_path = file.path(polis_data_folder,
-                                          "Core_Ready_Files/Archive",
+                                          output_folder_name, "Archive",
                                           latest_folder_in_archive),
                     full_names = T)
 
   y <- tidypolis_io(io = "list",
                     file_path = file.path(polis_data_folder,
-                                          "Core_Ready_Files"),
+                                          output_folder_name),
                     full_names = T)
 
   old.file <- x[grepl("Viruses_",x)]
