@@ -7124,24 +7124,31 @@ s4_fully_process_es_data <- function(polis_folder,
 
 #' Load and check ES data against previous downloads
 #'
-#' @inheritParams s4_fully_process_es_data
+#' @param polis_data_folder `str` Path to the POLIS data folder.
+#' @param latest_folder_in_archive `str` Time stamp of latest folder in archive
+#' @param output_folder_name str: Name of the output directory where processed
+#'        files will be saved. Defaults to "Core_Ready_Files". For
+#'        region-specific processing, this should be set to
+#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
 #'
-#' @returns `tibble` es.01.new - the latest SIA data quality checked for variable
+#' @returns `tiblle` es.01.new - the latest SIA data quality checked for variable
 #' stability against the last download if it exists
 #' @keywords internal
 #'
-s4_es_load_data <- function(polis_data_folder, latest_folder_in_archive){
+s4_es_load_data <- function(polis_data_folder, latest_folder_in_archive,
+                            output_folder_name){
 
   # Step 1: Read in "old" data file (System to find "Old" data file)
   x <- tidypolis_io(io = "list",
                     file_path = file.path(polis_data_folder,
-                                          "Core_Ready_Files/Archive",
+                                          output_folder_name,
+                                          "Archive",
                                           latest_folder_in_archive),
                     full_names = T)
 
   y <- tidypolis_io(io = "list",
                     file_path = file.path(polis_data_folder,
-                                          "Core_Ready_Files"),
+                                          output_folder_name),
                     full_names = T)
 
   old.file <- x[grepl("EnvSamples",x)]
