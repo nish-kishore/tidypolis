@@ -5443,11 +5443,6 @@ s2_process_coordinates <- function(data, polis_data_folder, polis_folder,
     dplyr::mutate(dup_epid = dplyr::n()) |>
     dplyr::filter(dup_epid > 1) |>
     dplyr::ungroup() |>
-    dplyr::select(
-      epid, date.onset, yronset, diagnosis.final, classification,
-      classificationvdpv, final.cell.culture.result, poliovirustypes,
-      person.sex, place.admin.0, place.admin.1, place.admin.2
-    ) |>
     dplyr::distinct() |>
     dplyr::arrange(epid)
 
@@ -5469,8 +5464,29 @@ s2_process_coordinates <- function(data, polis_data_folder, polis_folder,
       )
     ))
 
-    # Remove duplicates
-    data_deduped <- data_renamed[!duplicated(data_renamed$epid), ]
+    #fix EPIDS that aren't real duplicates
+    dup_epid_01 <- dup_epid |>
+      dplyr::group_by(epid, date.onset, followup.date) |>
+      dplyr::mutate(n = n()) |>
+      dplyr::filter(n > 1) |>
+      dplyr::slice(1) |>
+      dplyr::ungroup() |>
+      dplyr::select(-n)
+
+    dup_epid_fixed <- dup_epid |>
+      dplyr::filter(!epid %in% dup_epid_01$epid) |>
+      rbind(dup_epid_01) |>
+      dplyr::mutate(epid_fixed = paste0(stringr::str_sub(place.admin.0, 1, 3), "-",
+                                        stringr::str_sub(place.admin.1, 1, 3), "-",
+                                        stringr::str_sub(place.admin.2, 1, 3), "-",
+                                        epid))
+
+    data_deduped <- dup_epid_fixed |>
+      dplyr::select(-c("epid", "dup_epid")) |>
+      dplyr::rename(epid = epid_fixed) |>
+      rbind(data_renamed |> filter(!epid %in% dup_epid_fixed$epid))
+
+
     cli::cli_alert_warning(paste0(
       "Found and removed ", nrow(dup_epid), " duplicate EPIDs"
     ))
