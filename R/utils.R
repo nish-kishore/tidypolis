@@ -3931,6 +3931,10 @@ s1_get_most_recent_files <- function(polis_data_folder, patterns,
 #' @param api_es_data `tibble` Cleaned ES data
 #' @param api_virus_data `tibble` Cleaned virus data
 #' @param api_subactivity_data `tibble` Cleaned subactivity data
+#' @param output_folder_name str: Name of the output directory where processed
+#'        files will be saved. Defaults to "Core_Ready_Files". For
+#'        region-specific processing, this should be set to
+#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
 #'
 #' @returns `NULL`, if successful
 #' @keywords internal
@@ -3940,7 +3944,8 @@ s1_create_change_log <- function(polis_data_folder,
                                  api_case_data,
                                  api_es_data,
                                  api_virus_data,
-                                 api_subactivity_data) {
+                                 api_subactivity_data,
+                                 output_folder_name) {
 
   cli::cli_process_start(paste0("Processing data for: ", file))
   # compare current dataset to most recent and save summary to change_log
@@ -3948,7 +3953,7 @@ s1_create_change_log <- function(polis_data_folder,
     io = "read",
     file_path = file.path(
       polis_data_folder,
-      "Core_Ready_Files",
+      output_folder_name,
       file
     )
   ) |>
@@ -4076,7 +4081,7 @@ s1_create_change_log <- function(polis_data_folder,
     obj = change_summary,
     file_path = file.path(
       polis_data_folder,
-      "Core_Ready_Files",
+      output_folder_name,
       "Change Log",
       timestamp,
       paste0(substr(file, 1, nchar(file) - 4), ".rds")
@@ -4085,17 +4090,17 @@ s1_create_change_log <- function(polis_data_folder,
 
   invisible(capture.output(
     # Move most recent to archive
-    tidypolis_io(io = "read", file_path = file.path(polis_data_folder, "Core_Ready_Files", file)) |>
+    tidypolis_io(io = "read", file_path = file.path(polis_data_folder, output_folder_name, file)) |>
       tidypolis_io(
         io = "write",
-        file_path = file.path(polis_data_folder, "Core_Ready_Files", "Archive", timestamp, file)
+        file_path = file.path(polis_data_folder, output_folder_name, "Archive", timestamp, file)
       )
   ))
 
   invisible(capture.output(
 
     # Delete the original file
-    tidypolis_io(io = "delete", file_path = file.path(polis_data_folder, "Core_Ready_Files", file))
+    tidypolis_io(io = "delete", file_path = file.path(polis_data_folder, output_folder_name, file))
   ))
   cli_process_done()
 
