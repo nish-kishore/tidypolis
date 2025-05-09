@@ -7236,11 +7236,16 @@ s4_es_load_data <- function(polis_data_folder, latest_folder_in_archive,
 #' against the last download
 #' @param startyr `int` The subset of years for which to process ES data
 #' @param endyr `int` The subset of years for which to process ES data
+#' @param output_folder_name str: Name of the output directory where processed
+#'        files will be saved. Defaults to "Core_Ready_Files". For
+#'        region-specific processing, this should be set to
+#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
 #'
 #' @returns `tibble` es.02 SIA data with outputs validated
 #' @keywords internal
 #'
-s4_es_data_processing <- function(es.01.new){
+s4_es_data_processing <- function(es.01.new, startyr, endyr,
+                                  output_folder_name){
 
   # Data manipulation
 
@@ -7328,8 +7333,8 @@ s4_es_data_processing <- function(es.01.new){
 
     invisible(capture.output(
       tidypolis_io(obj = es.00, io = "write",
-                   file_path =  paste0(polis_data_folder,
-                                       "/Core_Ready_Files/duplicate_ES_sampleID_Polis.csv"))
+                   file_path =  paste0(polis_data_folder, "/", output_folder_name,
+                                       "/duplicate_ES_sampleID_Polis.csv"))
     ))
 
   } else {
@@ -7359,7 +7364,7 @@ s4_es_data_processing <- function(es.01.new){
     cli::cli_alert_warning(
       paste0("Writing out ES duplicates file: ",
              polis_data_folder,
-             "/Core_Ready_Files/duplicate_ES_Polis.csv -",
+             "/", output_folder_name, "/duplicate_ES_Polis.csv -",
              " please check, continuing processing"))
     es.dup.01 <- es.dup.01[order(es.dup.01$env.sample.id,es.dup.01$virus.type, es.dup.01$collect.yr),] |>
       dplyr::select(-es.dups)
@@ -7367,8 +7372,8 @@ s4_es_data_processing <- function(es.01.new){
     # Export duplicate viruses in the CSV file:
     invisible(capture.output(
       tidypolis_io(obj = es.dup.01, io = "write",
-                   file_path = paste0(polis_data_folder,
-                                      "/Core_Ready_Files/duplicate_ES_Polis.csv"))
+                   file_path = paste0(polis_data_folder, "/", output_folder_name,
+                                      "/duplicate_ES_Polis.csv"))
     ))
 
   } else {
@@ -7378,7 +7383,8 @@ s4_es_data_processing <- function(es.01.new){
   remove("es.dup.01")
 
   cli::cli_process_start("Checking for missingness in key ES vars")
-  check_missingness(data = es.02, type = "ES")
+  check_missingness(data = es.02, type = "ES",
+                    output_folder_name = output_folder_name)
   cli::cli_process_done("Review missing vars in es_missingness.rds")
 
   cli::cli_process_start("Cleaning 'virus.type' and creating CDC variables")
