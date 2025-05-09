@@ -8016,7 +8016,7 @@ s5_pos_create_cdc_vars <- function(virus.raw.new, polis_folder, polis_data_folde
 #' @returns `NULL` quietly upon success.
 #' @keywords internal
 #'
-s5_pos_check_duplicates <- function(virus.01, polis_data_folder) {
+s5_pos_check_duplicates <- function(virus.01, polis_data_folder, output_folder_name) {
   virus.dup.01 <- virus.01 |>
     dplyr::select(epid, epid.in.polis, pons.epid, virus.id, polis.case.id, env.sample.id,
                   place.admin.0, surveillance.type, datasource, virustype,
@@ -8033,7 +8033,7 @@ s5_pos_check_duplicates <- function(virus.01, polis_data_folder) {
       dplyr::select(-virus_dup)
 
     tidypolis_io(obj = virus.dup.01, io = "write",
-                 file_path = paste0(polis_data_folder, "/Core_Ready_Files/duplicate_viruses_Polis_virusTableData.csv"))
+                 file_path = paste0(polis_data_folder, "/", output_folder_name, "/duplicate_viruses_Polis_virusTableData.csv"))
 
     update_polis_log(.event = paste0("Duplicate viruses available in duplicate_viruses_Polis_virusTableData.csv"),
                      .event_type = "ALERT")
