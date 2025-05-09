@@ -4678,22 +4678,27 @@ s2_standardize_dates <- function(data) {
 #'
 #' @param data `tibble` A tibble containing AFP surveillance data
 #' @param polis_data_folder `str` String path to the POLIS data folder
+#' @param output_folder_name str: Name of the output directory where processed
+#'        files will be saved. Defaults to "Core_Ready_Files". For
+#'        region-specific processing, this should be set to
+#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
 #'
 #' @return Invisibly returns the filtered data frame of records with missing
 #'    onset dates
 #' @export
-s2_export_missing_onsets <- function(data, polis_data_folder) {
+s2_export_missing_onsets <- function(data, polis_data_folder, output_folder_name) {
   missing_onsets <- data |>
     dplyr::select(epid, dateonset) |>
     dplyr::filter(is.na(dateonset))
 
-invisible(capture.output(
+  invisible(capture.output(
     tidypolis_io(
       io = "write",
       obj = missing_onsets,
-      file_path = paste0(polis_data_folder, "/Core_Ready_Files/afp_no_onset.csv")
+      file_path = paste0(polis_data_folder, "/",
+                         output_folder_name, "/afp_no_onset.csv")
     )
-))
+  ))
 
   cli::cli_alert_info(paste0(
     "Exported ", nrow(missing_onsets), " records with missing onset dates"
