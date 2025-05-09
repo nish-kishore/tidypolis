@@ -5321,10 +5321,15 @@ s2_fix_admin_guids <- function(data, shape_data) {
 #' @param polis_data_folder `str` Path to the POLIS data folder containing
 #'   Core_Ready_Files.
 #' @param polis_folder `str` Path to the main POLIS folder.
+#' @param output_folder_name str: Name of the output directory where processed
+#'        files will be saved. Defaults to "Core_Ready_Files". For
+#'        region-specific processing, this should be set to
+#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
 #'
 #' @return A tibble with processed coordinate data
 #' @export
-s2_process_coordinates <- function(data, polis_data_folder, polis_folder) {
+s2_process_coordinates <- function(data, polis_data_folder, polis_folder,
+                                   output_folder_name) {
 
   cli::cli_process_start("Processing GPS coordinates for AFP cases",
                          msg_done = "Processed GPS coordinates for AFP cases"
@@ -5376,19 +5381,19 @@ s2_process_coordinates <- function(data, polis_data_folder, polis_folder) {
   if (nrow(dup_epid) > 0) {
     # Export duplicates
     invisible(capture.output(
-          tidypolis_io(
-            obj = dup_epid,
-            io = "write",
-            file_path = paste0(
-              polis_data_folder,
-              "/Core_Ready_Files/",
-              "duplicate_AFP_epids_Polis_",
-              min(dup_epid$yronset, na.rm = TRUE),
-              "_",
-              max(dup_epid$yronset, na.rm = TRUE),
-              ".csv"
-            )
-          )
+      tidypolis_io(
+        obj = dup_epid,
+        io = "write",
+        file_path = paste0(
+          polis_data_folder,
+          "/", output_folder_name,
+          "/duplicate_AFP_epids_Polis_",
+          min(dup_epid$yronset, na.rm = TRUE),
+          "_",
+          max(dup_epid$yronset, na.rm = TRUE),
+          ".csv"
+        )
+      )
     ))
 
     # Remove duplicates
@@ -5415,14 +5420,15 @@ s2_process_coordinates <- function(data, polis_data_folder, polis_folder) {
   if (nrow(afp_noshape) > 0) {
 
     invisible(capture.output(
-          tidypolis_io(
-            obj = afp_noshape,
-            io = "write",
-            file_path = paste0(
-              polis_data_folder,
-              "/Core_Ready_Files/AFP_epids_bad_guid.csv"
-            )
-          )
+      tidypolis_io(
+        obj = afp_noshape,
+        io = "write",
+        file_path = paste0(
+          polis_data_folder, "/",
+          output_folder_name,
+          "/AFP_epids_bad_guid.csv"
+        )
+      )
     ))
 
     cli::cli_alert_warning(paste0(
@@ -5444,15 +5450,15 @@ s2_process_coordinates <- function(data, polis_data_folder, polis_folder) {
   if (nrow(empty_coord_check) > 0) {
 
     invisible(capture.output(
-          tidypolis_io(
-            io = "write",
-            file_path = paste0(polis_data_folder,
-                              "/Core_Ready_Files/afp_empty_coords.csv"),
-            obj = empty_coord_check |>
-              dplyr::select(polis.case.id, epid, date.onset,
-                            place.admin.0, polis.latitude,
-                            polis.longitude)
-          )
+      tidypolis_io(
+        io = "write",
+        file_path = paste0(polis_data_folder, "/", output_folder_name,
+                           "/afp_empty_coords.csv"),
+        obj = empty_coord_check |>
+          dplyr::select(polis.case.id, epid, date.onset,
+                        place.admin.0, polis.latitude,
+                        polis.longitude)
+      )
     ))
 
     cli::cli_alert_warning(
