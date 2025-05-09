@@ -6613,7 +6613,7 @@ s3_sia_check_guids <- function(sia.02, long.global.dist.01){
                             "yr.sia" = "active.year.01")) |>
     #flag if guids still missing and merge in reference GUID
     dplyr::mutate(missing.guid = ifelse(is.na(GUID), 1, 0),
-                  adm2guid = ifelse(missing.guid==0, GUID, adm2guid)) |>
+                  adm2guid = dplyr::if_else(missing.guid==0, GUID, adm2guid)) |>
     dplyr::select(-GUID, -no_match)
 
   # Combine SIAs matched with prov, dist with shapes
