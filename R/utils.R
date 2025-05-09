@@ -7562,11 +7562,16 @@ s4_es_create_cdc_vars <- function(es.02, polis_folder){
 #' @param es.05 `tibble` The latest ES download with variables checked
 #' against the last download, variables validated and sites checked and
 #' CDC variables enforced
+#' @param output_folder_name str: Name of the output directory where processed
+#'        files will be saved. Defaults to "Core_Ready_Files". For
+#'        region-specific processing, this should be set to
+#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
 #'
 #' @returns `NULL` invisible return with write out to logs if necessary
 #' @keywords internal
 #'
 s4_es_check_metadata <- function(polis_data_folder, es.05,
+                                 output_folder_name,
                                  latest_folder_in_archive){
 
   cli::cli_process_start("Checking metadata with previous data")
@@ -7578,7 +7583,8 @@ s4_es_check_metadata <- function(polis_data_folder, es.05,
     io = "list",
     file_path = file.path(
       polis_data_folder,
-      "Core_Ready_Files/Archive",
+      output_folder_name,
+      "Archive",
       latest_folder_in_archive),
     full_names = T)
 
