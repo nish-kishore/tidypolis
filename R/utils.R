@@ -2289,7 +2289,8 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
   s4_fully_process_es_data(polis_folder = polis_folder,
                            polis_data_folder = polis_data_folder,
                            latest_folder_in_archive = latest_folder_in_archive,
-                           output_folder_name = output_folder_name)
+                           output_folder_name = output_folder_name,
+                           output_format = output_format)
 
   #Step 5 - Creating Virus datasets ====
   cli::cli_h1("Step 5/5 - Creating Virus datasets")
@@ -7314,12 +7315,16 @@ s3_sia_evaluate_unmatched_guids <- function(sia.05, polis_data_folder, output_fo
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
 #'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#' @param output_format str: output_format to save files as.
+#'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+#'    'rds'.
 #'
 #' @export
 s4_fully_process_es_data <- function(
     polis_folder,
     polis_data_folder, latest_folder_in_archive,
-    output_folder_name){
+    output_folder_name,
+    output_format){
 
   if (!tidypolis_io(io = "exists.dir",
                     file_path = file.path(polis_data_folder, output_folder_name))) {
@@ -7343,7 +7348,8 @@ s4_fully_process_es_data <- function(
 
   s4_es_write_data(
     polis_data_folder = polis_data_folder,
-    es.05 = es.05, output_folder_name = output_folder_name)
+    es.05 = es.05, output_folder_name = output_folder_name,
+                   output_format = output_format)
 
   rm("es.05")
 
@@ -7919,11 +7925,14 @@ s4_es_check_metadata <- function(polis_data_folder, es.05,
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
 #'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#' @param output_format str: output_format to save files as.
+#'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+#'    'rds'.
 #'
 #' @returns `NULL` invisible return with write out to logs if necessary
 #' @keywords internal
 #'
-s4_es_write_data <- function(polis_data_folder, es.05, output_folder_name){
+s4_es_write_data <- function(polis_data_folder, es.05, output_folder_name, output_format){
 
   cli::cli_process_start("Writing out ES datasets")
 
@@ -7938,7 +7947,7 @@ s4_es_write_data <- function(polis_data_folder, es.05, output_folder_name){
         "/",
         paste("es", min(es.05$collect.date, na.rm = T),
               max(es.05$collect.date, na.rm = T), sep = "_"),
-        ".rds",
+        output_format,
         sep = ""
       ))
   ))
