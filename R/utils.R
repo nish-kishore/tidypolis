@@ -2092,10 +2092,24 @@ check_missingness <- function(data,
 #' Process POLIS data into analytic datasets needed for CDC
 #' @import cli sirfunctions dplyr readr lubridate stringr tidyr stringi
 #' @param polis_folder str: location of the POLIS data folder
+#' @param output_format str: output_format to save files as.
+#'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+#'    'rds'.
 #' @returns Outputs intermediary core ready files
 #' @keywords internal
 #'
-preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
+preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
+                           output_format = "rds") {
+
+  # validate output_format
+  if (!output_format %in% c("rds", "rda", "csv", "parquet")) {
+    stop("Currently, only 'rds', 'rda', 'csv', and 'parquet' are supported.")
+  }
+
+  # ensure leading dot
+  if (!startsWith(output_format, ".")) {
+    output_format <- paste0(".", output_format)
+  }
 
   # Static global variables used in some part of our code
   polis_data_folder <- file.path(polis_folder, "data")
@@ -2187,7 +2201,7 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER")) {
   cli::cli_h1("Step 1/5: Basic cleaning and crosswalk across datasets")
 
   s1_prep_polis_tables(polis_folder, polis_data_folder,
-                       long.global.dist.01, ts, timestamp)
+                       long.global.dist.01, ts, timestamp, output_format)
 
   # Step 2 - Creating AFP and EPI datasets =====================================
 
@@ -3206,12 +3220,15 @@ check_missing_static_files <- function(core_files_folder_path,
 #' @param long.global.dist.01 `sf` Long global district shapefile.
 #' @param ts `str` Time stamp from [Sys.time()].
 #' @param timestamp `str` Formatted time stamp.
+#' @param output_format str: output_format to save files as.
+#'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+#'    'rds'.
 #'
 #' @returns `NULL` quietly upon success.
 #' @export
 #'
 s1_prep_polis_tables <- function(polis_folder, polis_data_folder,
-                                 long.global.dist.01, ts, timestamp) {
+                                 long.global.dist.01, ts, timestamp, output_format) {
   # update log for start of creation of CORE ready datasets
   update_polis_log(.event = "Beginning Preprocessing - Creation of CORE Ready Datasets",
                    .event_type = "START")
@@ -3285,7 +3302,7 @@ s1_prep_polis_tables <- function(polis_folder, polis_data_folder,
   invisible(capture.output(gc()))
 
   # Move files from the current POLIS data folder into the archive
-  s1_archive_old_files(polis_data_folder, timestamp)
+  s1_archive_old_files(polis_data_folder, timestamp, output_format)
 
   invisible(capture.output(gc()))
 
@@ -3297,7 +3314,8 @@ s1_prep_polis_tables <- function(polis_folder, polis_data_folder,
     api_case_data = api_case_data,
     api_subactivity_data = api_subactivity_data,
     api_es_data = api_es_data,
-    api_virus_data = api_virus_data)
+    api_virus_data = api_virus_data,
+    output_format = output_format)
 
   rm(api_case_data, api_es_data, api_virus_data, api_activity_data,
      api_subactivity_data)
@@ -4047,15 +4065,18 @@ s1_create_change_log <- function(polis_data_folder,
 #'
 #' @param polis_data_folder `str` Path to the POLIS data folder
 #' @param timestamp `str` Time stamp folder name
-#'
+#' @param output_format str: output_format to save files as.
+#'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+#'    'rds'.
 #' @returns NULL
 #' @keywords internal
 #'
-s1_archive_old_files <- function(polis_data_folder, timestamp) {
+s1_archive_old_files <- function(polis_data_folder, timestamp, output_format) {
 
   cli_process_start("Archiving old files")
   most_recent_files_01 <- s1_get_most_recent_files(polis_data_folder,
-                                                   c(".rds", ".csv", ".xlsx"))
+                                                   c(".rds", ".csv",
+                                                     ".xlsx", ".parquet"))
 
   if (length(most_recent_files_01) > 0) {
     for (file in most_recent_files_01) {
@@ -4096,6 +4117,9 @@ s1_archive_old_files <- function(polis_data_folder, timestamp) {
 #' @param api_subactivity_data `tibble` Cleaned Subactivity table.
 #' @param api_es_data `tibble` Cleaned ES table.
 #' @param api_virus_data `tibble` Cleaned Virus table.
+#' @param output_format str: output_format to save files as.
+#'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+#'    'rds'.
 #'
 #' @returns `NULL`
 #' @keywords internal
@@ -4104,7 +4128,8 @@ s1_export_final_core_ready_files <- function(polis_data_folder, ts, timestamp,
                                              api_case_data,
                                              api_subactivity_data,
                                              api_es_data,
-                                             api_virus_data) {
+                                             api_virus_data,
+                                             output_format) {
 
   cli::cli_process_start("Writing all final Core Ready files")
 
@@ -4120,7 +4145,7 @@ s1_export_final_core_ready_files <- function(polis_data_folder, ts, timestamp,
           timestamp,
           "_from_01_Dec_2019_to_",
           format(ts, "%d_%b_%Y"),
-          ".rds"
+          output_format
         )
       )
     )
@@ -4138,7 +4163,7 @@ s1_export_final_core_ready_files <- function(polis_data_folder, ts, timestamp,
           timestamp,
           "_from_01_Jan_2020_to_",
           format(Sys.Date() + 365 / 2, "%d_%b_%Y"),
-          ".rds"
+          output_format
         )
       )
     )
@@ -4156,7 +4181,7 @@ s1_export_final_core_ready_files <- function(polis_data_folder, ts, timestamp,
           timestamp,
           "_from_01_Jan_2000_to_",
           format(ts, "%d_%b_%Y"),
-          ".rds"
+          output_format
         )
       )
     )
@@ -4174,7 +4199,7 @@ s1_export_final_core_ready_files <- function(polis_data_folder, ts, timestamp,
           timestamp,
           "_from_01_Dec_1999_to_",
           format(ts, "%d_%b_%Y"),
-          ".rds"
+          output_format
         )
       )
     )
