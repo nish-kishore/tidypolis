@@ -2260,7 +2260,8 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
     long.global.dist.01 = long.global.dist.01,
     timestamp = timestamp,
     latest_folder_in_archive_path = latest_folder_in_archive,
-    output_folder_name = output_folder_name)
+    output_folder_name = output_folder_name,
+    output_format = output_format)
 
   invisible(gc())
 
@@ -4366,12 +4367,15 @@ s1_export_final_core_ready_files <- function(polis_data_folder, ts, timestamp,
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
 #'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#' @param output_format str: output_format to save files as.
+#'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+#'    'rds'.
 #'
 #' @export
 s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
                                       long.global.dist.01, timestamp,
                                       latest_folder_in_archive_path,
-                                      output_folder_name) {
+                                      output_folder_name, output_format) {
 
   if (!tidypolis_io(io = "exists.dir",
                     file_path = file.path(polis_data_folder, output_folder_name))) {
@@ -4457,7 +4461,8 @@ s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
     latest_archive = latest_folder_in_archive_path,
     polis_data_folder = polis_data_folder,
     col_afp_raw = colnames(afp_raw_new),
-    output_folder_name = output_folder_name
+    output_folder_name = output_folder_name,
+    output_format = output_format
   )
 
 }
@@ -5800,11 +5805,14 @@ s2_create_afp_variables <- function(data) {
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
 #'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#' @param output_format str: output_format to save files as.
+#'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+#'    'rds'.
 #'
 #' @return Invisibly returns NULL
 #' @export
 s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
-                                  col_afp_raw, output_folder_name) {
+                                  col_afp_raw, output_folder_name, output_format) {
 
   cli::cli_process_start("Exporting AFP outputs",
                          msg_done = "Exported AFP outputs")
@@ -5887,7 +5895,7 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
         polis_data_folder, "/",
         output_folder_name, "/afp_linelist_",
         min(afp_data$dateonset, na.rm = TRUE), "_",
-        max(afp_data$dateonset, na.rm = TRUE), ".rds"
+        max(afp_data$dateonset, na.rm = TRUE), output_format
       )
     )
   ))
@@ -5908,7 +5916,7 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
       file_path = paste0(
         polis_data_folder, "/", output_folder_name, "/afp_lat_long_",
         min(afp_latlong$dateonset, na.rm = TRUE), "_",
-        max(afp_latlong$dateonset, na.rm = TRUE), ".csv"
+        max(afp_latlong$dateonset, na.rm = TRUE), output_format
       )
     )
   ))
@@ -5924,7 +5932,7 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
     file_path = paste0(polis_data_folder, "/", output_folder_name),
     full_names = TRUE
   )) |>
-    dplyr::filter(grepl("^.*(afp_linelist).*(.rds)$", name)) |>
+    dplyr::filter(grepl(paste0("^.*(afp_linelist).*(\\", output_format, ")$"), name)) |>
     dplyr::pull(name)
 
   afp_files_combine <- dplyr::tibble("name" = tidypolis_io(
@@ -5932,7 +5940,7 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
     file_path = paste0(polis_data_folder, "/core_files_to_combine"),
     full_names = TRUE
   )) |>
-    dplyr::filter(grepl("^.*(afp_linelist).*(.rds)$", name)) |>
+    dplyr::filter(grepl(paste0("^.*(afp_linelist).*(\\", output_format, ")$"), name)) |>
     dplyr::pull(name)
 
   # Combine AFP files
@@ -5972,7 +5980,7 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
           min(afp_combined$dateonset, na.rm = TRUE),
           "_",
           max(afp_combined$dateonset, na.rm = TRUE),
-          ".rds"
+          output_format
         )
       )
     ))
@@ -5993,7 +6001,7 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
           min(afp_light$dateonset, na.rm = TRUE),
           "_",
           max(afp_light$dateonset, na.rm = TRUE),
-          ".rds"
+          output_format
         )
       )
     ))
@@ -6024,7 +6032,7 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
           "/", output_folder_name,
           "/other_surveillance_type_linelist_",
           min(other_surv$yronset, na.rm = TRUE), "_",
-          max(other_surv$yronset, na.rm = TRUE), ".rds"
+          max(other_surv$yronset, na.rm = TRUE), output_format
         )
       )
     ))
@@ -6039,7 +6047,7 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
       file_path = paste0(polis_data_folder, "/", output_folder_name),
       full_names = TRUE
     )) |>
-      dplyr::filter(grepl("^.*(other_surveillance).*(.rds)$", name)) |>
+      dplyr::filter(grepl(paste0("^.*(other_surveillance).*(\\", output_format, ")$"), name)) |>
       dplyr::pull(name)
 
     other_files_combine <- dplyr::tibble("name" = tidypolis_io(
@@ -6047,7 +6055,7 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
       file_path = paste0(polis_data_folder, "/core_files_to_combine"),
       full_names = TRUE
     )) |>
-      dplyr::filter(grepl("^.*(other_surveillance).*(.rds)$", name)) |>
+      dplyr::filter(grepl(paste0("^.*(other_surveillance).*(\\", output_format, ")$"), name)) |>
       dplyr::pull(name)
 
     # Combine other surveillance files
@@ -6089,7 +6097,7 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
             min(other_combined$yronset, na.rm = TRUE),
             "_",
             max(other_combined$yronset, na.rm = TRUE),
-            ".rds"
+            output_format
           )
         )
       ))
