@@ -2249,7 +2249,9 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
   #Step 5 - Creating Virus datasets ====
   cli::cli_h1("Step 5/5 - Creating Virus datasets")
 
-  s5_fully_process_pos_data(polis_folder, latest_folder_in_archive, long.global.dist.01)
+  s5_fully_process_pos_data(polis_folder, latest_folder_in_archive,
+                            long.global.dist.01,
+                            output_format = output_format)
 
   update_polis_log(.event = "Processing of CORE datafiles complete",
                    .event_type = "END")
@@ -7684,13 +7686,18 @@ s4_es_write_data <- function(polis_data_folder, es.05, output_format){
 #' @param long.global.dist.01 `sf` Global district lookup table for GUID
 #' @param polis_data_folder `str` The data folder within the POLIS folder.
 #'   validation.
+#' @param output_format str: output_format to save files as.
+#'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+#'    'rds'.
+#'
 #' @returns `NULL` quietly upon success.
 #'
 #' @export
 s5_fully_process_pos_data <- function(polis_folder,
                                       latest_folder_in_archive,
                                       long.global.dist.01,
-                                      polis_data_folder = file.path(polis_folder, "data")) {
+                                      polis_data_folder = file.path(polis_folder, "data"),
+                                      output_format) {
 
   virus.raw.new <- s5_pos_load_data(polis_data_folder, latest_folder_in_archive)
   virus.01 <- s5_pos_create_cdc_vars(virus.raw.new, polis_folder, polis_data_folder)
@@ -7698,8 +7705,10 @@ s5_fully_process_pos_data <- function(polis_folder,
   s5_pos_check_duplicates(virus.01, polis_data_folder)
   s5_pos_write_missing_onsets(virus.01, polis_data_folder)
 
-  human.virus.05 <- s5_pos_process_human_virus(virus.01, polis_data_folder)
-  env.virus.04 <- s5_pos_process_es_virus(virus.01, polis_data_folder)
+  human.virus.05 <- s5_pos_process_human_virus(virus.01, polis_data_folder,
+                                               output_format = output_format)
+  env.virus.04 <- s5_pos_process_es_virus(virus.01, polis_data_folder,
+                                          output_format = output_format)
 
   afp.es.virus.01 <- s5_pos_create_final_virus_data(human.virus.05, env.virus.04)
   afp.es.virus.02 <- remove_character_dates(type = "POS", df = afp.es.virus.01)
@@ -7708,7 +7717,8 @@ s5_fully_process_pos_data <- function(polis_folder,
   rm(afp.es.virus.02)
 
   s5_pos_compare_with_archive(afp.es.virus.01, afp.es.virus.03,
-                              polis_data_folder, latest_folder_in_archive)
+                              polis_data_folder, latest_folder_in_archive,
+                              output_format = output_format)
 
   s5_pos_evaluate_unmatched_guids(afp.es.virus.03, long.global.dist.01, polis_data_folder)
 
@@ -8022,11 +8032,15 @@ s5_pos_write_missing_onsets <- function(virus.01, polis_data_folder) {
 #' @inheritParams s5_pos_check_duplicates
 #' @param startyr `int` Start year to process the positives dataset.
 #' @param endyr `int` End year to process the positives dataset.
+#' @param output_format str: output_format to save files as.
+#'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+#'    'rds'.
 #'
 #' @returns `tibble` Cleaned positives dataset containing human cases only.
 #' @keywords internal
 #'
-s5_pos_process_human_virus <- function(virus.01, polis_data_folder) {
+s5_pos_process_human_virus <- function(virus.01, polis_data_folder,
+                                       output_format) {
 
   startyr <- 2000
   endyr <- year(format(Sys.time()))
@@ -8039,7 +8053,7 @@ s5_pos_process_human_virus <- function(virus.01, polis_data_folder) {
   cli::cli_process_start("Processing and cleaning AFP/non-AFP files")
   afp.files.01 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path = file.path(polis_data_folder, "Core_Ready_Files"), full_names = T)) |>
     dplyr::mutate(short_name = stringr::str_replace(name, paste0(polis_data_folder, "/Core_Ready_Files/"), "")) |>
-    dplyr::filter(grepl("^(afp_linelist_2001-01-01_2025).*(.rds)$", short_name)) |>
+    dplyr::filter(grepl(paste0("^(afp_linelist_2001-01-01_2025).*(\\", output_format, ")$"), short_name)) |>
     dplyr::pull(name)
 
   tryCatch({
@@ -8054,7 +8068,8 @@ s5_pos_process_human_virus <- function(virus.01, polis_data_folder) {
 
   non.afp.files.01 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path = file.path(polis_data_folder, "Core_Ready_Files"), full_names = T)) |>
     dplyr::mutate(short_name = stringr::str_replace(name, paste0(polis_data_folder, "/Core_Ready_Files/"), "")) |>
-    dplyr::filter(grepl("^(other_surveillance_type_linelist_2016_2025).*(.rds)$", short_name)) |>
+    dplyr::filter(grepl(paste0("^(other_surveillance_type_linelist_2016_2025).*(\\",
+                               output_format, ")$"), short_name)) |>
     dplyr::pull(name)
 
   tryCatch({
@@ -8149,11 +8164,15 @@ s5_pos_process_human_virus <- function(virus.01, polis_data_folder) {
 #'
 #'
 #' @inheritParams s5_pos_check_duplicates
+#' @param output_format str: output_format to save files as.
+#'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+#'    'rds'.
 #'
 #' @returns `tibble` Cleaned positives dataset containing environmental samples only.
 #' @keywords internal
 #'
-s5_pos_process_es_virus <- function(virus.01, polis_data_folder) {
+s5_pos_process_es_virus <- function(virus.01, polis_data_folder,
+                                    output_format) {
 
   ### ENV data from virus table
   env.virus.01 <- virus.01 |>
@@ -8165,7 +8184,7 @@ s5_pos_process_es_virus <- function(virus.01, polis_data_folder) {
   # read in ES files from cleaned ENV linelist
   env.files.01 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path = file.path(polis_data_folder, "Core_Ready_Files"), full_names = T)) |>
     dplyr::mutate(short_name = stringr::str_replace(name, paste0(polis_data_folder, "/Core_Ready_Files/"), "")) |>
-    dplyr::filter(grepl("^(es).*(.rds)$", short_name)) |>
+    dplyr::filter(grepl(paste0("^.*(es).*(\\", output_format, ")$"), short_name)) |>
     dplyr::pull(name)
   tryCatch({
     es.01 <- purrr::map_df(env.files.01, ~ tidypolis_io(io = "read", file_path = .x)) |>
@@ -8284,11 +8303,14 @@ s5_pos_create_final_virus_data <- function(human.virus.05, env.virus.04) {
 #' @param afp.es.virus.03 `tibble` Output of [s5_pos_create_final_virus()] but processed
 #' further using [remove_character_dates()] and [create_response_vars()].
 #' @inheritParams s5_fully_process_pos_data
+#' @param output_format str: output_format to save files as.
+#'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+#'    'rds'.
 #'
 #' @returns `NULL` quietly upon success.
 #' @keywords internal
 #'
-s5_pos_compare_with_archive <- function(afp.es.virus.01, afp.es.virus.03, polis_data_folder, latest_folder_in_archive) {
+s5_pos_compare_with_archive <- function(afp.es.virus.01, afp.es.virus.03, polis_data_folder, latest_folder_in_archive, output_format) {
   cli::cli_process_start("Checking for variables that don't match last weeks pull")
 
   #Compare the final file to last week's final file to identify any differences in var_names, var_classes, or categorical responses
@@ -8413,7 +8435,7 @@ s5_pos_compare_with_archive <- function(afp.es.virus.01, afp.es.virus.03, polis_
                                        max(afp.es.virus.03$dateonset, na.rm = T),
                                        sep = "_"
                                  ),
-                                 ".rds",
+                                 output_format,
                                  sep = ""
                ))
 
