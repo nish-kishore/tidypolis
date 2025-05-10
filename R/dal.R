@@ -169,7 +169,7 @@ tidypolis_io <- function(
       }
 
       if (grepl("\\.parquet$", file_path)) {
-        arrow::write_parquet(file_path)
+        arrow::write_parquet(obj, file_path)
       }
     }
   }
