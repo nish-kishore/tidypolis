@@ -7087,7 +7087,7 @@ s4_fully_process_es_data <- function(polis_folder,
 
   es.05 <- s4_es_load_data(polis_data_folder = polis_data_folder,
                            latest_folder_in_archive = latest_folder_in_archive) |>
-    s4_es_data_processing() |>
+    s4_es_data_processing(polis_data_folder = polis_data_folder) |>
     s4_es_validate_sites() |>
     s4_es_create_cdc_vars(polis_folder = polis_folder)
 
@@ -7214,11 +7214,13 @@ s4_es_load_data <- function(polis_data_folder, latest_folder_in_archive){
 #' against the last download
 #' @param startyr `int` The subset of years for which to process ES data
 #' @param endyr `int` The subset of years for which to process ES data
+#' @inheritParams s4_fully_process_es_data
 #'
 #' @returns `tibble` es.02 SIA data with outputs validated
 #' @keywords internal
 #'
-s4_es_data_processing <- function(es.01.new){
+s4_es_data_processing <- function(es.01.new,
+                                  polis_data_folder){
 
   # Data manipulation
 
