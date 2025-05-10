@@ -7484,11 +7484,13 @@ s4_es_load_data <- function(polis_data_folder, latest_folder_in_archive,
 #'        region-specific processing, this should be set to
 #'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
 #' @param polis_data_folder `str` Path to the POLIS data folder.
+#' @inheritParams s4_fully_process_es_data
 #'
 #' @returns `tibble` es.02 SIA data with outputs validated
 #' @keywords internal
 #'
-s4_es_data_processing <- function(es.01.new, startyr, endyr,
+s4_es_data_processing <- function(es.01.new,
+                                  polis_data_folder, startyr, endyr,
                                   output_folder_name,
                                   polis_data_folder){
 
