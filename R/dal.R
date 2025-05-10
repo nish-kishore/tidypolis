@@ -116,8 +116,8 @@ tidypolis_io <- function(
         return(x)
       }
     } else {
-      if (!grepl("\\.rds$|\\.rda$|\\.csv$", file_path)) {
-        stop("At the moment only 'rds' 'rda' and 'csv' are supported for reading.")
+      if (!grepl("\\.rds$|\\.rda$|\\.csv$|\\.parquet$", file_path)) {
+        stop("At the moment only 'rds' 'rda' 'csv' and 'parquet' are supported for reading.")
       }
 
       if (grepl("\\.rds$", file_path)) {
@@ -131,6 +131,11 @@ tidypolis_io <- function(
       if (grepl("\\.csv$", file_path)) {
         return(readr::read_csv(file_path, show_col_types = FALSE))
       }
+
+      if (grepl("\\.parquet$", file_path)) {
+        arrow::read_parquet(file_path)
+      }
+
     }
   }
 
@@ -147,8 +152,8 @@ tidypolis_io <- function(
         azcontainer = azcontainer
       )
     } else {
-      if (!grepl("\\.rds$|\\.rda$|\\.csv$", file_path)) {
-        stop("At the moment only 'rds' 'rda' and 'csv' are supported for reading.")
+      if (!grepl("\\.rds$|\\.rda$|\\.csv$|\\.parquet$", file_path)) {
+        stop("At the moment only 'rds' 'rda' 'csv' and 'parquet' are supported for writing")
       }
 
       if (grepl("\\.rds$", file_path)) {
@@ -161,6 +166,10 @@ tidypolis_io <- function(
 
       if (grepl("\\.csv$", file_path)) {
         readr::write_csv(x = obj, file = file_path)
+      }
+
+      if (grepl("\\.parquet$", file_path)) {
+        arrow::write_parquet(file_path)
       }
     }
   }
@@ -225,7 +234,7 @@ upload_cdc_proc_to_edav <- function(
   x <- dplyr::tibble(
     "full_name" = tidypolis_io(io = "list", file_path = core_ready_folder, full_names = T),
     "name" = tidypolis_io(io = "list", file_path = core_ready_folder)
-    ) |>
+  ) |>
     dplyr::filter(stringr::str_ends(name, ".rds"))
 
   files <- c("afp_linelist_2001-01-01_",
@@ -244,7 +253,7 @@ upload_cdc_proc_to_edav <- function(
   cli::cli_process_start("Archiving previous data in the polis folder")
   if (!tidypolis_io(io = "exists.dir", file_path = file.path(output_folder, "archive"))) {
     tidypolis_io(io = "create", file_path = file.path(output_folder, "archive"))
-    }
+  }
 
   # Move previous files to archive in polis data folder
   previous_files <- dplyr::tibble(
@@ -266,7 +275,7 @@ upload_cdc_proc_to_edav <- function(
     tidypolis_io(obj = local, io = "write",
                  file_path = file.path(output_folder, "archive", archive_folder_name,
                                        previous_files$file_name[i]))
-    })
+  })
   cli::cli_process_done()
 
   cli::cli_process_start("Adding updated data to polis data folder")
@@ -274,13 +283,13 @@ upload_cdc_proc_to_edav <- function(
   # Delete previous files
   lapply(1:nrow(previous_files), \(i) {
     tidypolis_io(io = "delete", file_path = previous_files$file_path[i])
-    })
+  })
 
   # Move all files to core polis data folder
   lapply(1:nrow(out.table), function(i){
     local <- tidypolis_io(io = "read", file_path = dplyr::pull(out.table[i,], source))
     tidypolis_io(obj = local, io = "write", file_path = dplyr::pull(out.table[i,], dest))
-    })
+  })
 
   cli::cli_process_done()
 
