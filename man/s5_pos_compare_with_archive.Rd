@@ -8,7 +8,8 @@ s5_pos_compare_with_archive(
   afp.es.virus.01,
   afp.es.virus.03,
   polis_data_folder,
-  latest_folder_in_archive
+  latest_folder_in_archive,
+  output_format
 )
 }
 \arguments{
@@ -21,6 +22,10 @@ further using \code{\link[=remove_character_dates]{remove_character_dates()}} an
 validation.}
 
 \item{latest_folder_in_archive}{\code{str} Name of the latest folder in the archive, if one exists.}
+
+\item{output_format}{str: output_format to save files as.
+Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+'rds'.}
 }
 \value{
 \code{NULL} quietly upon success.

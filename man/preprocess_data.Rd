@@ -4,10 +4,14 @@
 \alias{preprocess_data}
 \title{Preprocess data retrieved from POLIS}
 \usage{
-preprocess_data(type)
+preprocess_data(type, output_format)
 }
 \arguments{
 \item{type}{str: specify the type of preprocessing to complete}
+
+\item{output_format}{str: output_format to save files as.
+Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+'rds'.}
 }
 \value{
 Analytic rds files

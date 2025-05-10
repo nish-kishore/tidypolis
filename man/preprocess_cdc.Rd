@@ -4,10 +4,17 @@
 \alias{preprocess_cdc}
 \title{Preprocess data process data in the CDC style}
 \usage{
-preprocess_cdc(polis_folder = Sys.getenv("POLIS_DATA_FOLDER"))
+preprocess_cdc(
+  polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
+  output_format = "rds"
+)
 }
 \arguments{
 \item{polis_folder}{str: location of the POLIS data folder}
+
+\item{output_format}{str: output_format to save files as.
+Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+'rds'.}
 }
 \value{
 Outputs intermediary core ready files

@@ -389,6 +389,10 @@ freeze_polis_data <- function(){
 #' @description
 #' Create standard analytic datasets from raw POLIS data
 #' @param type str: specify the type of preprocessing to complete
+#' @param output_format str: output_format to save files as.
+#'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+#'    'rds'.
+#'
 #' @import cli
 #' @returns Analytic rds files
 #' @examples
@@ -396,7 +400,7 @@ freeze_polis_data <- function(){
 #' preprocess_data(type = "cdc") #must run init_tidypolis to specify POLIS data location first
 #' }
 #' @export
-preprocess_data <- function(type){
+preprocess_data <- function(type, output_format){
 
   types <- c("cdc")
 
@@ -407,7 +411,7 @@ preprocess_data <- function(type){
   #CDC pre-processing steps
   if(type == "cdc"){
 
-    preprocess_cdc()
+    preprocess_cdc(output_format = output_format)
 
   }
 

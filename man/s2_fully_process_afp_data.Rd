@@ -9,7 +9,8 @@ s2_fully_process_afp_data(
   polis_folder,
   long.global.dist.01,
   timestamp,
-  latest_folder_in_archive_path
+  latest_folder_in_archive_path,
+  output_format
 )
 }
 \arguments{
@@ -24,6 +25,10 @@ validation.}
 \item{timestamp}{\code{str} Time stamp}
 
 \item{latest_folder_in_archive_path}{\code{str} The path to the latest archive folder.}
+
+\item{output_format}{str: output_format to save files as.
+Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+'rds'.}
 }
 \description{
 This function processes AFP data through multiple standardization and

@@ -4,13 +4,17 @@
 \alias{s5_pos_process_es_virus}
 \title{Process and clean cases in the positives dataset}
 \usage{
-s5_pos_process_es_virus(virus.01, polis_data_folder)
+s5_pos_process_es_virus(virus.01, polis_data_folder, output_format)
 }
 \arguments{
 \item{virus.01}{\code{tibble} Output of \code{\link[=s5_pos_create_cdc_vars]{s5_pos_create_cdc_vars()}}.}
 
 \item{polis_data_folder}{\code{str} The data folder within the POLIS folder.
 validation.}
+
+\item{output_format}{str: output_format to save files as.
+Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+'rds'.}
 }
 \value{
 \code{tibble} Cleaned positives dataset containing environmental samples only.

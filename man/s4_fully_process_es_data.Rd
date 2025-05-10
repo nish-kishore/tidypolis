@@ -7,7 +7,8 @@
 s4_fully_process_es_data(
   polis_folder,
   polis_data_folder = file.path(polis_folder, "data"),
-  latest_folder_in_archive
+  latest_folder_in_archive,
+  output_format
 )
 }
 \arguments{
@@ -16,6 +17,10 @@ s4_fully_process_es_data(
 \item{polis_data_folder}{\code{str} Path to the POLIS data folder.}
 
 \item{latest_folder_in_archive}{\code{str} Name of the latest folder in the archive.}
+
+\item{output_format}{str: output_format to save files as.
+Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+'rds'.}
 }
 \value{
 \code{NULL} silently upon success.

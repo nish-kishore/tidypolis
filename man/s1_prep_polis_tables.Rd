@@ -9,7 +9,8 @@ s1_prep_polis_tables(
   polis_data_folder,
   long.global.dist.01,
   ts,
-  timestamp
+  timestamp,
+  output_format
 )
 }
 \arguments{
@@ -22,6 +23,10 @@ s1_prep_polis_tables(
 \item{ts}{\code{str} Time stamp from \code{\link[=Sys.time]{Sys.time()}}.}
 
 \item{timestamp}{\code{str} Formatted time stamp.}
+
+\item{output_format}{str: output_format to save files as.
+Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+'rds'.}
 }
 \value{
 \code{NULL} quietly upon success.

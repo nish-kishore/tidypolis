@@ -8,7 +8,8 @@ s5_fully_process_pos_data(
   polis_folder,
   latest_folder_in_archive,
   long.global.dist.01,
-  polis_data_folder = file.path(polis_folder, "data")
+  polis_data_folder = file.path(polis_folder, "data"),
+  output_format
 )
 }
 \arguments{
@@ -20,6 +21,10 @@ s5_fully_process_pos_data(
 
 \item{polis_data_folder}{\code{str} The data folder within the POLIS folder.
 validation.}
+
+\item{output_format}{str: output_format to save files as.
+Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+'rds'.}
 }
 \value{
 \code{NULL} quietly upon success.

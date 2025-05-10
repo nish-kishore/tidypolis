@@ -8,7 +8,8 @@ s3_fully_process_sia_data(
   long.global.dist.01,
   polis_data_folder,
   latest_folder_in_archive,
-  timestamp
+  timestamp,
+  output_format
 )
 }
 \arguments{
@@ -20,6 +21,10 @@ validation.}
 \item{latest_folder_in_archive}{\code{str} Name of the latest folder in the archive.}
 
 \item{timestamp}{\code{str} The time stamp.}
+
+\item{output_format}{str: output_format to save files as.
+Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+'rds'.}
 }
 \description{
 This function processes SIA data through multiple standardization and

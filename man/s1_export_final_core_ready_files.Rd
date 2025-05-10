@@ -11,7 +11,8 @@ s1_export_final_core_ready_files(
   api_case_data,
   api_subactivity_data,
   api_es_data,
-  api_virus_data
+  api_virus_data,
+  output_format
 )
 }
 \arguments{
@@ -28,6 +29,10 @@ s1_export_final_core_ready_files(
 \item{api_es_data}{\code{tibble} Cleaned ES table.}
 
 \item{api_virus_data}{\code{tibble} Cleaned Virus table.}
+
+\item{output_format}{str: output_format to save files as.
+Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+'rds'.}
 }
 \value{
 \code{NULL}
