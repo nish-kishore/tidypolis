@@ -2230,7 +2230,8 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
     long.global.dist.01,
     polis_data_folder,
     latest_folder_in_archive,
-    timestamp
+    timestamp,
+    output_format = output_format
   )
 
   invisible(gc())
@@ -6102,11 +6103,14 @@ s2_compare_with_archive <- function(data,
 #' @param polis_data_folder `str` Path to the POLIS data folder.
 #' @param latest_folder_in_archive `str` Name of the latest folder in the archive.
 #' @param timestamp `str` The time stamp.
-#'
+#' @param output_format str: output_format to save files as.
+#'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+#'    'rds'.
 #'
 #' @export
 s3_fully_process_sia_data <- function(long.global.dist.01, polis_data_folder,
-                                      latest_folder_in_archive, timestamp){
+                                      latest_folder_in_archive, timestamp,
+                                      output_format){
 
   if (!tidypolis_io(io = "exists.dir",
                     file_path = file.path(polis_data_folder, "Core_Ready_Files"))) {
@@ -6130,7 +6134,8 @@ s3_fully_process_sia_data <- function(long.global.dist.01, polis_data_folder,
 
   #writes our partially processed data into cache
   s3_sia_write_precluster_data(sia.06 = sia.06,
-                               polis_data_folder = polis_data_folder)
+                               polis_data_folder = polis_data_folder,
+                               output_format = output_format)
 
   #final clean dataset
   sia.clean.01 <- s3_sia_combine_historical_data(sia.new = sia.06, polis_data_folder)
@@ -6139,7 +6144,8 @@ s3_fully_process_sia_data <- function(long.global.dist.01, polis_data_folder,
   s3_sia_cluster_dates(sia.clean.01)
 
   #merged data with clustered data
-  s3_sia_merge_cluster_dates_final_data(sia.clean.01 = sia.clean.01)
+  s3_sia_merge_cluster_dates_final_data(sia.clean.01 = sia.clean.01,
+                                        output_format = output_format)
 
   #evaluate unmatched GUIDs
   s3_sia_evaluate_unmatched_guids(sia.05 = sia.05, polis_data_folder)
@@ -6186,7 +6192,7 @@ s3_sia_load_data <- function(polis_data_folder,
 
   cli::cli_process_start("Loading new SIA data")
   # Step 2: Read in "new" data file
-  # Newest downloaded activity file, will be .rds located in Core Ready Files
+  # Newest downloaded activity file, will be located in Core Ready Files
   invisible(capture.output(
     sia.01.new <- tidypolis_io(io = "read", file_path = new.file) |>
       dplyr::mutate_all(as.character) |>
@@ -6207,7 +6213,7 @@ s3_sia_load_data <- function(polis_data_folder,
     # Old pre-existing download
     # This is previous Activity .rds that was preprocessed last week, it has
     # been moved to the archive, change archive subfolder and specify last weeks
-    # Activity .rds
+    # Activity
     invisible(capture.output(
       sia.01.old <- tidypolis_io(io = "read", file_path = old.file) |>
         dplyr::mutate_all(as.character) |>
@@ -6624,11 +6630,14 @@ s3_sia_check_metadata <- function(sia.06, polis_data_folder, latest_folder_in_ar
 #' against the last download, CDC variables created, GUIDs validated and
 #' deduplicated
 #' @param polis_data_folder `str` Path to the POLIS data folder.
+#' @param output_format str: output_format to save files as.
+#'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+#'    'rds'.
 #'
 #' @returns NULL
 #' @keywords internal
 #'
-s3_sia_write_precluster_data <- function(sia.06, polis_data_folder){
+s3_sia_write_precluster_data <- function(sia.06, polis_data_folder, output_format){
   cli::cli_process_start("Writing out SIA file")
   # Write final SIA file to RDS file
   sia.file.path <- paste(polis_data_folder, "/Core_Ready_Files/", sep = "")
@@ -6639,7 +6648,7 @@ s3_sia_write_precluster_data <- function(sia.06, polis_data_folder){
                    sia.file.path,
                    paste("sia", min(sia.06$yr.sia, na.rm = T),
                          max(sia.06$yr.sia, na.rm = T), sep = "_"),
-                   ".rds",
+                   output_format,
                    sep = ""
                  ))
   ))
@@ -6654,11 +6663,14 @@ s3_sia_write_precluster_data <- function(sia.06, polis_data_folder){
 #' against the last download, CDC variables created, GUIDs validated and
 #' deduplicated
 #' @param polis_data_folder `str` Path to the POLIS data folder.
+#' @param output_format str: output_format to save files as.
+#'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+#'    'rds'.
 #'
 #' @returns `tibble` sia.clean.01 All historical SIA data
 #' @keywords internal
 #'
-s3_sia_combine_historical_data <- function(sia.new, polis_data_folder){
+s3_sia_combine_historical_data <- function(sia.new, polis_data_folder, output_format){
 
   #combine SIA pre-2020 with the current rds
   # read SIA and combine to make one SIA dataset
@@ -6667,7 +6679,7 @@ s3_sia_combine_historical_data <- function(sia.new, polis_data_folder){
     "name" = tidypolis_io(io = "list",
                           file_path=paste0(polis_data_folder, "/core_files_to_combine"),
                           full_names=TRUE)) |>
-    dplyr::filter(grepl("^.*(sia).*(.rds)$", name)) |>
+    dplyr::filter(grepl(paste0("^.*(sia).*(\\", output_format, ")$"), name)) |>
     dplyr::pull(name)
 
   invisible(capture.output(
