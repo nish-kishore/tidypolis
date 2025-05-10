@@ -4,10 +4,14 @@
 \alias{s3_sia_combine_historical_data}
 \title{Read in SIA data pre 2020 and combine with current SIA data}
 \usage{
-s3_sia_combine_historical_data(sia.new, polis_data_folder)
+s3_sia_combine_historical_data(sia.new, polis_data_folder, output_format)
 }
 \arguments{
 \item{polis_data_folder}{\code{str} Path to the POLIS data folder.}
+
+\item{output_format}{str: output_format to save files as.
+Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+'rds'.}
 
 \item{sia.06}{\code{tibble} The latest SIA download with variables checked and
 against the last download, CDC variables created, GUIDs validated and

@@ -9,7 +9,8 @@ s5_fully_process_pos_data(
   latest_folder_in_archive,
   long.global.dist.01,
   polis_data_folder = file.path(polis_folder, "data"),
-  output_folder_name
+  output_folder_name,
+  output_format
 )
 }
 \arguments{
@@ -27,6 +28,10 @@ region-specific processing, this should be set to
 "Core_Ready_Files_\link{REGION}" (e.g., "Core_Ready_Files_AFRO").
 
 validation.}
+
+\item{output_format}{str: output_format to save files as.
+Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+'rds'.}
 }
 \value{
 \code{NULL} quietly upon success.

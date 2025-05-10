@@ -4,7 +4,7 @@
 \alias{s3_sia_write_precluster_data}
 \title{Write out SIA data}
 \usage{
-s3_sia_write_precluster_data(sia.06, polis_data_folder, output_folder_name)
+s3_sia_write_precluster_data(sia.06, polis_data_folder, output_folder_name, output_format)
 }
 \arguments{
 \item{sia.06}{\code{tibble} The latest SIA download with variables checked and
@@ -17,6 +17,10 @@ deduplicated}
 files will be saved. Defaults to "Core_Ready_Files". For
 region-specific processing, this should be set to
 "Core_Ready_Files_\link{REGION}" (e.g., "Core_Ready_Files_AFRO").}
+
+\item{output_format}{str: output_format to save files as.
+Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+'rds'.}
 }
 \description{
 Write out SIA data

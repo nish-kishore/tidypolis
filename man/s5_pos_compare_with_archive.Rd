@@ -9,7 +9,8 @@ s5_pos_compare_with_archive(
   afp.es.virus.03,
   polis_data_folder,
   latest_folder_in_archive,
-  output_folder_name
+  output_folder_name,
+  output_format
 )
 }
 \arguments{
@@ -28,6 +29,10 @@ region-specific processing, this should be set to
 "Core_Ready_Files_\link{REGION}" (e.g., "Core_Ready_Files_AFRO").
 
 validation.}
+
+\item{output_format}{str: output_format to save files as.
+Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+'rds'.}
 }
 \value{
 \code{NULL} quietly upon success.

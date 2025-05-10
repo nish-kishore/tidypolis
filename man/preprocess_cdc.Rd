@@ -5,8 +5,11 @@
 \title{Preprocess data process data in the CDC style}
 \usage{
 preprocess_cdc(
+  
   polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
   who_region = NULL
+,
+  output_format = "rds"
 )
 }
 \arguments{
@@ -14,6 +17,10 @@ preprocess_cdc(
 
 \item{who_region}{str: optional WHO region to filter data
 Available inputs include AFRO, AMRO, EMRO, EURO, SEARO and  WPRO.}
+
+\item{output_format}{str: output_format to save files as.
+Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+'rds'.}
 }
 \value{
 Outputs intermediary core ready files

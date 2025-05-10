@@ -12,7 +12,8 @@ s1_export_final_core_ready_files(
   api_subactivity_data,
   api_es_data,
   api_virus_data,
-  output_folder_name
+  output_folder_name,
+  output_format
 )
 }
 \arguments{
@@ -34,6 +35,10 @@ s1_export_final_core_ready_files(
 files will be saved. Defaults to "Core_Ready_Files". For
 region-specific processing, this should be set to
 "Core_Ready_Files_\link{REGION}" (e.g., "Core_Ready_Files_AFRO").}
+
+\item{output_format}{str: output_format to save files as.
+Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+'rds'.}
 }
 \value{
 \code{NULL}

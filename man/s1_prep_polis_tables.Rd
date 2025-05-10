@@ -10,7 +10,8 @@ s1_prep_polis_tables(
   long.global.dist.01,
   ts,
   timestamp,
-  who_region
+  who_region,
+  output_format
 )
 }
 \arguments{
@@ -26,6 +27,10 @@ s1_prep_polis_tables(
 
 \item{who_region}{str: optional WHO region to filter data
 Available inputs include AFRO, AMRO, EMRO, EURO, SEARO and  WPRO.}
+
+\item{output_format}{str: output_format to save files as.
+Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+'rds'.}
 }
 \value{
 \code{NULL} quietly upon success.

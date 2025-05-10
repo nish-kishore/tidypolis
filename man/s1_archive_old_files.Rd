@@ -4,7 +4,7 @@
 \alias{s1_archive_old_files}
 \title{Archives the old files in the data folder}
 \usage{
-s1_archive_old_files(polis_data_folder, timestamp, output_folder_name)
+s1_archive_old_files(polis_data_folder, timestamp, output_folder_name, output_format)
 }
 \arguments{
 \item{polis_data_folder}{\code{str} Path to the POLIS data folder}
@@ -15,6 +15,10 @@ s1_archive_old_files(polis_data_folder, timestamp, output_folder_name)
 files will be saved. Defaults to "Core_Ready_Files". For
 region-specific processing, this should be set to
 "Core_Ready_Files_\link{REGION}" (e.g., "Core_Ready_Files_AFRO").}
+
+\item{output_format}{str: output_format to save files as.
+Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+'rds'.}
 }
 \description{
 Archives the old files in the data folder

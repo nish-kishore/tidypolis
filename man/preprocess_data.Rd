@@ -4,13 +4,17 @@
 \alias{preprocess_data}
 \title{Preprocess data retrieved from POLIS}
 \usage{
-preprocess_data(type, who_region = NULL)
+preprocess_data(type, who_region = NULL, output_format)
 }
 \arguments{
 \item{type}{str: specify the type of preprocessing to complete}
 
 \item{who_region}{str: optional WHO region to filter data
 Available inputs include AFRO, AMRO, EMRO, EURO, SEARO and  WPRO.}
+
+\item{output_format}{str: output_format to save files as.
+Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+'rds'.}
 }
 \value{
 Analytic rds files
