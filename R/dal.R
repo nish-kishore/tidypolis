@@ -133,7 +133,7 @@ tidypolis_io <- function(
       }
 
       if (grepl("\\.parquet$", file_path)) {
-        arrow::read_parquet(file_path)
+        return(arrow::read_parquet(file_path))
       }
 
     }
