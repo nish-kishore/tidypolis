@@ -129,7 +129,7 @@ tidypolis_io <- function(
       }
 
       if (grepl("\\.csv$", file_path)) {
-        return(readr::read_csv(file_path))
+        return(readr::read_csv(file_path, show_col_types = FALSE))
       }
     }
   }
