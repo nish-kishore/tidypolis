@@ -8522,12 +8522,20 @@ s5_pos_process_es_virus <- function(virus.01, polis_data_folder, output_folder_n
     dplyr::pull(name)
 
   tryCatch({
-    es.01 <- purrr::map_df(env.files.01, ~ tidypolis_io(io = "read", file_path = .x)) |>
-      dplyr::ungroup() |>
-      dplyr::distinct(.keep_all = T)
+    es.01 <- purrr::map_df(env.files.01, \(x) {
+      df <- tidypolis_io(io = "read", file_path = x)
+      if ("Admin 0 Id" %in% names(df)) {
+        df <- df |>
+          dplyr::mutate(`Admin 0 Id` = as.character(`Admin 0 Id`),
+                        `Admin 1 Id` = as.character(`Admin 1 Id`),
+                        `Admin 2 Id` = as.character(`Admin 2 Id`))
+      }
+      df
+    }) |> dplyr::ungroup()
   }, error = \(e) {
     cli::cli_abort("Please run Step 4 of preprocessing before Step 5.")
   })
+
 
   # Make sure 'env.sample.maual.edit.id' is unique for each ENV sample
   es.00 <- es.01[duplicated(es.01$env.sample.manual.edit.id), ]
