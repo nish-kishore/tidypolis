@@ -4,11 +4,13 @@
 \alias{s4_es_data_processing}
 \title{Convert variables in POLIS download to to cleaned outputs}
 \usage{
-s4_es_data_processing(es.01.new)
+s4_es_data_processing(es.01.new, polis_data_folder)
 }
 \arguments{
 \item{es.01.new}{\code{tibble} The latest ES download with variables checked
 against the last download}
+
+\item{polis_data_folder}{\code{str} Path to the POLIS data folder.}
 
 \item{startyr}{\code{int} The subset of years for which to process ES data}
 
