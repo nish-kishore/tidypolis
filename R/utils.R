@@ -5950,7 +5950,7 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
     file_path = paste0(polis_data_folder, "/core_files_to_combine"),
     full_names = TRUE
   )) |>
-    dplyr::filter(grepl(paste0("^.*(afp_linelist).*(\\", output_format, ")$"), name)) |>
+    dplyr::filter(grepl("^.*(afp_linelist).*(.rds)$", name)) |>
     dplyr::pull(name)
 
   # Combine AFP files
@@ -6065,7 +6065,7 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
       file_path = paste0(polis_data_folder, "/core_files_to_combine"),
       full_names = TRUE
     )) |>
-      dplyr::filter(grepl(paste0("^.*(other_surveillance).*(\\", output_format, ")$"), name)) |>
+      dplyr::filter(grepl("^.*(other_surveillance).*(.rds)$", name)) |>
       dplyr::pull(name)
 
     # Combine other surveillance files
@@ -6365,7 +6365,8 @@ s3_fully_process_sia_data <- function(long.global.dist.01, polis_data_folder,
                                output_format = output_format)
 
   #final clean dataset
-  sia.clean.01 <- s3_sia_combine_historical_data(sia.new = sia.06, polis_data_folder)
+  sia.clean.01 <- s3_sia_combine_historical_data(sia.new = sia.06,
+                                                 polis_data_folder)
 
   #creates cache from clustered SIA dates
   s3_sia_cluster_dates(sia.clean.01)
@@ -6913,14 +6914,11 @@ s3_sia_write_precluster_data <- function(sia.06, polis_data_folder,
 #' against the last download, CDC variables created, GUIDs validated and
 #' deduplicated
 #' @param polis_data_folder `str` Path to the POLIS data folder.
-#' @param output_format str: output_format to save files as.
-#'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
-#'    'rds'.
 #'
 #' @returns `tibble` sia.clean.01 All historical SIA data
 #' @keywords internal
 #'
-s3_sia_combine_historical_data <- function(sia.new, polis_data_folder, output_format){
+s3_sia_combine_historical_data <- function(sia.new, polis_data_folder){
 
   #combine SIA pre-2020 with the current rds
   # read SIA and combine to make one SIA dataset
@@ -6929,7 +6927,7 @@ s3_sia_combine_historical_data <- function(sia.new, polis_data_folder, output_fo
     "name" = tidypolis_io(io = "list",
                           file_path=paste0(polis_data_folder, "/core_files_to_combine"),
                           full_names=TRUE)) |>
-    dplyr::filter(grepl(paste0("^.*(sia).*(\\", output_format, ")$"), name)) |>
+    dplyr::filter(grepl("^.*(sia).*(.rds)$", name)) |>
     dplyr::pull(name)
 
   invisible(capture.output(
