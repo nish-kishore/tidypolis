@@ -5275,7 +5275,8 @@ s2_fix_admin_guids <- function(data, shape_data) {
       wrongAdmin1GUID = dplyr::if_else(is.na(match) & !is.na(admin1guid),
                                        "yes", "no"
       )
-    )
+    ) |>
+    dplyr::distinct()
 
   # Match by name and fix incorrect Admin1 GUIDs
   data_fixed_prov <- data_fixed_prov |>
@@ -5291,7 +5292,8 @@ s2_fix_admin_guids <- function(data, shape_data) {
       wrongAdmin1GUID == "yes" & !is.na(match01),
       ADM1_GUID, Admin1GUID
     )) |>
-    dplyr::select(-match, -match01)
+    dplyr::select(-match, -match01) |>
+    dplyr::distinct()
 
   # Extract district level data
   shapes_dist <- shape_data |>
@@ -5325,7 +5327,8 @@ s2_fix_admin_guids <- function(data, shape_data) {
     dplyr::mutate(wrongAdmin2GUID = dplyr::if_else(
       is.na(match) & !is.na(admin2guid),
       "yes", "no"
-    ))
+    )) |>
+    dplyr::distinct()
 
   # Match by name and fix incorrect Admin2 GUIDs
   data_fixed_dist <- data_fixed_dist |>
@@ -5342,7 +5345,8 @@ s2_fix_admin_guids <- function(data, shape_data) {
       wrongAdmin2GUID == "yes" & !is.na(match01),
       GUID, Admin2GUID
     )) |>
-    dplyr::select(-match, -match01, -ADM1_GUID, -GUID)
+    dplyr::select(-match, -match01, -ADM1_GUID, -GUID) |>
+    dplyr::distinct()
 
   # Generate summary statistics on GUID issues
   issues_by_year <- data_fixed_dist |>
