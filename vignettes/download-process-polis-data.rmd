@@ -24,6 +24,7 @@ The Surveillance, Innovation, and Research (SIR) Team within the Polio Eradicati
 This guide is tailored for collaborators who wish to use the sirfunctions package to analyze global polio data and have access to data in POLIS.
 
 ## Getting Started
+Ensure that you have a valid POLIS API key, this can be obtained by contacting **Minh-Ly Pham** [phamm\@who.int](mailto:phamm@who.int){.email} 
 
 ### Setting up your POLIS folder {#polis-folder-setup}
 Choose a location for your POLIS data folder, this can be on your local computer or, if you have access to Microsoft's Azure environment, in Azure storage.
