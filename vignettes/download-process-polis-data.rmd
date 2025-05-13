@@ -1,0 +1,19 @@
+---
+title: "Downloading and Processing POLIS Data"
+output: rmarkdown::html_vignette
+vignette: >
+%\VignetteIndexEntry{Downloading and Processing POLIS Data}
+%\VignetteEngine{knitr::rmarkdown}
+%\VignetteEncoding{UTF-8}
+---
+
+  ```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup, echo=FALSE}
+library(tidypolis)
+```
