@@ -4421,8 +4421,8 @@ s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
     data = afp_with_guids,
     polis_data_folder = polis_data_folder,
     polis_folder = polis_folder,
-    output_folder_name = output_folder_name
-  )
+    output_folder_name = output_folder_name) |>
+    dplyr::select(polis.case.id, epid, tidyr::everything())
 
   # Step 2j: Create key AFP variables
   afp_final <- s2_create_afp_variables(data = afp_processed)
