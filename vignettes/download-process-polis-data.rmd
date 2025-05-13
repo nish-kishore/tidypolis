@@ -27,18 +27,19 @@ This guide is tailored for collaborators who wish to use the sirfunctions packag
 Ensure that you have a valid POLIS API key, this can be obtained by contacting **Minh-Ly Pham** [phamm\@who.int](mailto:phamm@who.int){.email} 
 
 ### Setting up your POLIS folder {#polis-folder-setup}
-Choose a location for your POLIS data folder, this can be on your local computer or, if you have access to Microsoft's Azure environment, in Azure storage.
+Choose a location for your POLIS data folder on your local machine, it is suggested that you keep this folder on your desktop.
 
 ```
 library(tidypolis)
 init_tidypolis <- function(
     polis_folder = "path/to/POLIS", #replace with your file path
-    edav = F, #change to T if using Azure storage
+    edav = F, #keep as F
     api_debug = F #set to T to log individual API calls
     )
 ```
 
-This function will create a POLIS folder if one doesn't exist or connect to an already existing POLIS folder. If creating folder you will be required to supply a valid POLIS API key. If the folder already exists your API key will be validated with POLIS. (Note: if POLIS is offline for any reason, ie maintenance, you will be unable to validate your API key)
+This function will create a POLIS folder if one doesn't exist or connect to an already existing POLIS folder. If creating a folder you will be required to supply a valid POLIS API key. If the folder already exists your API key will be validated with POLIS. (Note: if POLIS is offline for any reason, ie maintenance, you will be unable to validate your API key)
 
-In creating your POLIS folder your API key will be stored in a 'creds.rds' 
+In creating your POLIS folder your API key will be stored in 'creds.rds' within your POLIS folder
 
+### Downloading Global Polio Data {#}
