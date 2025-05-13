@@ -5488,7 +5488,7 @@ s2_process_coordinates <- function(data, polis_data_folder, polis_folder,
 
 
     cli::cli_alert_warning(paste0(
-      "Found and removed ", nrow(dup_epid), " duplicate EPIDs"
+      "Found and fixed/removed ", nrow(dup_epid), " duplicate EPIDs"
     ))
   } else {
     data_deduped <- data_renamed
