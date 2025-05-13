@@ -7,13 +7,18 @@ vignette: >
 %\VignetteEncoding{UTF-8}
 ---
 
-  ```{r, include = FALSE}
+```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
-)
+  comment = "#>")
 ```
 
 ```{r setup, echo=FALSE}
 library(tidypolis)
 ```
+
+## Introduction
+
+The Surveillance, Innovation, and Research (SIR) Team within the Polio Eradication Branch at CDC obtains global polio data from [POLIS](https://extranet.who.int/polis/Account/Login). Collaborators outside of CDC who wish to download and process global polio data using the tidypolis package must have access to POLIS beforehand, as well obtain a POLIS API key.
+
+This guide is tailored for collaborators who wish to use the sirfunctions package to analyze global polio data and have access to data in POLIS.
