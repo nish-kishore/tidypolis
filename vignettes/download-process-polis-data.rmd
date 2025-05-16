@@ -31,7 +31,7 @@ Choose a location for your POLIS data folder on your local machine, it is sugges
 
 ```
 library(tidypolis)
-init_tidypolis <- function(
+init_tidypolis <- (
     polis_folder = "path/to/POLIS", #replace with your file path
     edav = F, #keep as F
     api_debug = F #set to T to log individual API calls
@@ -42,4 +42,30 @@ This function will create a POLIS folder if one doesn't exist or connect to an a
 
 In creating your POLIS folder your API key will be stored in 'creds.rds' within your POLIS folder
 
-### Downloading Global Polio Data {#}
+### Downloading Global Polio Data {#download-polis-data}
+Once you've created or connected to a POLIS folder you can download data via the POLIS API.
+
+```
+ get_polis_data()
+```
+Running this function will download the following tables:
+
+1. activity
+2. case
+3. environmental_sample
+4. human_specimen
+5. im
+6. lqas
+7. sub_activity
+8. virus
+
+The first download will pull the entirety of each table. Subsequent downloads will only pull updated records for tables that contain a unique identifier and updated date fields. 
+
+POLIS population data can also be downloaded with `get_polis_data()`
+
+```
+get_polis_data(type = "pop)
+```
+
+This will download the population dataset into the same location as the other POLIS tables.
+
