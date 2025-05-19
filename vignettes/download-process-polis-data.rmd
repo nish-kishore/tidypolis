@@ -69,3 +69,31 @@ get_polis_data(type = "pop)
 
 This will download the population dataset into the same location as the other POLIS tables.
 
+### Pre-processing Data
+
+## Set-up for processing
+In order to fully process POLIS data you will need the following:
+
+1. Global WHO geodatabase - this can be obtained by anyone with POLIS access, contact **Oluwadamilola Sonoiki** [sonoikio\@who.int](mailto:sonoikio@who.int){.email}
+2. Static AFP and SIA data pre-2020 - this can be obtained by contacting **Stephanie Kovacs** at [uvx4\@cdc.gov](mailto:uvx4@cdc.gov){.email}
+
+When you have these data then you can do the following:
+
+- Process shapefiles using the `preprocess_spatial` function in tidypolis:
+
+```
+preprocess_spatial(
+gdb_folder = "path/to/gdb_file.gdb", # replace with real path to the GDB file
+output_folder = "path/to/data/spatial", # replace with real path to the spatial folder
+edav = FALSE
+)
+```
+This will output three .rds shapefiles, `global.ctry.rds`, `global.prov.rds` and `global.dist.rds`. These three datasets need to be placed in the `misc` folder `POLIS_folder/misc/`.
+
+- Static files: you will need nine static files that will be appended to AFP and SIA data at the end of pre-processing. This is all pre-2020 data that remains static and contains certain hard coded values to correct for old POLIS entries that will not be updated. Six of those files are `afp_linelist_2001-01-01_2012-12-31.rds`, `afp_linelist_2013-01-01_2016-12-31.rds`, `afp_linelist_2017-01-01_2019-12-31.rds`, `other_surveillance_type_linelist_2016_2016.rds`, `other_surveillance_type_linelist_2017_2019.rds`, `sia_2000_2019.rds`. These need to be placed in the `core_files_to_combine` folder `POLIS_folder/data/core_files_to_combine/`. The other three static files are `crosswalk.rds`, `env_sites.rds` and `nopv_emg.table.rds` which all need to go in the `misc` folder.
+
+Once you have created and obtained these datasets you can begin pre-processing.
+
+## Processing POLIS data
+
+
