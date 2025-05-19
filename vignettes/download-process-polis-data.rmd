@@ -96,4 +96,39 @@ Once you have created and obtained these datasets you can begin pre-processing.
 
 ## Processing POLIS data
 
+To process datasets for analysis all you need to run is the function 
+```
+preprocess_data(type = "cdc")
+```` 
+At this moment `cdc` is the only type of pre-processing supported by this function. Like `get_polis_data()` you will need to be connected to a valid POLIS folder before running this function. 
+
+There are five steps to pre-processing:
+
+0. Basic cleaning and standardization of variable names, creates four datasets that will become AFP/other surveillance, SIA, Environmental sample and Positives data. 
+1. Creates AFP and Other surveillance linelists, classifies cases and creates analysis variables as well as evaluates and corrects (when possible) geographic information.
+2. Creates SIA data including applying a clustering algorithm to impute round numbers (on first run this step will take many hours)
+3. Creates Environmental sample data, classifies detections and evaluates ES sites
+4. Creates Positives data, this uses the previously processed AFP and ES data to classify cases
+
+`preprocess_data()` will always run pre-processing in this order but if stepping through the function manually it should be noted that step 4 will not run if the previous steps have not been run prior. 
+
+This function will produce a number of outputs into `POLIS_folder/data/Core_Ready_Files/`, the primary outputs are the datasets: 
+
+- afp_linelist_2001-01-01_{date_of_latest_case}.rds
+- afp_linelist_2019-01-01_{date_of_latest_case}.rds
+- afp_linelist_2020-01-01_{date_of_latest_case}.rds
+- other_surveillance_type_linelist_2016_2025.rds
+- other_surveillance_type_linelist_2020_2025.rds
+- sia_2000_2025.rds
+- sia_2020_2025.rds
+- es_2001-01-08_{date_of_latest_detection}.rds
+- positives_2001-01-01_{date_of_latest_positive}.rds
+
+In addition to these datasets there are a number of additional QA/QC outputs, these include duplicate records, missing or unmatched geographies, original date variables/formats, and changed virus records. These outputs can be used to check for errors in POLIS and are helpful for understanding changes in POLIS data from week to week.
+
+CDC follows this schedule for updating and processing POLIS data:
+- Download of POLIS tables: Tuesdays at 6:00PM Eastern Time.
+- Running preprocessing: Wednesdays at 9:00AM Eastern Time.
+
+### 
 
