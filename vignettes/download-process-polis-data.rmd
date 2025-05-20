@@ -130,5 +130,11 @@ CDC follows this schedule for updating and processing POLIS data:
 - Download of POLIS tables: Tuesdays at 6:00PM Eastern Time.
 - Running preprocessing: Wednesdays at 9:00AM Eastern Time.
 
-### 
+### Logging and Caching
+
+## Log
+Tidypolis logs all steps of initializing, downloading and processing. This information is output into `log.rds` within `POLIS_folder`. This can be used to understand changes in data from week to week, identify issues with the download, the data or the functions themselves, and provides a litany of useful information on each download and processing run. It is suggested that the user looks over the log after each run.
+
+## Cache
+Tidypolis maintains a cache of information on each table available via API from POLIS. This cache contains information about the size of the table, when it was last downloaded, the unique ID and update date variables present in tables (where applicable) and the user who last downloaded it. 
 
