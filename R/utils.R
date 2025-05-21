@@ -7259,7 +7259,8 @@ s4_fully_process_es_data <- function(
   es.05 <- s4_es_load_data(polis_data_folder = polis_data_folder,
                            latest_folder_in_archive = latest_folder_in_archive,
                            output_folder_name = output_folder_name) |>
-    s4_es_data_processing(output_folder_name = output_folder_name) |>
+    s4_es_data_processing(output_folder_name = output_folder_name,
+                          polis_data_folder = polis_data_folder) |>
     s4_es_validate_sites() |>
     s4_es_create_cdc_vars(
       polis_folder = polis_folder,
@@ -7398,12 +7399,14 @@ s4_es_load_data <- function(polis_data_folder, latest_folder_in_archive,
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
 #'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#' @param polis_data_folder `str` Path to the POLIS data folder.
 #'
 #' @returns `tibble` es.02 SIA data with outputs validated
 #' @keywords internal
 #'
 s4_es_data_processing <- function(es.01.new, startyr, endyr,
-                                  output_folder_name){
+                                  output_folder_name,
+                                  polis_data_folder){
 
   # Data manipulation
 
