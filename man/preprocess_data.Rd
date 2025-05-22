@@ -4,7 +4,7 @@
 \alias{preprocess_data}
 \title{Preprocess data retrieved from POLIS}
 \usage{
-preprocess_data(type, who_region = NULL, output_format)
+preprocess_data(type = "cdc", who_region = NULL, output_format = "rds")
 }
 \arguments{
 \item{type}{str: specify the type of preprocessing to complete}
