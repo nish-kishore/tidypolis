@@ -3268,7 +3268,7 @@ s1_prep_polis_tables <- function(polis_folder, polis_data_folder,
   if (!is.null(who_region)) {
     # Set region-specific folder name
     output_folder_name <- paste0("Core_Ready_Files_", who_region)
-  }
+  } else {output_folder_name <- "Core_Ready_Files"}
 
   # update log for start of creation of CORE ready datasets
   update_polis_log(.event = "Beginning Preprocessing - Creation of CORE Ready Datasets",
