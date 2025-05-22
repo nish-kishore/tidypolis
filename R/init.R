@@ -400,19 +400,22 @@ freeze_polis_data <- function(){
 #' preprocess_data(type = "cdc") #must run init_tidypolis to specify POLIS data location first
 #' }
 #' @export
-preprocess_data <- function(type, output_format){
+preprocess_data <- function(type = "cdc", output_format = "rds"){
 
   types <- c("cdc")
+  outputs <- c("rds", "rda", "csv", "parquet")
 
-  if(!(type %in% types)){
+  if (!(type %in% types)) {
     cli::cli_abort(message = paste0("'", type, "'", " is not one of the accepted values for 'type'"))
   }
 
+  if (!(output_format %in% outputs)) {
+    cli::cli_abort(paste0("'", output_format, "'", " is not one of the accepted values for 'output_format'"))
+  }
+
   #CDC pre-processing steps
-  if(type == "cdc"){
-
+  if (type == "cdc") {
     preprocess_cdc(output_format = output_format)
-
   }
 
 
