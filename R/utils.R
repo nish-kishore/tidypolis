@@ -4421,8 +4421,8 @@ s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
     data = afp_with_guids,
     polis_data_folder = polis_data_folder,
     polis_folder = polis_folder,
-    output_folder_name = output_folder_name
-  )
+    output_folder_name = output_folder_name) |>
+    dplyr::select(polis.case.id, epid, tidyr::everything())
 
   # Step 2j: Create key AFP variables
   afp_final <- s2_create_afp_variables(data = afp_processed)
@@ -5275,7 +5275,8 @@ s2_fix_admin_guids <- function(data, shape_data) {
       wrongAdmin1GUID = dplyr::if_else(is.na(match) & !is.na(admin1guid),
                                        "yes", "no"
       )
-    )
+    ) |>
+    dplyr::distinct()
 
   # Match by name and fix incorrect Admin1 GUIDs
   data_fixed_prov <- data_fixed_prov |>
@@ -5291,7 +5292,8 @@ s2_fix_admin_guids <- function(data, shape_data) {
       wrongAdmin1GUID == "yes" & !is.na(match01),
       ADM1_GUID, Admin1GUID
     )) |>
-    dplyr::select(-match, -match01)
+    dplyr::select(-match, -match01) |>
+    dplyr::distinct()
 
   # Extract district level data
   shapes_dist <- shape_data |>
@@ -5325,7 +5327,8 @@ s2_fix_admin_guids <- function(data, shape_data) {
     dplyr::mutate(wrongAdmin2GUID = dplyr::if_else(
       is.na(match) & !is.na(admin2guid),
       "yes", "no"
-    ))
+    )) |>
+    dplyr::distinct()
 
   # Match by name and fix incorrect Admin2 GUIDs
   data_fixed_dist <- data_fixed_dist |>
@@ -5342,7 +5345,8 @@ s2_fix_admin_guids <- function(data, shape_data) {
       wrongAdmin2GUID == "yes" & !is.na(match01),
       GUID, Admin2GUID
     )) |>
-    dplyr::select(-match, -match01, -ADM1_GUID, -GUID)
+    dplyr::select(-match, -match01, -ADM1_GUID, -GUID) |>
+    dplyr::distinct()
 
   # Generate summary statistics on GUID issues
   issues_by_year <- data_fixed_dist |>
@@ -5443,11 +5447,6 @@ s2_process_coordinates <- function(data, polis_data_folder, polis_folder,
     dplyr::mutate(dup_epid = dplyr::n()) |>
     dplyr::filter(dup_epid > 1) |>
     dplyr::ungroup() |>
-    dplyr::select(
-      epid, date.onset, yronset, diagnosis.final, classification,
-      classificationvdpv, final.cell.culture.result, poliovirustypes,
-      person.sex, place.admin.0, place.admin.1, place.admin.2
-    ) |>
     dplyr::distinct() |>
     dplyr::arrange(epid)
 
@@ -5469,10 +5468,37 @@ s2_process_coordinates <- function(data, polis_data_folder, polis_folder,
       )
     ))
 
-    # Remove duplicates
-    data_deduped <- data_renamed[!duplicated(data_renamed$epid), ]
+    #fix EPIDS that aren't real duplicates
+    dup_epid_01 <- dup_epid |>
+      dplyr::group_by(epid, date.onset, followup.date) |>
+      dplyr::mutate(n = n()) |>
+      dplyr::filter(n > 1) |>
+      dplyr::slice(1) |>
+      dplyr::ungroup() |>
+      dplyr::select(-n)
+
+    dup_epid_fixed <- dup_epid |>
+      dplyr::filter(!epid %in% dup_epid_01$epid) |>
+      dplyr::mutate(epid_fixed = paste0(stringr::str_sub(place.admin.0, 1, 3), "-",
+                                        stringr::str_sub(place.admin.1, 1, 3), "-",
+                                        stringr::str_sub(place.admin.2, 1, 3), "-",
+                                        epid)) |>
+    dplyr::bind_rows(dup_epid_01)
+
+    for (i in 1:nrow(dup_epid_fixed |> dplyr::filter(!is.na(epid_fixed)))) {
+      update_polis_log(.event = paste0("Duplicate EPID ", dup_epid_fixed[i, "epid"], " updated to: ",
+                                       dup_epid_fixed[i, "epid_fixed"]),
+                       .event_type = "ALERT")
+    }
+
+    data_deduped <- dup_epid_fixed |>
+      dplyr::select(-c("epid", "dup_epid")) |>
+      dplyr::rename(epid = epid_fixed) |>
+      rbind(data_renamed |> filter(!epid %in% dup_epid_fixed$epid))
+
+
     cli::cli_alert_warning(paste0(
-      "Found and removed ", nrow(dup_epid), " duplicate EPIDs"
+      "Found and fixed/removed ", nrow(dup_epid), " duplicate EPIDs"
     ))
   } else {
     data_deduped <- data_renamed
