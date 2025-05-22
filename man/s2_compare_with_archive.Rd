@@ -10,7 +10,8 @@ s2_compare_with_archive(
   latest_archive,
   col_afp_raw,
   start_year = 2020,
-  end_year = lubridate::year(Sys.Date())
+  end_year = lubridate::year(Sys.Date()),
+  output_folder_name
 )
 }
 \arguments{
@@ -25,6 +26,11 @@ s2_compare_with_archive(
 \item{start_year}{Integer. Start year for filtering (default: 2020)}
 
 \item{end_year}{Integer. End year for filtering (default: current year)}
+
+\item{output_folder_name}{str: Name of the output directory where processed
+files will be saved. Defaults to "Core_Ready_Files". For
+region-specific processing, this should be set to
+"Core_Ready_Files_\link{REGION}" (e.g., "Core_Ready_Files_AFRO").}
 }
 \value{
 A list containing comparison results:

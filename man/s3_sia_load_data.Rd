@@ -4,12 +4,21 @@
 \alias{s3_sia_load_data}
 \title{Load SIA Data}
 \usage{
-s3_sia_load_data(polis_data_folder, latest_folder_in_archive)
+s3_sia_load_data(
+  polis_data_folder,
+  latest_folder_in_archive,
+  output_folder_name
+)
 }
 \arguments{
 \item{polis_data_folder}{\code{str} Path to the POLIS data folder.}
 
 \item{latest_folder_in_archive}{\code{str} Time stamp of latest folder in archive}
+
+\item{output_folder_name}{str: Name of the output directory where processed
+files will be saved. Defaults to "Core_Ready_Files". For
+region-specific processing, this should be set to
+"Core_Ready_Files_\link{REGION}" (e.g., "Core_Ready_Files_AFRO").}
 }
 \value{
 \code{tiblle} sia.01.new - the latest SIA data quality checked for variable

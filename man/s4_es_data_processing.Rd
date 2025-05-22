@@ -4,7 +4,7 @@
 \alias{s4_es_data_processing}
 \title{Convert variables in POLIS download to to cleaned outputs}
 \usage{
-s4_es_data_processing(es.01.new)
+s4_es_data_processing(es.01.new, startyr, endyr, output_folder_name)
 }
 \arguments{
 \item{es.01.new}{\code{tibble} The latest ES download with variables checked
@@ -13,6 +13,11 @@ against the last download}
 \item{startyr}{\code{int} The subset of years for which to process ES data}
 
 \item{endyr}{\code{int} The subset of years for which to process ES data}
+
+\item{output_folder_name}{str: Name of the output directory where processed
+files will be saved. Defaults to "Core_Ready_Files". For
+region-specific processing, this should be set to
+"Core_Ready_Files_\link{REGION}" (e.g., "Core_Ready_Files_AFRO").}
 }
 \value{
 \code{tibble} es.02 SIA data with outputs validated

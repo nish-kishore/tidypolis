@@ -4,7 +4,11 @@
 \alias{create_response_vars}
 \title{Creates a summary of SIA responses to cVDPV detections}
 \usage{
-create_response_vars(pos, polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"))
+create_response_vars(
+  pos,
+  output_folder_name,
+  polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")
+)
 }
 \arguments{
 \item{pos}{\code{tibble} The positive viruses dataset.}

@@ -7,7 +7,8 @@
 remove_character_dates(
   type,
   df,
-  polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")
+  polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
+  output_folder_name
 )
 }
 \arguments{
@@ -16,6 +17,11 @@ remove_character_dates(
 \item{df}{tibble: the dataframe from which to remove character formatted dates}
 
 \item{polis_data_folder}{str:  location of user's polis data folder}
+
+\item{output_folder_name}{str: Name of the output directory where processed
+files will be saved. Defaults to "Core_Ready_Files". For
+region-specific processing, this should be set to
+"Core_Ready_Files_\link{REGION}" (e.g., "Core_Ready_Files_AFRO").}
 }
 \value{
 outputs a saved reference table of original date vars and a smaller

@@ -4,7 +4,13 @@
 \alias{s2_export_afp_outputs}
 \title{Export AFP data and related outputs}
 \usage{
-s2_export_afp_outputs(data, latest_archive, polis_data_folder, col_afp_raw)
+s2_export_afp_outputs(
+  data,
+  latest_archive,
+  polis_data_folder,
+  col_afp_raw,
+  output_folder_name
+)
 }
 \arguments{
 \item{data}{A data frame containing processed AFP data}
@@ -14,6 +20,11 @@ s2_export_afp_outputs(data, latest_archive, polis_data_folder, col_afp_raw)
 \item{polis_data_folder}{String path to the POLIS data folder}
 
 \item{col_afp_raw}{Names of original columns for comparison}
+
+\item{output_folder_name}{str: Name of the output directory where processed
+files will be saved. Defaults to "Core_Ready_Files". For
+region-specific processing, this should be set to
+"Core_Ready_Files_\link{REGION}" (e.g., "Core_Ready_Files_AFRO").}
 }
 \value{
 Invisibly returns NULL

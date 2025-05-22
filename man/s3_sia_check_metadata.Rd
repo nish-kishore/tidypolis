@@ -5,7 +5,12 @@
 \title{Check SIA dataset metadata against the previous download for data type changes
 or new types of entries}
 \usage{
-s3_sia_check_metadata(sia.06, polis_data_folder, latest_folder_in_archive)
+s3_sia_check_metadata(
+  sia.06,
+  polis_data_folder,
+  latest_folder_in_archive,
+  output_folder_name
+)
 }
 \arguments{
 \item{sia.06}{\code{tibble} The latest SIA download with variables checked and
@@ -15,6 +20,11 @@ deduplicated}
 \item{polis_data_folder}{\code{str} Path to the POLIS data folder.}
 
 \item{latest_folder_in_archive}{\code{str} Time stamp of latest folder in archive}
+
+\item{output_folder_name}{str: Name of the output directory where processed
+files will be saved. Defaults to "Core_Ready_Files". For
+region-specific processing, this should be set to
+"Core_Ready_Files_\link{REGION}" (e.g., "Core_Ready_Files_AFRO").}
 }
 \description{
 Check SIA dataset metadata against the previous download for data type changes

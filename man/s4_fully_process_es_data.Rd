@@ -6,8 +6,9 @@
 \usage{
 s4_fully_process_es_data(
   polis_folder,
-  polis_data_folder = file.path(polis_folder, "data"),
-  latest_folder_in_archive
+  polis_data_folder,
+  latest_folder_in_archive,
+  output_folder_name
 )
 }
 \arguments{
@@ -16,9 +17,11 @@ s4_fully_process_es_data(
 \item{polis_data_folder}{\code{str} Path to the POLIS data folder.}
 
 \item{latest_folder_in_archive}{\code{str} Name of the latest folder in the archive.}
-}
-\value{
-\code{NULL} silently upon success.
+
+\item{output_folder_name}{str: Name of the output directory where processed
+files will be saved. Defaults to "Core_Ready_Files". For
+region-specific processing, this should be set to
+"Core_Ready_Files_\link{REGION}" (e.g., "Core_Ready_Files_AFRO").}
 }
 \description{
 This function processes ES data through multiple standardization and

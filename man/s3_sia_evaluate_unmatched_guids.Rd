@@ -4,12 +4,17 @@
 \alias{s3_sia_evaluate_unmatched_guids}
 \title{Evaluate SIA data with unmatched spatial data}
 \usage{
-s3_sia_evaluate_unmatched_guids(sia.05, polis_data_folder)
+s3_sia_evaluate_unmatched_guids(sia.05, polis_data_folder, output_folder_name)
 }
 \arguments{
 \item{sia.05}{\code{tibble} the output of s3_sia_check_guids()}
 
 \item{polis_data_folder}{The POLIS data folder.}
+
+\item{output_folder_name}{str: Name of the output directory where processed
+files will be saved. Defaults to "Core_Ready_Files". For
+region-specific processing, this should be set to
+"Core_Ready_Files_\link{REGION}" (e.g., "Core_Ready_Files_AFRO").}
 }
 \value{
 \code{NULL} silently.

@@ -4,7 +4,7 @@
 \alias{s2_check_missingness}
 \title{Check missingness in key AFP variables}
 \usage{
-s2_check_missingness(data, type = "AFP", polis_data_folder)
+s2_check_missingness(data, type = "AFP", polis_data_folder, output_folder_name)
 }
 \arguments{
 \item{data}{A data frame containing AFP surveillance data}
@@ -12,6 +12,11 @@ s2_check_missingness(data, type = "AFP", polis_data_folder)
 \item{type}{String indicating the type of data (e.g., "AFP")}
 
 \item{polis_data_folder}{String path to the POLIS data folder}
+
+\item{output_folder_name}{str: Name of the output directory where processed
+files will be saved. Defaults to "Core_Ready_Files". For
+region-specific processing, this should be set to
+"Core_Ready_Files_\link{REGION}" (e.g., "Core_Ready_Files_AFRO").}
 }
 \value{
 Invisibly returns the missingness summary

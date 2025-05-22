@@ -8,7 +8,8 @@ s3_fully_process_sia_data(
   long.global.dist.01,
   polis_data_folder,
   latest_folder_in_archive,
-  timestamp
+  timestamp,
+  output_folder_name
 )
 }
 \arguments{
@@ -20,6 +21,11 @@ validation.}
 \item{latest_folder_in_archive}{\code{str} Name of the latest folder in the archive.}
 
 \item{timestamp}{\code{str} The time stamp.}
+
+\item{output_folder_name}{str: Name of the output directory where processed
+files will be saved. Defaults to "Core_Ready_Files". For
+region-specific processing, this should be set to
+"Core_Ready_Files_\link{REGION}" (e.g., "Core_Ready_Files_AFRO").}
 }
 \description{
 This function processes SIA data through multiple standardization and
