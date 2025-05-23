@@ -5,16 +5,11 @@
 \title{Export AFP data and related outputs}
 \usage{
 s2_export_afp_outputs(
-  
   data,
- 
   latest_archive,
- 
   polis_data_folder,
- 
   col_afp_raw,
-  output_folder_name
-,
+  output_folder_name,
   output_format
 )
 }

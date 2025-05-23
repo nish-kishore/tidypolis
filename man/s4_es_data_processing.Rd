@@ -4,7 +4,13 @@
 \alias{s4_es_data_processing}
 \title{Convert variables in POLIS download to to cleaned outputs}
 \usage{
-s4_es_data_processing(es.01.new, polis_data_folder, startyr, endyr, output_folder_name)
+s4_es_data_processing(
+  es.01.new,
+  polis_data_folder,
+  startyr,
+  endyr,
+  output_folder_name
+)
 }
 \arguments{
 \item{es.01.new}{\code{tibble} The latest ES download with variables checked

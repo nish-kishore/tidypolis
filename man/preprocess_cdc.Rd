@@ -5,10 +5,8 @@
 \title{Preprocess data process data in the CDC style}
 \usage{
 preprocess_cdc(
-  
   polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
-  who_region = NULL
-,
+  who_region = NULL,
   output_format = "rds"
 )
 }

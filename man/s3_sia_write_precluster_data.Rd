@@ -4,7 +4,12 @@
 \alias{s3_sia_write_precluster_data}
 \title{Write out SIA data}
 \usage{
-s3_sia_write_precluster_data(sia.06, polis_data_folder, output_folder_name, output_format)
+s3_sia_write_precluster_data(
+  sia.06,
+  polis_data_folder,
+  output_folder_name,
+  output_format
+)
 }
 \arguments{
 \item{sia.06}{\code{tibble} The latest SIA download with variables checked and

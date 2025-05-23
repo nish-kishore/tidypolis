@@ -2304,7 +2304,6 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
   s5_fully_process_pos_data(polis_folder = polis_folder,
                             polis_data_folder = polis_data_folder,
                             latest_folder_in_archive,
-                           
                             long.global.dist.01,
                             output_folder_name = output_folder_name,
                             output_format = output_format)
@@ -7475,22 +7474,18 @@ s4_es_load_data <- function(polis_data_folder, latest_folder_in_archive,
 #'
 #' @param es.01.new `tibble` The latest ES download with variables checked
 #' against the last download
-#' @param startyr `int` The subset of years for which to process ES data
-#' @param endyr `int` The subset of years for which to process ES data
 #' @param output_folder_name str: Name of the output directory where processed
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
 #'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
 #' @param polis_data_folder `str` Path to the POLIS data folder.
-#' @inheritParams s4_fully_process_es_data
 #'
 #' @returns `tibble` es.02 SIA data with outputs validated
 #' @keywords internal
 #'
 s4_es_data_processing <- function(es.01.new,
-                                  polis_data_folder, startyr, endyr,
-                                  output_folder_name,
-                                  polis_data_folder){
+                                  polis_data_folder,
+                                  output_folder_name){
 
   # Data manipulation
 
