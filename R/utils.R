@@ -7180,6 +7180,7 @@ s3_sia_cluster_dates_by_vax_type <- function(data,
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
 #'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#' @param output_format Output format of the SIA dataset.
 #'
 #' @returns `NULL` silently.
 #' @keywords internal
@@ -7188,7 +7189,8 @@ s3_sia_merge_cluster_dates_final_data <- function(
     sia.clean.01,
     polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
     polis_data_folder = file.path(polis_folder, "data"),
-    output_folder_name
+    output_folder_name,
+    output_format
 ){
 
   cli::cli_process_start("Reading in cached SIA cluster data")
@@ -7246,7 +7248,7 @@ s3_sia_merge_cluster_dates_final_data <- function(
                    paste("sia", min(sia.clean.02$yr.sia, na.rm = T),
                          max(sia.clean.02$yr.sia, na.rm = T),
                          sep = "_"),
-                   ".rds",
+                   output_format,
                    sep = ""
                  ))
   ))
@@ -8515,9 +8517,10 @@ s5_pos_process_es_virus <- function(virus.01, polis_data_folder, output_folder_n
   cli::cli_process_start("Adding in ES data")
 
   # read in ES files from cleaned ENV linelist
-  env.files.01 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path = file.path(polis_data_folder, output_folder_name), full_names = T)) |>
+  env.files.01 <- dplyr::tibble("name" = tidypolis_io(io = "list",
+                                                      file_path = file.path(polis_data_folder, output_folder_name), full_names = T)) |>
     dplyr::mutate(short_name = stringr::str_replace(name, paste0(polis_data_folder, "/", output_folder_name, "/"), "")) |>
-    dplyr::filter(grepl(paste0("^.*(es).*(\\", output_format, ")$"), short_name)) |>
+    dplyr::filter(grepl(paste0("^(es).*", "(", output_format, ")$"), short_name)) |>
     dplyr::pull(name)
 
   tryCatch({
@@ -8756,7 +8759,7 @@ s5_pos_compare_with_archive <- function(afp.es.virus.01, afp.es.virus.03, polis_
   class.updated <- afp.es.virus.01 |>
     dplyr::filter(vdpvclassificationchangedate <= Sys.Date() & vdpvclassificationchangedate > (Sys.Date()- 7)) |>
     dplyr::select(epid, virustype, measurement, vdpvclassificationchangedate, vdpvclassificationcode, createddate) |>
-    dplyr::mutate(vdpvclassificationchangedate = as.Date(vdpvclassificationchangedate, "%Y-%m-%d"))
+    dplyr::mutate(vdpvclassificationchangedate = as.Date(vdpvclassificationchangedate, tryFormats = "%Y-%m-%d"))
 
   if(nrow(class.updated > 0)){
     tidypolis_io(obj = class.updated,
