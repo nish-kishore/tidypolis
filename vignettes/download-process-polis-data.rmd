@@ -64,7 +64,7 @@ The first download will pull the entirety of each table. Subsequent downloads wi
 POLIS population data can also be downloaded with `get_polis_data()`
 
 ```
-get_polis_data(type = "pop)
+get_polis_data(type = "pop")
 ```
 
 This will download the population dataset into the same location as the other POLIS tables.
