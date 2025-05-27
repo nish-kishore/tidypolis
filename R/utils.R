@@ -2146,11 +2146,26 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
     round(lubridate::second(ts), 0)
   )
 
-  suppressMessages(
-    latest_folder_in_archive <- s2_find_latest_archive(
-      polis_data_folder = polis_data_folder, timestamp = timestamp,
-      output_folder_name = "Core_Ready_Files")
-  )
+  # WHO Region set-up and validation ------------------------------------------
+  # Default output folder name
+  output_folder_name <- "Core_Ready_Files"
+
+  # If a WHO region is provided:
+  if (!is.null(who_region)) {
+    # 2a. Validate region code
+    valid <- c("AFRO","AMRO","EMRO","EURO","SEARO","WPRO")
+    if (!who_region %in% valid) {
+      cli::cli_abort("‘{who_region}’ is not a valid WHO region.")
+    }
+
+    # Set region-specific folder name
+    output_folder_name <- paste0("Core_Ready_Files_", who_region)
+
+  }
+
+  latest_folder_in_archive <- s2_find_latest_archive(
+    polis_data_folder = polis_data_folder, timestamp = timestamp,
+    output_folder_name = output_folder_name)
 
   if (!requireNamespace("purrr", quietly = TRUE)) {
     stop('Package "purrr" must be installed to use this function.',
@@ -2220,29 +2235,6 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
     cli::cli_abort("Halting execution of preprocessing due to missing files.")
   }
   rm(core_files_folder_path, missing_static_files)
-
-
-  # WHO Region set-up and validation ------------------------------------------
-  # Default output folder name
-  output_folder_name <- "Core_Ready_Files"
-
-  # If a WHO region is provided:
-  if (!is.null(who_region)) {
-    # 2a. Validate region code
-    valid <- c("AFRO","AMRO","EMRO","EURO","SEARO","WPRO")
-    if (!who_region %in% valid) {
-      cli::cli_abort("‘{who_region}’ is not a valid WHO region.")
-    }
-
-    # Set region-specific folder name
-    output_folder_name <- paste0("Core_Ready_Files_", who_region)
-
-    # Locate latest archive folder
-    latest_folder_in_archive <-
-      s2_find_latest_archive(polis_data_folder, timestamp,
-                             output_folder_name)
-
-  }
 
   #Step 1 - Basic cleaning and crosswalk ======
   cli::cli_h1("Step 1/5: Basic cleaning and crosswalk across datasets")
@@ -3423,7 +3415,7 @@ s1_prep_polis_tables <- function(polis_folder, polis_data_folder,
 
   # Move files from the current POLIS data folder into the archive
   s1_archive_old_files(polis_data_folder, timestamp,
-                       output_folder_name = output_folder_name, output_format)
+                       output_folder_name, output_format)
 
   invisible(capture.output(gc()))
 
@@ -4508,6 +4500,18 @@ s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
 #' }
 #' @keywords internal
 s2_find_latest_archive <- function(polis_data_folder, timestamp, output_folder_name) {
+
+  if (!tidypolis_io(io = "exists.dir",
+                    file_path =  paste0(polis_data_folder, "/",
+                                        output_folder_name, "/Archive"))) {
+    cli::cli_alert_info(paste0("No archive found for: ",
+                               output_folder_name, ".\n Creating..."))
+    tidypolis_io(io = "create",
+                 file_path = paste0(polis_data_folder, "/",
+                                    output_folder_name, "/Archive"))
+  }
+
+
   latest_folder_in_archive <- tidypolis_io(
     io = "list",
     file_path = paste0(polis_data_folder, "/", output_folder_name, "/Archive")
