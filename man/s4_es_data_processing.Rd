@@ -4,15 +4,13 @@
 \alias{s4_es_data_processing}
 \title{Convert variables in POLIS download to to cleaned outputs}
 \usage{
-s4_es_data_processing(es.01.new, startyr, endyr, output_folder_name)
+s4_es_data_processing(es.01.new, polis_data_folder, output_folder_name)
 }
 \arguments{
 \item{es.01.new}{\code{tibble} The latest ES download with variables checked
 against the last download}
 
-\item{startyr}{\code{int} The subset of years for which to process ES data}
-
-\item{endyr}{\code{int} The subset of years for which to process ES data}
+\item{polis_data_folder}{\code{str} Path to the POLIS data folder.}
 
 \item{output_folder_name}{str: Name of the output directory where processed
 files will be saved. Defaults to "Core_Ready_Files". For

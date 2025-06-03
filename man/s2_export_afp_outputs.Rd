@@ -9,7 +9,8 @@ s2_export_afp_outputs(
   latest_archive,
   polis_data_folder,
   col_afp_raw,
-  output_folder_name
+  output_folder_name,
+  output_format
 )
 }
 \arguments{
@@ -25,6 +26,10 @@ s2_export_afp_outputs(
 files will be saved. Defaults to "Core_Ready_Files". For
 region-specific processing, this should be set to
 "Core_Ready_Files_\link{REGION}" (e.g., "Core_Ready_Files_AFRO").}
+
+\item{output_format}{str: output_format to save files as.
+Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+'rds'.}
 }
 \value{
 Invisibly returns NULL

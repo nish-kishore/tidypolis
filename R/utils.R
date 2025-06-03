@@ -2105,13 +2105,33 @@ check_missingness <- function(data,
 #' Process POLIS data into analytic datasets needed for CDC
 #' @import cli sirfunctions dplyr readr lubridate stringr tidyr stringi
 #' @param polis_folder str: location of the POLIS data folder
+#' @param output_format str: output_format to save files as.
+#'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+#'    'rds'.
 #' @param who_region str: optional WHO region to filter data
 #'      Available inputs include AFRO, AMRO, EMRO, EURO, SEARO and  WPRO.
 #' @returns Outputs intermediary core ready files
 #' @keywords internal
 #'
 preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
-                           who_region = NULL) {
+                           who_region = NULL,
+                           output_format = "rds") {
+
+
+  # ensure leading dot in output_format
+  if (!startsWith(output_format, ".")) {
+    output_format <- paste0(".", output_format)
+  }
+
+  # validate output_format
+  if (!output_format %in% c(".rds", ".rda", ".csv", ".parquet")) {
+    stop("Currently, only 'rds', 'rda', 'csv', and 'parquet' are supported.")
+  }
+
+  # ensure leading dot
+  if (!startsWith(output_format, ".")) {
+    output_format <- paste0(".", output_format)
+  }
 
   # Static global variables used in some part of our code
   polis_data_folder <- file.path(polis_folder, "data")
@@ -2126,11 +2146,26 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
     round(lubridate::second(ts), 0)
   )
 
-  suppressMessages(
-    latest_folder_in_archive <- s2_find_latest_archive(
-      polis_data_folder = polis_data_folder, timestamp = timestamp,
-      output_folder_name = "Core_Ready_Files")
-  )
+  # WHO Region set-up and validation ------------------------------------------
+  # Default output folder name
+  output_folder_name <- "Core_Ready_Files"
+
+  # If a WHO region is provided:
+  if (!is.null(who_region)) {
+    # 2a. Validate region code
+    valid <- c("AFRO","AMRO","EMRO","EURO","SEARO","WPRO")
+    if (!who_region %in% valid) {
+      cli::cli_abort("‘{who_region}’ is not a valid WHO region.")
+    }
+
+    # Set region-specific folder name
+    output_folder_name <- paste0("Core_Ready_Files_", who_region)
+
+  }
+
+  latest_folder_in_archive <- s2_find_latest_archive(
+    polis_data_folder = polis_data_folder, timestamp = timestamp,
+    output_folder_name = output_folder_name)
 
   if (!requireNamespace("purrr", quietly = TRUE)) {
     stop('Package "purrr" must be installed to use this function.',
@@ -2201,35 +2236,12 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
   }
   rm(core_files_folder_path, missing_static_files)
 
-
-  # WHO Region set-up and validation ------------------------------------------
-  # Default output folder name
-  output_folder_name <- "Core_Ready_Files"
-
-  # If a WHO region is provided:
-  if (!is.null(who_region)) {
-    # 2a. Validate region code
-    valid <- c("AFRO","AMRO","EMRO","EURO","SEARO","WPRO")
-    if (!who_region %in% valid) {
-      cli::cli_abort("‘{who_region}’ is not a valid WHO region.")
-    }
-
-    # Set region-specific folder name
-    output_folder_name <- paste0("Core_Ready_Files_", who_region)
-
-    # Locate latest archive folder
-    latest_folder_in_archive <-
-      s2_find_latest_archive(polis_data_folder, timestamp,
-                             output_folder_name)
-
-  }
-
   #Step 1 - Basic cleaning and crosswalk ======
   cli::cli_h1("Step 1/5: Basic cleaning and crosswalk across datasets")
 
   s1_prep_polis_tables(polis_folder, polis_data_folder,
                        long.global.dist.01, ts, timestamp,
-                       who_region)
+                       who_region, output_format)
 
   # Step 2 - Creating AFP and EPI datasets =====================================
 
@@ -2246,7 +2258,8 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
     long.global.dist.01 = long.global.dist.01,
     timestamp = timestamp,
     latest_folder_in_archive_path = latest_folder_in_archive,
-    output_folder_name = output_folder_name)
+    output_folder_name = output_folder_name,
+    output_format = output_format)
 
   invisible(gc())
 
@@ -2259,7 +2272,8 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
     polis_data_folder,
     latest_folder_in_archive,
     timestamp,
-    output_folder_name = output_folder_name
+    output_folder_name = output_folder_name,
+    output_format = output_format
   )
 
   invisible(gc())
@@ -2273,7 +2287,8 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
   s4_fully_process_es_data(polis_folder = polis_folder,
                            polis_data_folder = polis_data_folder,
                            latest_folder_in_archive = latest_folder_in_archive,
-                           output_folder_name = output_folder_name)
+                           output_folder_name = output_folder_name,
+                           output_format = output_format)
 
   #Step 5 - Creating Virus datasets ====
   cli::cli_h1("Step 5/5 - Creating Virus datasets")
@@ -2282,7 +2297,8 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
                             polis_data_folder = polis_data_folder,
                             latest_folder_in_archive,
                             long.global.dist.01,
-                            output_folder_name = output_folder_name)
+                            output_folder_name = output_folder_name,
+                            output_format = output_format)
 
   update_polis_log(.event = "Processing of CORE datafiles complete",
                    .event_type = "END")
@@ -3258,12 +3274,15 @@ check_missing_static_files <- function(core_files_folder_path,
 #' @param timestamp `str` Formatted time stamp.
 #' @param who_region str: optional WHO region to filter data
 #'      Available inputs include AFRO, AMRO, EMRO, EURO, SEARO and  WPRO.
+#' @param output_format str: output_format to save files as.
+#'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+#'    'rds'.
 #'
 #' @returns `NULL` quietly upon success.
 #' @export
 #'
 s1_prep_polis_tables <- function(polis_folder, polis_data_folder,
-                                 long.global.dist.01, ts, timestamp, who_region) {
+                                 long.global.dist.01, ts, timestamp, who_region, output_format) {
 
   if (!is.null(who_region)) {
     # Set region-specific folder name
@@ -3396,7 +3415,7 @@ s1_prep_polis_tables <- function(polis_folder, polis_data_folder,
 
   # Move files from the current POLIS data folder into the archive
   s1_archive_old_files(polis_data_folder, timestamp,
-                       output_folder_name = output_folder_name)
+                       output_folder_name, output_format)
 
   invisible(capture.output(gc()))
 
@@ -3409,7 +3428,8 @@ s1_prep_polis_tables <- function(polis_folder, polis_data_folder,
     api_subactivity_data = api_subactivity_data,
     api_es_data = api_es_data,
     api_virus_data = api_virus_data,
-    output_folder_name = output_folder_name)
+    output_folder_name = output_folder_name,
+    output_format = output_format)
 
   rm(api_case_data, api_es_data, api_virus_data, api_activity_data,
      api_subactivity_data)
@@ -4180,15 +4200,17 @@ s1_create_change_log <- function(polis_data_folder,
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
 #'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
-#'
+#' @param output_format str: output_format to save files as.
+#'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+#'    'rds'.
 #' @returns NULL
 #' @keywords internal
 #'
-s1_archive_old_files <- function(polis_data_folder, timestamp, output_folder_name) {
+s1_archive_old_files <- function(polis_data_folder, timestamp, output_folder_name, output_format) {
 
   cli_process_start("Archiving old files")
   most_recent_files_01 <- s1_get_most_recent_files(polis_data_folder,
-                                                   c(".rds", ".csv", ".xlsx"),
+                                                   c(".rds", ".rda", ".csv", ".xlsx", ".parquet"),
                                                    output_folder_name)
 
   if (length(most_recent_files_01) > 0) {
@@ -4234,6 +4256,9 @@ s1_archive_old_files <- function(polis_data_folder, timestamp, output_folder_nam
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
 #'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#' @param output_format str: output_format to save files as.
+#'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+#'    'rds'.
 #'
 #' @returns `NULL`
 #' @keywords internal
@@ -4243,7 +4268,8 @@ s1_export_final_core_ready_files <- function(polis_data_folder, ts, timestamp,
                                              api_subactivity_data,
                                              api_es_data,
                                              api_virus_data,
-                                             output_folder_name) {
+                                             output_folder_name,
+                                             output_format) {
 
   cli::cli_process_start("Writing all final Core Ready files")
 
@@ -4259,7 +4285,7 @@ s1_export_final_core_ready_files <- function(polis_data_folder, ts, timestamp,
           timestamp,
           "_from_01_Dec_2019_to_",
           format(ts, "%d_%b_%Y"),
-          ".rds"
+          output_format
         )
       )
     )
@@ -4277,7 +4303,7 @@ s1_export_final_core_ready_files <- function(polis_data_folder, ts, timestamp,
           timestamp,
           "_from_01_Jan_2020_to_",
           format(Sys.Date() + 365 / 2, "%d_%b_%Y"),
-          ".rds"
+          output_format
         )
       )
     )
@@ -4295,7 +4321,7 @@ s1_export_final_core_ready_files <- function(polis_data_folder, ts, timestamp,
           timestamp,
           "_from_01_Jan_2000_to_",
           format(ts, "%d_%b_%Y"),
-          ".rds"
+          output_format
         )
       )
     )
@@ -4313,7 +4339,7 @@ s1_export_final_core_ready_files <- function(polis_data_folder, ts, timestamp,
           timestamp,
           "_from_01_Dec_1999_to_",
           format(ts, "%d_%b_%Y"),
-          ".rds"
+          output_format
         )
       )
     )
@@ -4342,12 +4368,15 @@ s1_export_final_core_ready_files <- function(polis_data_folder, ts, timestamp,
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
 #'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#' @param output_format str: output_format to save files as.
+#'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+#'    'rds'.
 #'
 #' @export
 s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
                                       long.global.dist.01, timestamp,
                                       latest_folder_in_archive_path,
-                                      output_folder_name) {
+                                      output_folder_name, output_format) {
 
   if (!tidypolis_io(io = "exists.dir",
                     file_path = file.path(polis_data_folder, output_folder_name))) {
@@ -4433,7 +4462,8 @@ s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
     latest_archive = latest_folder_in_archive_path,
     polis_data_folder = polis_data_folder,
     col_afp_raw = colnames(afp_raw_new),
-    output_folder_name = output_folder_name
+    output_folder_name = output_folder_name,
+    output_format = output_format
   )
 
 }
@@ -4470,6 +4500,18 @@ s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
 #' }
 #' @keywords internal
 s2_find_latest_archive <- function(polis_data_folder, timestamp, output_folder_name) {
+
+  if (!tidypolis_io(io = "exists.dir",
+                    file_path =  paste0(polis_data_folder, "/",
+                                        output_folder_name, "/Archive"))) {
+    cli::cli_alert_info(paste0("No archive found for: ",
+                               output_folder_name, ".\n Creating..."))
+    tidypolis_io(io = "create",
+                 file_path = paste0(polis_data_folder, "/",
+                                    output_folder_name, "/Archive"))
+  }
+
+
   latest_folder_in_archive <- tidypolis_io(
     io = "list",
     file_path = paste0(polis_data_folder, "/", output_folder_name, "/Archive")
@@ -5776,11 +5818,14 @@ s2_create_afp_variables <- function(data) {
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
 #'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#' @param output_format str: output_format to save files as.
+#'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+#'    'rds'.
 #'
 #' @return Invisibly returns NULL
 #' @export
 s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
-                                  col_afp_raw, output_folder_name) {
+                                  col_afp_raw, output_folder_name, output_format) {
 
   cli::cli_process_start("Exporting AFP outputs",
                          msg_done = "Exported AFP outputs")
@@ -5863,7 +5908,7 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
         polis_data_folder, "/",
         output_folder_name, "/afp_linelist_",
         min(afp_data$dateonset, na.rm = TRUE), "_",
-        max(afp_data$dateonset, na.rm = TRUE), ".rds"
+        max(afp_data$dateonset, na.rm = TRUE), output_format
       )
     )
   ))
@@ -5884,7 +5929,7 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
       file_path = paste0(
         polis_data_folder, "/", output_folder_name, "/afp_lat_long_",
         min(afp_latlong$dateonset, na.rm = TRUE), "_",
-        max(afp_latlong$dateonset, na.rm = TRUE), ".csv"
+        max(afp_latlong$dateonset, na.rm = TRUE), output_format
       )
     )
   ))
@@ -5900,7 +5945,7 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
     file_path = paste0(polis_data_folder, "/", output_folder_name),
     full_names = TRUE
   )) |>
-    dplyr::filter(grepl("^.*(afp_linelist).*(.rds)$", name)) |>
+    dplyr::filter(grepl(paste0("^.*(afp_linelist).*(\\", output_format, ")$"), name)) |>
     dplyr::pull(name)
 
   afp_files_combine <- dplyr::tibble("name" = tidypolis_io(
@@ -5948,7 +5993,7 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
           min(afp_combined$dateonset, na.rm = TRUE),
           "_",
           max(afp_combined$dateonset, na.rm = TRUE),
-          ".rds"
+          output_format
         )
       )
     ))
@@ -5969,7 +6014,7 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
           min(afp_light$dateonset, na.rm = TRUE),
           "_",
           max(afp_light$dateonset, na.rm = TRUE),
-          ".rds"
+          output_format
         )
       )
     ))
@@ -6000,7 +6045,7 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
           "/", output_folder_name,
           "/other_surveillance_type_linelist_",
           min(other_surv$yronset, na.rm = TRUE), "_",
-          max(other_surv$yronset, na.rm = TRUE), ".rds"
+          max(other_surv$yronset, na.rm = TRUE), output_format
         )
       )
     ))
@@ -6015,7 +6060,7 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
       file_path = paste0(polis_data_folder, "/", output_folder_name),
       full_names = TRUE
     )) |>
-      dplyr::filter(grepl("^.*(other_surveillance).*(.rds)$", name)) |>
+      dplyr::filter(grepl(paste0("^.*(other_surveillance).*(\\", output_format, ")$"), name)) |>
       dplyr::pull(name)
 
     other_files_combine <- dplyr::tibble("name" = tidypolis_io(
@@ -6065,7 +6110,7 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
             min(other_combined$yronset, na.rm = TRUE),
             "_",
             max(other_combined$yronset, na.rm = TRUE),
-            ".rds"
+            output_format
           )
         )
       ))
@@ -6285,12 +6330,15 @@ s2_compare_with_archive <- function(data,
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
 #'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
-#'
+#' @param output_format str: output_format to save files as.
+#'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+#'    'rds'.
 #'
 #' @export
 s3_fully_process_sia_data <- function(long.global.dist.01, polis_data_folder,
                                       latest_folder_in_archive, timestamp,
-                                      output_folder_name){
+                                      output_folder_name,
+                                      output_format){
 
   if (!tidypolis_io(io = "exists.dir",
                     file_path = file.path(polis_data_folder, output_folder_name))) {
@@ -6316,17 +6364,20 @@ s3_fully_process_sia_data <- function(long.global.dist.01, polis_data_folder,
   #writes our partially processed data into cache
   s3_sia_write_precluster_data(sia.06 = sia.06,
                                polis_data_folder = polis_data_folder,
-                               output_folder_name = output_folder_name)
+                               output_folder_name = output_folder_name,
+                               output_format = output_format)
 
   #final clean dataset
-  sia.clean.01 <- s3_sia_combine_historical_data(sia.new = sia.06, polis_data_folder)
+  sia.clean.01 <- s3_sia_combine_historical_data(sia.new = sia.06,
+                                                 polis_data_folder)
 
   #creates cache from clustered SIA dates
   s3_sia_cluster_dates(sia.clean.01)
 
   #merged data with clustered data
   s3_sia_merge_cluster_dates_final_data(sia.clean.01 = sia.clean.01,
-                                        output_folder_name = output_folder_name)
+                                        output_folder_name = output_folder_name,
+                                        output_format = output_format)
 
   #evaluate unmatched GUIDs
   s3_sia_evaluate_unmatched_guids(sia.05 = sia.05, polis_data_folder,
@@ -6379,7 +6430,7 @@ s3_sia_load_data <- function(polis_data_folder,
 
   cli::cli_process_start("Loading new SIA data")
   # Step 2: Read in "new" data file
-  # Newest downloaded activity file, will be .rds located in Core Ready Files
+  # Newest downloaded activity file, will be located in Core Ready Files
   invisible(capture.output(
     sia.01.new <- tidypolis_io(io = "read", file_path = new.file) |>
       dplyr::mutate_all(as.character) |>
@@ -6400,7 +6451,7 @@ s3_sia_load_data <- function(polis_data_folder,
     # Old pre-existing download
     # This is previous Activity .rds that was preprocessed last week, it has
     # been moved to the archive, change archive subfolder and specify last weeks
-    # Activity .rds
+    # Activity
     invisible(capture.output(
       sia.01.old <- tidypolis_io(io = "read", file_path = old.file) |>
         dplyr::mutate_all(as.character) |>
@@ -6832,12 +6883,15 @@ s3_sia_check_metadata <- function(sia.06, polis_data_folder, latest_folder_in_ar
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
 #'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#' @param output_format str: output_format to save files as.
+#'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+#'    'rds'.
 #'
 #' @returns NULL
 #' @keywords internal
 #'
 s3_sia_write_precluster_data <- function(sia.06, polis_data_folder,
-                                         output_folder_name){
+                                         output_folder_name, output_format){
   cli::cli_process_start("Writing out SIA file")
   # Write final SIA file to RDS file
   sia.file.path <- paste(polis_data_folder, "/", output_folder_name, "/", sep = "")
@@ -6848,7 +6902,7 @@ s3_sia_write_precluster_data <- function(sia.06, polis_data_folder,
                    sia.file.path,
                    paste("sia", min(sia.06$yr.sia, na.rm = T),
                          max(sia.06$yr.sia, na.rm = T), sep = "_"),
-                   ".rds",
+                   output_format,
                    sep = ""
                  ))
   ))
@@ -7126,6 +7180,7 @@ s3_sia_cluster_dates_by_vax_type <- function(data,
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
 #'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#' @param output_format Output format of the SIA dataset.
 #'
 #' @returns `NULL` silently.
 #' @keywords internal
@@ -7134,7 +7189,8 @@ s3_sia_merge_cluster_dates_final_data <- function(
     sia.clean.01,
     polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
     polis_data_folder = file.path(polis_folder, "data"),
-    output_folder_name
+    output_folder_name,
+    output_format
 ){
 
   cli::cli_process_start("Reading in cached SIA cluster data")
@@ -7192,7 +7248,7 @@ s3_sia_merge_cluster_dates_final_data <- function(
                    paste("sia", min(sia.clean.02$yr.sia, na.rm = T),
                          max(sia.clean.02$yr.sia, na.rm = T),
                          sep = "_"),
-                   ".rds",
+                   output_format,
                    sep = ""
                  ))
   ))
@@ -7270,12 +7326,16 @@ s3_sia_evaluate_unmatched_guids <- function(sia.05, polis_data_folder, output_fo
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
 #'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#' @param output_format str: output_format to save files as.
+#'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+#'    'rds'.
 #'
 #' @export
 s4_fully_process_es_data <- function(
     polis_folder,
     polis_data_folder, latest_folder_in_archive,
-    output_folder_name){
+    output_folder_name,
+    output_format){
 
   if (!tidypolis_io(io = "exists.dir",
                     file_path = file.path(polis_data_folder, output_folder_name))) {
@@ -7299,7 +7359,8 @@ s4_fully_process_es_data <- function(
 
   s4_es_write_data(
     polis_data_folder = polis_data_folder,
-    es.05 = es.05, output_folder_name = output_folder_name)
+    es.05 = es.05, output_folder_name = output_folder_name,
+                   output_format = output_format)
 
   rm("es.05")
 
@@ -7419,8 +7480,6 @@ s4_es_load_data <- function(polis_data_folder, latest_folder_in_archive,
 #'
 #' @param es.01.new `tibble` The latest ES download with variables checked
 #' against the last download
-#' @param startyr `int` The subset of years for which to process ES data
-#' @param endyr `int` The subset of years for which to process ES data
 #' @param output_folder_name str: Name of the output directory where processed
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
@@ -7430,9 +7489,9 @@ s4_es_load_data <- function(polis_data_folder, latest_folder_in_archive,
 #' @returns `tibble` es.02 SIA data with outputs validated
 #' @keywords internal
 #'
-s4_es_data_processing <- function(es.01.new, startyr, endyr,
-                                  output_folder_name,
-                                  polis_data_folder){
+s4_es_data_processing <- function(es.01.new,
+                                  polis_data_folder,
+                                  output_folder_name){
 
   # Data manipulation
 
@@ -7875,11 +7934,14 @@ s4_es_check_metadata <- function(polis_data_folder, es.05,
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
 #'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#' @param output_format str: output_format to save files as.
+#'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+#'    'rds'.
 #'
 #' @returns `NULL` invisible return with write out to logs if necessary
 #' @keywords internal
 #'
-s4_es_write_data <- function(polis_data_folder, es.05, output_folder_name){
+s4_es_write_data <- function(polis_data_folder, es.05, output_folder_name, output_format){
 
   cli::cli_process_start("Writing out ES datasets")
 
@@ -7894,7 +7956,7 @@ s4_es_write_data <- function(polis_data_folder, es.05, output_folder_name){
         "/",
         paste("es", min(es.05$collect.date, na.rm = T),
               max(es.05$collect.date, na.rm = T), sep = "_"),
-        ".rds",
+        output_format,
         sep = ""
       ))
   ))
@@ -7926,6 +7988,10 @@ s4_es_write_data <- function(polis_data_folder, es.05, output_folder_name){
 #'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
 #'
 #'   validation.
+#' @param output_format str: output_format to save files as.
+#'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+#'    'rds'.
+#'
 #' @returns `NULL` quietly upon success.
 #'
 #' @export
@@ -7933,7 +7999,8 @@ s5_fully_process_pos_data <- function(polis_folder,
                                       latest_folder_in_archive,
                                       long.global.dist.01,
                                       polis_data_folder = file.path(polis_folder, "data"),
-                                      output_folder_name) {
+                                      output_folder_name,
+                                      output_format) {
 
   virus.raw.new <- s5_pos_load_data(polis_data_folder, latest_folder_in_archive,
                                     output_folder_name)
@@ -7943,10 +8010,12 @@ s5_fully_process_pos_data <- function(polis_folder,
   s5_pos_write_missing_onsets(virus.01, polis_data_folder, output_folder_name)
 
   human.virus.05 <- s5_pos_process_human_virus(virus.01, polis_data_folder,
-                                               output_folder_name)
+                                               output_folder_name,
+                                               output_format = output_format)
 
   env.virus.04 <- s5_pos_process_es_virus(virus.01, polis_data_folder,
-                                          output_folder_name)
+                                          output_folder_name,
+                                          output_format = output_format)
 
   afp.es.virus.01 <- s5_pos_create_final_virus_data(human.virus.05, env.virus.04)
   afp.es.virus.02 <- remove_character_dates(type = "POS", df = afp.es.virus.01,
@@ -7958,7 +8027,8 @@ s5_fully_process_pos_data <- function(polis_folder,
 
   s5_pos_compare_with_archive(afp.es.virus.01, afp.es.virus.03,
                               polis_data_folder, latest_folder_in_archive,
-                              output_folder_name = output_folder_name)
+                              output_folder_name = output_folder_name,
+                              output_format = output_format)
 
   s5_pos_evaluate_unmatched_guids(afp.es.virus.03, long.global.dist.01,
                                   polis_data_folder,
@@ -8275,11 +8345,15 @@ s5_pos_write_missing_onsets <- function(virus.01, polis_data_folder, output_fold
 #' @inheritParams s5_pos_check_duplicates
 #' @param startyr `int` Start year to process the positives dataset.
 #' @param endyr `int` End year to process the positives dataset.
+#' @param output_format str: output_format to save files as.
+#'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+#'    'rds'.
 #'
 #' @returns `tibble` Cleaned positives dataset containing human cases only.
 #' @keywords internal
 #'
-s5_pos_process_human_virus <- function(virus.01, polis_data_folder, output_folder_name) {
+s5_pos_process_human_virus <- function(virus.01, polis_data_folder, output_folder_name,
+                                       output_format) {
 
   startyr <- 2000
   endyr <- year(format(Sys.time()))
@@ -8294,7 +8368,7 @@ s5_pos_process_human_virus <- function(virus.01, polis_data_folder, output_folde
     dplyr::mutate(short_name = stringr::str_replace(name, paste0(polis_data_folder, "/",
                                                                  output_folder_name,
                                                                  "/"), "")) |>
-    dplyr::filter(grepl("^(afp_linelist_2001-01-01_2025).*(.rds)$", short_name)) |>
+    dplyr::filter(grepl(paste0("^(afp_linelist_2001-01-01_2025).*(\\", output_format, ")$"), short_name)) |>
     dplyr::pull(name)
 
   tryCatch({
@@ -8310,7 +8384,8 @@ s5_pos_process_human_virus <- function(virus.01, polis_data_folder, output_folde
 
   non.afp.files.01 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path = file.path(polis_data_folder, output_folder_name), full_names = T)) |>
     dplyr::mutate(short_name = stringr::str_replace(name, paste0(polis_data_folder, "/", output_folder_name, "/"), "")) |>
-    dplyr::filter(grepl("^(other_surveillance_type_linelist_2016_2025).*(.rds)$", short_name)) |>
+    dplyr::filter(grepl(paste0("^(other_surveillance_type_linelist_2016_2025).*(\\",
+                               output_format, ")$"), short_name)) |>
     dplyr::pull(name)
 
 
@@ -8424,11 +8499,15 @@ s5_pos_process_human_virus <- function(virus.01, polis_data_folder, output_folde
 #'
 #'
 #' @inheritParams s5_pos_check_duplicates
+#' @param output_format str: output_format to save files as.
+#'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+#'    'rds'.
 #'
 #' @returns `tibble` Cleaned positives dataset containing environmental samples only.
 #' @keywords internal
 #'
-s5_pos_process_es_virus <- function(virus.01, polis_data_folder, output_folder_name) {
+s5_pos_process_es_virus <- function(virus.01, polis_data_folder, output_folder_name,
+                                    output_format) {
 
   ### ENV data from virus table
   env.virus.01 <- virus.01 |>
@@ -8438,18 +8517,27 @@ s5_pos_process_es_virus <- function(virus.01, polis_data_folder, output_folder_n
   cli::cli_process_start("Adding in ES data")
 
   # read in ES files from cleaned ENV linelist
-  env.files.01 <- dplyr::tibble("name" = tidypolis_io(io = "list", file_path = file.path(polis_data_folder, output_folder_name), full_names = T)) |>
+  env.files.01 <- dplyr::tibble("name" = tidypolis_io(io = "list",
+                                                      file_path = file.path(polis_data_folder, output_folder_name), full_names = T)) |>
     dplyr::mutate(short_name = stringr::str_replace(name, paste0(polis_data_folder, "/", output_folder_name, "/"), "")) |>
-    dplyr::filter(grepl("^(es).*(.rds)$", short_name)) |>
+    dplyr::filter(grepl(paste0("^(es).*", "(", output_format, ")$"), short_name)) |>
     dplyr::pull(name)
 
   tryCatch({
-    es.01 <- purrr::map_df(env.files.01, ~ tidypolis_io(io = "read", file_path = .x)) |>
-      dplyr::ungroup() |>
-      dplyr::distinct(.keep_all = T)
+    es.01 <- purrr::map_df(env.files.01, \(x) {
+      df <- tidypolis_io(io = "read", file_path = x)
+      if ("Admin 0 Id" %in% names(df)) {
+        df <- df |>
+          dplyr::mutate(`Admin 0 Id` = as.character(`Admin 0 Id`),
+                        `Admin 1 Id` = as.character(`Admin 1 Id`),
+                        `Admin 2 Id` = as.character(`Admin 2 Id`))
+      }
+      df
+    }) |> dplyr::ungroup()
   }, error = \(e) {
     cli::cli_abort("Please run Step 4 of preprocessing before Step 5.")
   })
+
 
   # Make sure 'env.sample.maual.edit.id' is unique for each ENV sample
   es.00 <- es.01[duplicated(es.01$env.sample.manual.edit.id), ]
@@ -8560,11 +8648,14 @@ s5_pos_create_final_virus_data <- function(human.virus.05, env.virus.04) {
 #' @param afp.es.virus.03 `tibble` Output of [s5_pos_create_final_virus()] but processed
 #' further using [remove_character_dates()] and [create_response_vars()].
 #' @inheritParams s5_fully_process_pos_data
+#' @param output_format str: output_format to save files as.
+#'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+#'    'rds'.
 #'
 #' @returns `NULL` quietly upon success.
 #' @keywords internal
 #'
-s5_pos_compare_with_archive <- function(afp.es.virus.01, afp.es.virus.03, polis_data_folder, latest_folder_in_archive, output_folder_name) {
+s5_pos_compare_with_archive <- function(afp.es.virus.01, afp.es.virus.03, polis_data_folder, latest_folder_in_archive, output_folder_name, output_format) {
   cli::cli_process_start("Checking for variables that don't match last weeks pull")
 
   #Compare the final file to last week's final file to identify any differences in var_names, var_classes, or categorical responses
@@ -8668,7 +8759,7 @@ s5_pos_compare_with_archive <- function(afp.es.virus.01, afp.es.virus.03, polis_
   class.updated <- afp.es.virus.01 |>
     dplyr::filter(vdpvclassificationchangedate <= Sys.Date() & vdpvclassificationchangedate > (Sys.Date()- 7)) |>
     dplyr::select(epid, virustype, measurement, vdpvclassificationchangedate, vdpvclassificationcode, createddate) |>
-    dplyr::mutate(vdpvclassificationchangedate = as.Date(vdpvclassificationchangedate, "%Y-%m-%d"))
+    dplyr::mutate(vdpvclassificationchangedate = as.Date(vdpvclassificationchangedate, tryFormats = "%Y-%m-%d"))
 
   if(nrow(class.updated > 0)){
     tidypolis_io(obj = class.updated,
@@ -8691,7 +8782,7 @@ s5_pos_compare_with_archive <- function(afp.es.virus.01, afp.es.virus.03, polis_
                                        max(afp.es.virus.03$dateonset, na.rm = T),
                                        sep = "_"
                                  ),
-                                 ".rds",
+                                 output_format,
                                  sep = ""
                ))
 

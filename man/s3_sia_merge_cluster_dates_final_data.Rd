@@ -8,7 +8,8 @@ s3_sia_merge_cluster_dates_final_data(
   sia.clean.01,
   polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
   polis_data_folder = file.path(polis_folder, "data"),
-  output_folder_name
+  output_folder_name,
+  output_format
 )
 }
 \arguments{
@@ -22,6 +23,8 @@ s3_sia_merge_cluster_dates_final_data(
 files will be saved. Defaults to "Core_Ready_Files". For
 region-specific processing, this should be set to
 "Core_Ready_Files_\link{REGION}" (e.g., "Core_Ready_Files_AFRO").}
+
+\item{output_format}{Output format of the SIA dataset.}
 }
 \value{
 \code{NULL} silently.

@@ -8,7 +8,8 @@ s4_fully_process_es_data(
   polis_folder,
   polis_data_folder,
   latest_folder_in_archive,
-  output_folder_name
+  output_folder_name,
+  output_format
 )
 }
 \arguments{
@@ -22,6 +23,10 @@ s4_fully_process_es_data(
 files will be saved. Defaults to "Core_Ready_Files". For
 region-specific processing, this should be set to
 "Core_Ready_Files_\link{REGION}" (e.g., "Core_Ready_Files_AFRO").}
+
+\item{output_format}{str: output_format to save files as.
+Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+'rds'.}
 }
 \description{
 This function processes ES data through multiple standardization and
