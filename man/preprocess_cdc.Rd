@@ -7,7 +7,9 @@
 preprocess_cdc(
   polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
   who_region = NULL,
-  output_format = "rds"
+  output_format = "rds",
+  archive = TRUE,
+  keep_n_archives = Inf
 )
 }
 \arguments{
@@ -19,6 +21,13 @@ Available inputs include AFRO, AMRO, EMRO, EURO, SEARO and  WPRO.}
 \item{output_format}{str: output_format to save files as.
 Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
 'rds'.}
+
+\item{archive}{Logical. Whether to archive previous output directories
+before overwriting. Default is \code{TRUE}.}
+
+\item{keep_n_archives}{Numeric. Number of archive folders to retain.
+Defaults to \code{Inf}, which keeps all archives. Set to a finite number
+(e.g., 3) to automatically delete older archives beyond the N most recent.}
 }
 \value{
 Outputs intermediary core ready files

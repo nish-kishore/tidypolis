@@ -12,7 +12,8 @@ s1_create_change_log(
   api_es_data,
   api_virus_data,
   api_subactivity_data,
-  output_folder_name
+  output_folder_name,
+  archive
 )
 }
 \arguments{
@@ -34,6 +35,9 @@ s1_create_change_log(
 files will be saved. Defaults to "Core_Ready_Files". For
 region-specific processing, this should be set to
 "Core_Ready_Files_\link{REGION}" (e.g., "Core_Ready_Files_AFRO").}
+
+\item{archive}{Logical. Whether to archive previous output directories
+before overwriting. Default is \code{TRUE}.}
 }
 \value{
 \code{NULL}, if successful

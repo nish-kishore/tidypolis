@@ -4,3 +4,4 @@
 .Ruserdata
 R/archive/*.*
 R/archive/sandbox.R
+.DS_Store

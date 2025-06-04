@@ -11,7 +11,8 @@ s1_prep_polis_tables(
   ts,
   timestamp,
   who_region,
-  output_format
+  output_format,
+  archive
 )
 }
 \arguments{
@@ -31,6 +32,9 @@ Available inputs include AFRO, AMRO, EMRO, EURO, SEARO and  WPRO.}
 \item{output_format}{str: output_format to save files as.
 Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
 'rds'.}
+
+\item{archive}{Logical. Whether to archive previous output directories
+before overwriting. Default is \code{TRUE}.}
 }
 \value{
 \code{NULL} quietly upon success.

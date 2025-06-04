@@ -10,7 +10,8 @@ s2_export_afp_outputs(
   polis_data_folder,
   col_afp_raw,
   output_folder_name,
-  output_format
+  output_format,
+  archive
 )
 }
 \arguments{
@@ -30,6 +31,9 @@ region-specific processing, this should be set to
 \item{output_format}{str: output_format to save files as.
 Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
 'rds'.}
+
+\item{archive}{Logical. Whether to archive previous output directories
+before overwriting. Default is \code{TRUE}.}
 }
 \value{
 Invisibly returns NULL
