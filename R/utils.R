@@ -2110,13 +2110,18 @@ check_missingness <- function(data,
 #'    'rds'.
 #' @param who_region str: optional WHO region to filter data
 #'      Available inputs include AFRO, AMRO, EMRO, EURO, SEARO and  WPRO.
+#' @param archive Logical. Whether to archive previous output directories
+#'    before overwriting. Default is `TRUE`.
+#'
 #' @returns Outputs intermediary core ready files
 #' @keywords internal
 #'
 preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
                            who_region = NULL,
-                           output_format = "rds") {
+                           output_format = "rds",
+                           archive = TRUE) {
 
+  cli::cli_h1("Step 0/5: Set-up preprocessing environment")
 
   # ensure leading dot in output_format
   if (!startsWith(output_format, ".")) {
@@ -2163,9 +2168,16 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
 
   }
 
-  latest_folder_in_archive <- s2_find_latest_archive(
-    polis_data_folder = polis_data_folder, timestamp = timestamp,
-    output_folder_name = output_folder_name)
+  # get latest archive if archiving option is TRUE
+  if (archive) {
+    latest_folder_in_archive <- s2_find_latest_archive(
+      polis_data_folder = polis_data_folder, timestamp = timestamp,
+      output_folder_name = output_folder_name)
+
+  } else {
+    cli::cli_alert_info("Archiving is turned off for this run.")
+    latest_folder_in_archive <-  NULL
+    }
 
   if (!requireNamespace("purrr", quietly = TRUE)) {
     stop('Package "purrr" must be installed to use this function.',
@@ -2241,7 +2253,7 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
 
   s1_prep_polis_tables(polis_folder, polis_data_folder,
                        long.global.dist.01, ts, timestamp,
-                       who_region, output_format)
+                       who_region, output_format, archive = archive)
 
   # Step 2 - Creating AFP and EPI datasets =====================================
 
@@ -3277,12 +3289,15 @@ check_missing_static_files <- function(core_files_folder_path,
 #' @param output_format str: output_format to save files as.
 #'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
 #'    'rds'.
+#' @param archive Logical. Whether to archive previous output directories
+#'    before overwriting. Default is `TRUE`.
 #'
 #' @returns `NULL` quietly upon success.
 #' @export
 #'
 s1_prep_polis_tables <- function(polis_folder, polis_data_folder,
-                                 long.global.dist.01, ts, timestamp, who_region, output_format) {
+                                 long.global.dist.01, ts, timestamp, who_region,
+                                 output_format, archive) {
 
   if (!is.null(who_region)) {
     # Set region-specific folder name
@@ -3385,7 +3400,8 @@ s1_prep_polis_tables <- function(polis_folder, polis_data_folder,
   cli::cli_h2("Creating change log and exporting data")
 
   # create directory for the Archive and Changelogs
-  s1_create_core_ready_dir(polis_data_folder, timestamp, output_folder_name)
+  s1_create_core_ready_dir(polis_data_folder, timestamp, output_folder_name,
+                           archive = archive)
 
   # Get list of most recent files
   most_recent_file_patterns <- c(
@@ -3405,7 +3421,8 @@ s1_prep_polis_tables <- function(polis_folder, polis_data_folder,
                            api_es_data,
                            api_virus_data,
                            api_subactivity_data,
-                           output_folder_name = output_folder_name)
+                           output_folder_name = output_folder_name,
+                           archive = archive)
     }
   } else {
     cli::cli_alert_info("No previous main Core Ready Files found, creating new files")
@@ -3413,9 +3430,11 @@ s1_prep_polis_tables <- function(polis_folder, polis_data_folder,
 
   invisible(capture.output(gc()))
 
-  # Move files from the current POLIS data folder into the archive
+  # Move files from the current POLIS data folder into the archive if specified
+  if (archive) {
   s1_archive_old_files(polis_data_folder, timestamp,
                        output_folder_name, output_format)
+  }
 
   invisible(capture.output(gc()))
 
@@ -3956,22 +3975,38 @@ s1_clean_subactivity_table <- function(path, activity_table, crosswalk,
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
 #'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#' @param archive Logical. Whether to archive previous output directories
+#'    before overwriting. Default is `TRUE`.
 #'
 #' @returns NULL
 #' @keywords internal
 #'
 s1_create_core_ready_dir <- function(polis_data_folder, timestamp,
-                                     output_folder_name) {
+                                     output_folder_name, archive = TRUE) {
 
   cli_process_start("Checking on requisite file structure")
 
-  dirs <- c(
-    file.path(polis_data_folder, output_folder_name),
-    file.path(polis_data_folder, output_folder_name, "Archive"),
-    file.path(polis_data_folder, output_folder_name, "Archive", timestamp),
-    file.path(polis_data_folder, output_folder_name, "Change Log"),
-    file.path(polis_data_folder, output_folder_name, "Change Log", timestamp)
+  # Base directory is always created
+  base_dirs <- c(
+    file.path(polis_data_folder, output_folder_name)
   )
+
+  # Archive and Change Log directories only if archiving is TRUE
+  if (archive) {
+    archive_dirs <- c(
+      file.path(polis_data_folder, output_folder_name, "Archive"),
+      file.path(polis_data_folder, output_folder_name, "Archive", timestamp),
+      file.path(polis_data_folder, output_folder_name, "Change Log"),
+      file.path(polis_data_folder, output_folder_name, "Change Log", timestamp)
+    )
+    dirs <- c(base_dirs, archive_dirs)
+  } else {
+    archive_dirs <- c(
+      file.path(polis_data_folder, output_folder_name, "Change Log"),
+      file.path(polis_data_folder, output_folder_name, "Change Log", timestamp)
+    )
+    dirs <- c(base_dirs, archive_dirs)
+  }
 
   sapply(dirs, function(x) {
     if (!tidypolis_io(io = "exists.dir", file_path = x)) {
@@ -4020,6 +4055,8 @@ s1_get_most_recent_files <- function(polis_data_folder, patterns,
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
 #'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#' @param archive Logical. Whether to archive previous output directories
+#'    before overwriting. Default is `TRUE`.
 #'
 #' @returns `NULL`, if successful
 #' @keywords internal
@@ -4030,7 +4067,8 @@ s1_create_change_log <- function(polis_data_folder,
                                  api_es_data,
                                  api_virus_data,
                                  api_subactivity_data,
-                                 output_folder_name) {
+                                 output_folder_name,
+                                 archive) {
 
   cli::cli_process_start(paste0("Processing data for: ", file))
   # compare current dataset to most recent and save summary to change_log
@@ -4174,12 +4212,14 @@ s1_create_change_log <- function(polis_data_folder,
   )))
 
   invisible(capture.output(
+    if (archive) {
     # Move most recent to archive
     tidypolis_io(io = "read", file_path = file.path(polis_data_folder, output_folder_name, file)) |>
       tidypolis_io(
         io = "write",
         file_path = file.path(polis_data_folder, output_folder_name, "Archive", timestamp, file)
       )
+    }
   ))
 
   invisible(capture.output(
@@ -4463,7 +4503,8 @@ s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
     polis_data_folder = polis_data_folder,
     col_afp_raw = colnames(afp_raw_new),
     output_folder_name = output_folder_name,
-    output_format = output_format
+    output_format = output_format,
+    archive
   )
 
 }
@@ -5821,11 +5862,14 @@ s2_create_afp_variables <- function(data) {
 #' @param output_format str: output_format to save files as.
 #'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
 #'    'rds'.
+#' @param archive Logical. Whether to archive previous output directories
+#'    before overwriting. Default is `TRUE`.
 #'
 #' @return Invisibly returns NULL
 #' @export
 s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
-                                  col_afp_raw, output_folder_name, output_format) {
+                                  col_afp_raw, output_folder_name, output_format,
+                                  archive) {
 
   cli::cli_process_start("Exporting AFP outputs",
                          msg_done = "Exported AFP outputs")
@@ -5890,7 +5934,9 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
       doses.total = as.numeric(doses.total)
     )
 
-  # Compare with archive using the dedicated comparison function
+
+  # Compare with archive using the dedicated comparison function if archiving
+  if (archive) {
   comparison_results <- s2_compare_with_archive(
     data = afp_data,
     polis_data_folder = polis_data_folder,
@@ -5898,6 +5944,7 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
     col_afp_raw = col_afp_raw,
     output_folder_name = output_folder_name
   )
+  }
 
   # Export AFP linelist
   invisible(capture.output(
