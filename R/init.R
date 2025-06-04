@@ -242,41 +242,50 @@ init_tidypolis <- function(
 
   if(invalid_key){
 
-    cli::cli_alert_warning("POLIS API Key is not valid or not found - please enter new key")
+    cli::cli_alert_warning("POLIS API Key is not valid or not found - enter a new key (recommended) or skip validation? (yes/skip)")
+    while (TRUE) {
+      response <- stringr::str_to_lower(stringr::str_trim(readline("Response: ")))
+      if (!response %in% c("yes", "skip")) {
+        cli::cli_alert_warning("Invalid response. Please try again.")
+      } else if (response == "skip") {
+        break
+      } else if (response == "yes") {
+        cli::cli_alert_warning("Please enter new key")
 
-    i <- 1
-    fail <- T
-    while(i < 3 & fail){
+        i <- 1
+        fail <- T
+        while(i < 3 & fail){
 
-      cli::cli_alert_info(paste0("Attempt - ", i, "/3"))
+          cli::cli_alert_info(paste0("Attempt - ", i, "/3"))
 
 
-      key <- readline(prompt = "Please enter API Key (without any quotation marks or wrappers): ")
+          key <- readline(prompt = "Please enter API Key (without any quotation marks or wrappers): ")
 
-      if(test_polis_key(key)){
+          if(test_polis_key(key)){
 
-        fail <- F
+            fail <- F
 
-        list(
-          "polis_api_key" = key,
-          "polis_data_folder" = polis_folder
-        ) |>
-          tidypolis_io(io = "write", file_path = cred_file)
+            list(
+              "polis_api_key" = key,
+              "polis_data_folder" = polis_folder
+            ) |>
+              tidypolis_io(io = "write", file_path = cred_file)
 
-        Sys.setenv(POLIS_API_KEY = key)
+            Sys.setenv(POLIS_API_KEY = key)
 
-        cli::cli_alert_success("POLIS API Key validated!")
+            cli::cli_alert_success("POLIS API Key validated!")
+            break
+          }
 
+          i <- i + 1
+
+        }
+
+        if(i == 3){
+          stop("Please verify your POLIS API key and try again")
+        }
       }
-
-      i <- i + 1
-
     }
-
-    if(i == 3){
-      stop("Please verify your POLIS API key and try again")
-    }
-
   }
 
   flag <- c("POLIS_DATA_FOLDER", "POLIS_API_KEY", "POLIS_DATA_CACHE",
