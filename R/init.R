@@ -112,80 +112,6 @@ init_tidypolis <- function(
     Sys.setenv(SIA_CLUSTERING_FLAG = TRUE)
   }
 
-  #check if key details exist, if not ask for them, test them and store them
-  #if they exist, check the key
-  #if key doesn't work ask for another one
-  #check to see if a previous yaml version exists that needs to
-  #be converted into an rds
-  yaml_cred_file <- file.path(polis_folder, "creds.yaml")
-  yaml_cred_file_exists <- tidypolis_io(io = "exists.file", file_path = yaml_cred_file)
-  cred_file <- file.path(polis_folder, "creds.rds")
-  cred_file_exists <- tidypolis_io(io = "exists.file", file_path = cred_file)
-
-  if(yaml_cred_file_exists & !cred_file_exists){
-    yaml::read_yaml(yaml_cred_file) |>
-      readr::write_rds(cred_file)
-    cli::cli_alert_info("Cred file updated to RDS from YAML")
-  }
-
-  if(cred_file_exists){
-    cli::cli_alert_success("POLIS API Key found - validating key")
-
-    invisible(capture.output(
-      api_key <- tidypolis_io(io = "read", file_path = cred_file)$polis_api_key
-    ))
-
-
-    if(test_polis_key(api_key)){
-      Sys.setenv(POLIS_API_KEY = api_key)
-      cli::cli_alert_success("POLIS API Key validated!")
-      invalid_key <- F
-    }else{
-      invalid_key <- T
-    }
-  }else{
-    invalid_key <- T
-  }
-
-  if(invalid_key){
-
-    cli::cli_alert_warning("POLIS API Key is not valid or not found - please enter new key")
-
-    i <- 1
-    fail <- T
-    while(i < 3 & fail){
-
-      cli::cli_alert_info(paste0("Attempt - ", i, "/3"))
-
-
-      key <- readline(prompt = "Please enter API Key (without any quotation marks or wrappers): ")
-
-      if(test_polis_key(key)){
-
-        fail <- F
-
-        list(
-          "polis_api_key" = key,
-          "polis_data_folder" = polis_folder
-        ) |>
-          tidypolis_io(io = "write", file_path = cred_file)
-
-        Sys.setenv(POLIS_API_KEY = key)
-
-        cli::cli_alert_success("POLIS API Key validated!")
-
-      }
-
-      i <- i + 1
-
-    }
-
-    if(i == 3){
-      stop("Please verify your POLIS API key and try again")
-    }
-
-  }
-
   #check if cache exists, if not, create it
 
   cache_file <- file.path(polis_folder, "cache.rds")
@@ -278,6 +204,89 @@ init_tidypolis <- function(
 
   Sys.setenv(POLIS_LOG_FILE = log_file)
   Sys.setenv(POLIS_API_LOG_FILE = api_log_file)
+
+  #check if key details exist, if not ask for them, test them and store them
+  #if they exist, check the key
+  #if key doesn't work ask for another one
+  #check to see if a previous yaml version exists that needs to
+  #be converted into an rds
+  yaml_cred_file <- file.path(polis_folder, "creds.yaml")
+  yaml_cred_file_exists <- tidypolis_io(io = "exists.file", file_path = yaml_cred_file)
+  cred_file <- file.path(polis_folder, "creds.rds")
+  cred_file_exists <- tidypolis_io(io = "exists.file", file_path = cred_file)
+
+  if(yaml_cred_file_exists & !cred_file_exists){
+    yaml::read_yaml(yaml_cred_file) |>
+      readr::write_rds(cred_file)
+    cli::cli_alert_info("Cred file updated to RDS from YAML")
+  }
+
+  if(cred_file_exists){
+    cli::cli_alert_success("POLIS API Key found - validating key")
+
+    invisible(capture.output(
+      api_key <- tidypolis_io(io = "read", file_path = cred_file)$polis_api_key
+    ))
+
+
+    if(test_polis_key(api_key)){
+      Sys.setenv(POLIS_API_KEY = api_key)
+      cli::cli_alert_success("POLIS API Key validated!")
+      invalid_key <- F
+    }else{
+      invalid_key <- T
+    }
+  }else{
+    invalid_key <- T
+  }
+
+  if(invalid_key){
+
+    cli::cli_alert_warning("POLIS API Key is not valid or not found - enter a new key (recommended) or skip validation? (yes/skip)")
+    while (TRUE) {
+      response <- stringr::str_to_lower(stringr::str_trim(readline("Response: ")))
+      if (!response %in% c("yes", "skip")) {
+        cli::cli_alert_warning("Invalid response. Please try again.")
+      } else if (response == "skip") {
+        break
+      } else if (response == "yes") {
+        cli::cli_alert_warning("Please enter new key")
+
+        i <- 1
+        fail <- T
+        while(i < 3 & fail){
+
+          cli::cli_alert_info(paste0("Attempt - ", i, "/3"))
+
+
+          key <- readline(prompt = "Please enter API Key (without any quotation marks or wrappers): ")
+
+          if(test_polis_key(key)){
+
+            fail <- F
+
+            list(
+              "polis_api_key" = key,
+              "polis_data_folder" = polis_folder
+            ) |>
+              tidypolis_io(io = "write", file_path = cred_file)
+
+            Sys.setenv(POLIS_API_KEY = key)
+
+            cli::cli_alert_success("POLIS API Key validated!")
+            break
+          }
+
+          i <- i + 1
+
+        }
+
+        if(i == 3){
+          stop("Please verify your POLIS API key and try again")
+        }
+      }
+    }
+  }
 
   flag <- c("POLIS_DATA_FOLDER", "POLIS_API_KEY", "POLIS_DATA_CACHE",
     "POLIS_CACHE_FILE", "POLIS_LOG_FILE") |>
