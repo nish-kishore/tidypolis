@@ -2112,6 +2112,9 @@ check_missingness <- function(data,
 #'      Available inputs include AFRO, AMRO, EMRO, EURO, SEARO and  WPRO.
 #' @param archive Logical. Whether to archive previous output directories
 #'    before overwriting. Default is `TRUE`.
+#' @param keep_n_archives Numeric. Number of archive folders to retain.
+#'   Defaults to `Inf`, which keeps all archives. Set to a finite number
+#'   (e.g., 3) to automatically delete older archives beyond the N most recent.
 #'
 #' @returns Outputs intermediary core ready files
 #' @keywords internal
@@ -4427,7 +4430,7 @@ s2_trim_archives <- function(polis_data_folder, output_folder_name, keep_n = 3) 
     purrr::walk(to_delete, fs::dir_delete)
   } else {
     cli::cli_alert_info(
-      "No old archives removed. Total archives ≤ keep_n.")
+      "No old archives removed. Total archives \u001b keep_n.")
   }
 
   invisible()
