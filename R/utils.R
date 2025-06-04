@@ -2119,7 +2119,8 @@ check_missingness <- function(data,
 preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
                            who_region = NULL,
                            output_format = "rds",
-                           archive = TRUE) {
+                           archive = TRUE,
+                           keep_n_archives = Inf) {
 
   cli::cli_h1("Step 0/5: Set-up preprocessing environment")
 
@@ -2171,13 +2172,24 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
   # get latest archive if archiving option is TRUE
   if (archive) {
     latest_folder_in_archive <- s2_find_latest_archive(
-      polis_data_folder = polis_data_folder, timestamp = timestamp,
-      output_folder_name = output_folder_name)
+      polis_data_folder = polis_data_folder,
+      timestamp = timestamp,
+      output_folder_name = output_folder_name
+    )
+
+    # trim the archives if a limit is set
+    if (!is.infinite(keep_n_archives)) {
+      s2_trim_archives(
+        polis_data_folder = polis_data_folder,
+        output_folder_name = output_folder_name,
+        keep_n = keep_n_archives
+      )
+    }
 
   } else {
     cli::cli_alert_info("Archiving is turned off for this run.")
-    latest_folder_in_archive <-  NULL
-    }
+    latest_folder_in_archive <- NULL
+  }
 
   if (!requireNamespace("purrr", quietly = TRUE)) {
     stop('Package "purrr" must be installed to use this function.',
@@ -4386,6 +4398,39 @@ s1_export_final_core_ready_files <- function(polis_data_folder, ts, timestamp,
   ))
 
   cli::cli_process_done()
+}
+
+#' Trim archived folders to retain only the N most recent
+#'
+#' @description
+#' Deletes older archive folders within a given POLIS output directory,
+#' keeping only the most recent `keep_n` versions.
+#'
+#' @param polis_data_folder Character. Path to the POLIS data folder.
+#' @param output_folder_name Character. Name of the output folder within the
+#'      data directory.
+#' @param keep_n Integer. Number of most recent archives to retain. Default is 3.
+#'
+#' @return Invisibly returns NULL after trimming.
+#' @keywords internal
+s2_trim_archives <- function(polis_data_folder, output_folder_name, keep_n = 3) {
+  archive_dir <- file.path(polis_data_folder, output_folder_name, "Archive")
+  if (!dir.exists(archive_dir)) return(invisible())
+
+  folders <- list.dirs(archive_dir, recursive = FALSE, full.names = TRUE)
+  folders <- folders[order(file.info(folders)$ctime, decreasing = TRUE)]
+
+  if (length(folders) > keep_n) {
+    to_delete <- folders[(keep_n + 1):length(folders)]
+    cli::cli_alert_info(
+      "Trimming archives: deleting {length(to_delete)} older folder(s).")
+    purrr::walk(to_delete, fs::dir_delete)
+  } else {
+    cli::cli_alert_info(
+      "No old archives removed. Total archives ≤ keep_n.")
+  }
+
+  invisible()
 }
 
 
