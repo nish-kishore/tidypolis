@@ -2286,7 +2286,8 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
     timestamp = timestamp,
     latest_folder_in_archive_path = latest_folder_in_archive,
     output_folder_name = output_folder_name,
-    output_format = output_format)
+    output_format = output_format,
+    archive = archive)
 
   invisible(gc())
 
@@ -4444,12 +4445,15 @@ s2_trim_archives <- function(polis_data_folder, output_folder_name, keep_n = 3) 
 #' @param output_format str: output_format to save files as.
 #'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
 #'    'rds'.
+#' @param archive Logical. Whether to archive previous output directories
+#'    before overwriting. Default is `TRUE`.
 #'
 #' @export
 s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
                                       long.global.dist.01, timestamp,
                                       latest_folder_in_archive_path,
-                                      output_folder_name, output_format) {
+                                      output_folder_name, output_format,
+                                      archive) {
 
   if (!tidypolis_io(io = "exists.dir",
                     file_path = file.path(polis_data_folder, output_folder_name))) {
@@ -4537,7 +4541,7 @@ s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
     col_afp_raw = colnames(afp_raw_new),
     output_folder_name = output_folder_name,
     output_format = output_format,
-    archive
+    archive = archive
   )
 
 }
