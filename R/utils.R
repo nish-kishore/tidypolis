@@ -3336,9 +3336,6 @@ s1_prep_polis_tables <- function(polis_folder, polis_data_folder,
       dplyr::filter(`WHO Region` == who_region)
     cli::cli_alert_success(
       paste0("Filtered case data to region: ", who_region))
-  } else {
-    cli::cli_alert_warning(
-      "Could not find WHO region column in case data. No filtering applied.")
   }
 
   cli::cli_h2("Environmental Samples")
@@ -3352,9 +3349,6 @@ s1_prep_polis_tables <- function(polis_folder, polis_data_folder,
       dplyr::filter(`WHO Region` == who_region)
     cli::cli_alert_success(
       paste0("Filtered ES data to region: ", who_region))
-  } else {
-    cli::cli_alert_warning(
-      "Could not find WHO region column in ES data. No filtering applied.")
   }
 
   cli::cli_h2("Virus")
@@ -3367,9 +3361,6 @@ s1_prep_polis_tables <- function(polis_folder, polis_data_folder,
       dplyr::filter(`WHO Region` == who_region)
     cli::cli_alert_success(
       paste0("Filtered Virus data to region: ", who_region))
-  } else {
-    cli::cli_alert_warning(
-      "Could not find WHO region column in Virus data. No filtering applied.")
   }
 
   cli::cli_h2("Activity")
@@ -3384,9 +3375,6 @@ s1_prep_polis_tables <- function(polis_folder, polis_data_folder,
       dplyr::filter(`WHORegion` == who_region)
     cli::cli_alert_success(
       paste0("Filtered Activity data to region: ", who_region))
-  } else {
-    cli::cli_alert_warning(
-      "Could not find WHO region column in Activity data. No filtering applied.")
   }
 
   cli::cli_h2("Sub-activity")
@@ -3402,9 +3390,6 @@ s1_prep_polis_tables <- function(polis_folder, polis_data_folder,
       dplyr::filter(WHORegion == who_region)
     cli::cli_alert_success(
       paste0("Filtered Sub-activity data to region: ", who_region))
-  } else {
-    cli::cli_alert_warning(
-      "Could not find WHO region column in Sub-activity data. No filtering applied.")
   }
 
   rm(crosswalk_data)
