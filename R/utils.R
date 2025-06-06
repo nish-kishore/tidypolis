@@ -5596,9 +5596,13 @@ s2_process_coordinates <- function(data, polis_data_folder, polis_folder,
     dplyr::bind_rows(dup_epid_01)
 
     for (i in 1:nrow(dup_epid_fixed |> dplyr::filter(!is.na(epid_fixed)))) {
-      update_polis_log(.event = paste0("Duplicate EPID ", dup_epid_fixed[i, "epid"], " updated to: ",
+
+      suppressMessages(
+      update_polis_log(.event = paste0("Duplicate EPID ",
+                                       dup_epid_fixed[i, "epid"], " updated to: ",
                                        dup_epid_fixed[i, "epid_fixed"]),
                        .event_type = "ALERT")
+      )
     }
 
     data_deduped <- dup_epid_fixed |>
