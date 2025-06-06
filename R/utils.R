@@ -2241,8 +2241,8 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
 
   cli::cli_process_done()
 
-  #Step 0 - create a CORE datafiles to combine folder and check for datasets before continuing with pre-p =========
-
+  # Create a CORE datafiles to combine folder and check for datasets
+  # before continuing with pre-p =========
 
   core_files_folder_path <- file.path(polis_data_folder, "core_files_to_combine")
   if (!tidypolis_io(io = "exists.dir", file_path = core_files_folder_path)) {
@@ -4486,7 +4486,8 @@ s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
   # Step 2b: Check for duplicate EPIDs
   has_duplicates <- s2_check_duplicated_epids(
     data = afp_raw_new,
-    polis_data_folder = polis_data_folder, output_folder_name = output_folder_name)
+    polis_data_folder = polis_data_folder,
+    output_folder_name = output_folder_name)
 
   if (has_duplicates) {
     cli::cli_alert_warning("Please review duplicates!")
@@ -4799,36 +4800,30 @@ s2_standardize_dates <- function(data) {
       admin2guid = admin.2.guid
     ) |>
     dplyr::mutate(
-      dateonset = lubridate::ymd(
-        as.Date(date.onset, "%Y-%m-%dT%H:%M:%S"),
-        quiet = TRUE
+      dateonset = lubridate::as_date(
+        lubridate::ymd_hms(date.onset, tz = "UTC", quiet = TRUE)
       ),
-      datenotify = lubridate::ymd(
-        as.Date(notification.date, "%Y-%m-%dT%H:%M:%S"),
-        quiet = TRUE
+      datenotify = lubridate::as_date(
+        lubridate::ymd_hms(notification.date, tz = "UTC", quiet = TRUE)
       ),
-      dateinvest = lubridate::ymd(
-        as.Date(investigation.date, "%Y-%m-%dT%H:%M:%S"),
-        quiet = TRUE
+      dateinvest = lubridate::as_date(
+        lubridate::ymd_hms(investigation.date, tz = "UTC", quiet = TRUE)
       ),
-      datestool1 = lubridate::ymd(
-        as.Date(stool.1.collection.date, "%Y-%m-%dT%H:%M:%S"),
-        quiet = TRUE
+      datestool1 = lubridate::as_date(
+        lubridate::ymd_hms(`stool.1.collection.date`, tz = "UTC",
+                           quiet = TRUE)
       ),
-      datestool2 = lubridate::ymd(
-        as.Date(stool.2.collection.date, "%Y-%m-%dT%H:%M:%S"),
-        quiet = TRUE
+      datestool2 = lubridate::as_date(
+        lubridate::ymd_hms(`stool.2.collection.date`, tz = "UTC",
+                           quiet = TRUE)
       ),
-      followup.date = lubridate::ymd(
-        as.Date(followup.date, "%Y-%m-%dT%H:%M:%S"),
-        quiet = TRUE
+      followup.date = lubridate::as_date(
+        lubridate::ymd_hms(followup.date, tz = "UTC", quiet = TRUE)
       ),
-      yronset = lubridate::year(dateonset),
-      yronset = dplyr::if_else(is.na(yronset),
-                               lubridate::year(datestool1), yronset
-      ),
-      yronset = dplyr::if_else(is.na(datestool1) & is.na(yronset),
-                               lubridate::year(datenotify), yronset
+      yronset = dplyr::coalesce(
+        lubridate::year(dateonset),
+        lubridate::year(datestool1),
+        lubridate::year(datenotify)
       ),
       age.months = as.numeric(`calculated.age.(months)`),
       ontostool1 = as.numeric(datestool1 - dateonset),
@@ -4848,14 +4843,15 @@ s2_standardize_dates <- function(data) {
           "case.date", "stool.date.sent.to.lab",
           "clinical.admitted.date", "followup.date"
         )),
-        ~ lubridate::ymd(as.Date(., "%Y-%m-%dT%H:%M:%S"), quiet = TRUE)
-      )
-    ) |>
-    dplyr::mutate(datenotificationtohq = date.notification.to.hq,
-                  casedate = case.date,
-                  stooltolabdate = stool.date.sent.to.lab,
-                  stooltoiclabdate = stool.date.sent.to.ic.lab,
-                  clinicadmitdate = clinical.admitted.date)
+        ~ lubridate::as_date(
+          lubridate::ymd_hms(.x, tz = "UTC", quiet = TRUE)
+        )
+      ),
+        datenotificationtohq = date.notification.to.hq,
+        casedate = case.date,
+        stooltolabdate = stool.date.sent.to.lab,
+        stooltoiclabdate = stool.date.sent.to.ic.lab,
+        clinicadmitdate = clinical.admitted.date)
 
   cli::cli_process_done()
 
