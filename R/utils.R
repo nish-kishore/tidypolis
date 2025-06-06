@@ -1371,10 +1371,10 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
     empty.coord.01 <- empty.coord |>
       tibble::as_tibble() |>
       dplyr::group_by(Admin2GUID) |>
-      dplyr::summarise(nperarm = dplyr::n()) |>
+      dplyr::summarise(nperarm = dplyr::n(),
+                       .groups = "drop") |>
       dplyr::arrange(Admin2GUID) |>
       dplyr::mutate(id = dplyr::row_number()) |>
-      dplyr::ungroup() |>
       dplyr::filter(Admin2GUID != "{NA}")
 
     empty.coord.02 <- global.dist.01 |>
@@ -2043,7 +2043,8 @@ check_missingness <- function(data,
 
     missing_by_group <- data |>
       dplyr::select("yronset", "place.admin.0", dplyr::any_of(afp.vars)) |>
-      dplyr::summarise(dplyr::across(dplyr::everything(), ~ mean(is.na(.)) * 100), .by = c("yronset", "place.admin.0")) |>
+      dplyr::summarise(dplyr::across(dplyr::everything(), ~ mean(is.na(.)) * 100),
+                       .by = c("yronset", "place.admin.0")) |>
       dplyr::filter(dplyr::if_any(dplyr::any_of(afp.vars), ~ . >= 10))
 
     invisible(capture.output(
@@ -2878,7 +2879,8 @@ process_spatial <- function(gdb_folder,
   if(endyr == lubridate::year(format(Sys.time())) & startyr == 2000) {
     prov.shape.issue.01 <- long.global.prov.01 |>
       dplyr::group_by(ADM0_NAME, ADM1_NAME, active.year.01) |>
-      dplyr::summarise(no.of.shapes = dplyr::n()) |>
+      dplyr::summarise(no.of.shapes = dplyr::n(),
+                       .groups = "drop") |>
       dplyr::filter(no.of.shapes > 1)
 
     if(edav) {
@@ -2919,7 +2921,8 @@ process_spatial <- function(gdb_folder,
   if(endyr == year(format(Sys.time())) & startyr == 2000) {
     dist.shape.issue.01 <- long.global.dist.01 |>
       dplyr::group_by(ADM0_NAME, ADM1_NAME, ADM2_NAME, active.year.01) |>
-      dplyr::summarise(no.of.shapes = dplyr::n()) |>
+      dplyr::summarise(no.of.shapes = dplyr::n(),
+                       .groups = "drop") |>
       dplyr::filter(no.of.shapes > 1)
 
     if(edav) {
@@ -2985,10 +2988,10 @@ add_gpei_cases <- function(azcontainer = suppressMessages(get_azure_storage_conn
     proxy.data.fill.prov.01 <- proxy.data.fill.prov |>
       tibble::as_tibble() |>
       dplyr::group_by(adm1guid) |>
-      dplyr::summarise(nperarm = dplyr::n()) |>
+      dplyr::summarise(nperarm = dplyr::n(),
+                       .groups = "drop") |>
       dplyr::arrange(adm1guid) |>
       dplyr::mutate(id = dplyr::row_number()) |>
-      dplyr::ungroup() |>
       dplyr::filter(adm1guid != "{NA}")
 
     proxy.data.fill.prov.02 <- global.prov |>
@@ -3082,10 +3085,10 @@ add_gpei_cases <- function(azcontainer = suppressMessages(get_azure_storage_conn
     proxy.data.fill.ctry.01 <- proxy.data.fill.ctry |>
       tibble::as_tibble() |>
       dplyr::group_by(adm0guid) |>
-      dplyr::summarise(nperarm = dplyr::n()) |>
+      dplyr::summarise(nperarm = dplyr::n(),
+                       .groups = "drop") |>
       dplyr::arrange(adm0guid) |>
       dplyr::mutate(id = dplyr::row_number()) |>
-      dplyr::ungroup() |>
       dplyr::filter(adm0guid != "{NA}")
 
     proxy.data.fill.ctry.02 <- global.ctry |>
@@ -4115,14 +4118,14 @@ s1_create_change_log <- function(polis_data_folder,
 
   potential_duplicates_new <- new |>
     dplyr::group_by(Id) |>
-    dplyr::summarise(count = n()) |>
-    dplyr::ungroup() |>
+    dplyr::summarise(count = n(),
+                     .groups = "drop") |>
     dplyr::filter(count >= 2)
 
   potential_duplicates_old <- old |>
     dplyr::group_by(Id) |>
-    dplyr::summarise(count = n()) |>
-    dplyr::ungroup() |>
+    dplyr::summarise(count = n(),
+                     .groups = "drop") |>
     dplyr::filter(count >= 2)
 
   new <- new |>
@@ -7365,7 +7368,7 @@ s3_sia_evaluate_unmatched_guids <- function(sia.05, polis_data_folder, output_fo
 
   cty.yr.mismatch <- dist.sia.mismatch.01 |>
     dplyr::group_by(place.admin.0, yr.sia) |>
-    dplyr::summarise(no.of.mismatch.sia = n())
+    dplyr::summarise(no.of.mismatch.sia = n(), .groups = "drop")
 
   # excel file summarizing mismatch SIA by country
 
@@ -7736,7 +7739,8 @@ s4_es_data_processing <- function(es.01.new,
 
   es.space.03 <- es.space.02 |>
     dplyr::group_by(env.sample.manual.edit.id) |>
-    dplyr::summarise(virus.type.01 = paste(virus.type, collapse = ", "))
+    dplyr::summarise(virus.type.01 = paste(virus.type, collapse = ", "),
+                     .groups = "drop")
 
   es.space.03$virus.type.01[es.space.03$virus.type.01=="NA"] <- NA
 
