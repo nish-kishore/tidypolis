@@ -1261,36 +1261,21 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
     sf::st_as_sf(coords = c(x = "lon" , y = "lat"),
                  crs = sf::st_crs(global.dist.01))
 
-  global.dist.02 <- sf::st_make_valid(global.dist.01)
-
-  #identify bad shape rows after make_valid
-  check.dist.2 <- tibble::as_tibble(sf::st_is_valid(global.dist.02))
-
-  #removing all bad shapes post make valid
-  valid.shapes <- global.dist.02[check.dist.2$value, ] |>
-    dplyr::select(GUID, ADM1_GUID, ADM0_GUID, yr.st, yr.end, Shape)
-
-  cli::cli_process_start("Evaluating invalid district shapes")
-  #invalid shapes for which we'll turn off s2
-  invalid.shapes <- global.dist.02[!check.dist.2$value, ] |>
-    dplyr::select(GUID, ADM1_GUID, ADM0_GUID, yr.st, yr.end, Shape)
-
-  #do 2 seperate st_joins the first, df02, is for valid shapes and those attached cases
-  df02 <- sf::st_join(df01.sf |>
-                        dplyr::filter(!Admin2GUID %in% invalid.shapes$GUID), valid.shapes, left = T) |>
-    dplyr::filter(yronset >= yr.st & yronset <= yr.end)
-
-  #second st_join is for invalid shapes and those attached cases, turning off s2
-  sf::sf_use_s2(F)
-  df03 <- sf::st_join(df01.sf |>
-                        dplyr::filter(!Admin2GUID %in% valid.shapes$GUID), invalid.shapes, left = T) |>
-    dplyr::filter(yronset >= yr.st & yronset <= yr.end)
-  sf::sf_use_s2(T)
-
-  cli::cli_process_done()
-
-  #bind back together df02 and df03
-  df04 <- dplyr::bind_rows(df02, df03)
+  # spatial join to get district info
+  suppressMessages(
+    suppressWarnings({
+      sf::sf_use_s2(FALSE)
+      df04 <- sf::st_join(
+        df01.sf,
+        global.dist.01 |>
+          dplyr::select(GUID, ADM1_GUID, ADM0_GUID,
+                        yr.st, yr.end, Shape),
+        left = TRUE
+      ) |>
+        dplyr::filter(yronset >= yr.st & yronset <= yr.end)
+      sf::sf_use_s2(TRUE)
+    })
+  )
 
   cli::cli_process_done()
 
@@ -1379,8 +1364,6 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
     dplyr::select(-dplyr::all_of(c("GUID", "yr.st", "yr.end")))
 
   df07$geometry <- NULL
-
-  sf::st_geometry(global.dist.02) <- NULL
 
   #feed only cases with empty coordinates into st_sample (vars = GUID, nperarm, id, Shape)
   if (nrow(empty.coord |> dplyr::filter(Admin2GUID != "{NA}")) > 0) {
@@ -1483,8 +1466,9 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
 
   #bind back placed point cases with df06 and finished
   df09 <- df08 |>
-    dplyr::left_join(global.dist.01 |> dplyr::select(ADM0_NAME, ADM1_NAME, ADM2_NAME, ADM0_GUID, ADM1_GUID, GUID),
-                     by = c("Admin0GUID" = "ADM0_GUID", "Admin1GUID" = "ADM1_GUID", "Admin2GUID" = "GUID")) |>
+    dplyr::left_join( sf::st_drop_geometry(global.dist.01) |>
+                        dplyr::select(ADM0_NAME, ADM1_NAME, ADM2_NAME, ADM0_GUID, ADM1_GUID, GUID),
+                      by = c("Admin0GUID" = "ADM0_GUID", "Admin1GUID" = "ADM1_GUID", "Admin2GUID" = "GUID")) |>
     dplyr::mutate(geo.corrected = ifelse(paste0("{", stringr::str_to_upper(admin2guid), "}", sep = "") != Admin2GUID, 1, 0),
                   geo.corrected = ifelse(paste0("{", stringr::str_to_upper(admin1guid), "}", sep = "") != Admin1GUID, 1, geo.corrected),
                   geo.corrected = ifelse(paste0("{", stringr::str_to_upper(admin0guid), "}", sep = "") != Admin0GUID, 1, geo.corrected),
@@ -2586,6 +2570,8 @@ process_spatial <- function(gdb_folder,
 
   #ensure CRS of ctry file is 4326
   global.ctry.01 <- sf::st_set_crs(global.ctry.01, 4326)
+  #make sure shapefile is valid before saving
+  global.ctry.01 <-  sf::st_make_valid(global.ctry.01)
 
   # save global country geodatabase in RDS file:
   if(edav) {
@@ -2721,6 +2707,10 @@ process_spatial <- function(gdb_folder,
 
   #ensure CRS is 4326
   global.prov.01 <- sf::st_set_crs(global.prov.01, 4326)
+
+  #make sure shapefile is valid before saving
+  global.prov.01 <-  sf::st_make_valid(global.prov.01)
+
   # save global province geodatabase in RDS file:
   if(edav) {
     tidypolis_io(io = "write", edav = T,
@@ -2848,6 +2838,10 @@ process_spatial <- function(gdb_folder,
 
   #ensure district CRS is 4326
   global.dist.01 <- sf::st_set_crs(global.dist.01, 4326)
+
+  #make sure shapefile is valid before saving
+  global.dist.01 <-  sf::st_make_valid(global.dist.01)
+
   # save global province geodatabase in RDS file:
   if(edav) {
     tidypolis_io(io = "write", edav = T,
