@@ -1804,7 +1804,8 @@ remove_character_dates <- function(type,
 
     df.02 <- df |>
       dplyr::select(env.sample.manual.edit.id, env.sample.id, !(dplyr::contains("date") & dplyr::where(is.character))) |>
-      dplyr::left_join(df.01.fixed)
+      dplyr::left_join(df.01.fixed,
+                       by = c("env.sample.manual.edit.id", "env.sample.id"))
 
   }
 
@@ -7866,11 +7867,16 @@ s4_es_create_cdc_vars <- function(es.02, polis_folder, output_folder_name){
                              })
   ))
 
-  sf::sf_use_s2(F)
-  shape.name.01 <- global.ctry.01 |>
-    dplyr::select(ISO_3_CODE, ADM0_NAME.rep = ADM0_NAME) |>
-    dplyr::distinct(.keep_all = T)
-  sf::sf_use_s2(T)
+  suppressMessages(
+    suppressWarnings({
+      sf::sf_use_s2(FALSE)
+      shape.name.01 <- global.ctry.01 |>
+        dplyr::select(ISO_3_CODE, ADM0_NAME.rep = ADM0_NAME) |>
+        dplyr::distinct(.keep_all = T)
+      sf::sf_use_s2(FALSE)
+    }
+    )
+  )
 
   savescipen <- getOption("scipen")
   options(scipen = 999)
