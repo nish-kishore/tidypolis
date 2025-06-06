@@ -8800,7 +8800,7 @@ s5_pos_compare_with_archive <- function(afp.es.virus.01, afp.es.virus.03, polis_
     in_old_not_new <- old |>
       dplyr::filter(!(epid %in% new$epid))
 
-    in_new_and_old_but_modified <- new |>
+    in_new_and_old_but_modified <- suppressWarnings({ new |>
       dplyr::filter(epid %in% old$epid) |>
       dplyr::select(-c(setdiff(colnames(new), colnames(old)))) |>
       setdiff(old |>
@@ -8816,6 +8816,7 @@ s5_pos_compare_with_archive <- function(afp.es.virus.01, afp.es.virus.03, polis_
       dplyr::mutate(name = stringr::str_sub(name, 1, -3)) |>
       #long_to_wide
       tidyr::pivot_wider(names_from=source, values_from=value)
+    })
 
     if(nrow(in_new_and_old_but_modified) > 0){
       in_new_and_old_but_modified <- in_new_and_old_but_modified |>
