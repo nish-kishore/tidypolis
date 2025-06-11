@@ -4552,7 +4552,7 @@ s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
     col_afp_raw = colnames(afp_raw_new),
     output_folder_name = output_folder_name,
     output_format = output_format,
-    archive
+    archive = T
   )
 
 }
