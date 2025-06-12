@@ -11,7 +11,8 @@ s2_fully_process_afp_data(
   timestamp,
   latest_folder_in_archive_path,
   output_folder_name,
-  output_format
+  output_format,
+  archive
 )
 }
 \arguments{
@@ -33,8 +34,11 @@ region-specific processing, this should be set to
 "Core_Ready_Files_\link{REGION}" (e.g., "Core_Ready_Files_AFRO").}
 
 \item{output_format}{str: output_format to save files as.
-Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+Available formats include 'rds' 'rda' 'csv' 'qs' and 'parquet', Defaults is
 'rds'.}
+
+\item{archive}{Logical. Whether to archive previous output directories
+before overwriting. Default is \code{TRUE}.}
 }
 \description{
 This function processes AFP data through multiple standardization and

@@ -13,7 +13,7 @@ preprocess_data(type = "cdc", who_region = NULL, output_format = "rds")
 Available inputs include AFRO, AMRO, EMRO, EURO, SEARO and  WPRO.}
 
 \item{output_format}{str: output_format to save files as.
-Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+Available formats include 'rds' 'rda' 'csv' 'qs' and 'parquet', Defaults is
 'rds'.}
 }
 \value{

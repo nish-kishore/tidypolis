@@ -403,7 +403,7 @@ freeze_polis_data <- function(){
 #'      Available inputs include AFRO, AMRO, EMRO, EURO, SEARO and  WPRO.
 #'
 #' @param output_format str: output_format to save files as.
-#'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+#'    Available formats include 'rds' 'rda' 'csv' 'qs' and 'parquet', Defaults is
 #'    'rds'.
 #'
 #' @import cli
@@ -416,7 +416,7 @@ freeze_polis_data <- function(){
 preprocess_data <- function(type = "cdc", who_region = NULL, output_format = "rds"){
 
   types <- c("cdc")
-  outputs <- c("rds", "rda", "csv", "parquet")
+  outputs <- c("rds", "rda", "csv", "qs",  "parquet")
 
   if (!(type %in% types)) {
     cli::cli_abort(message = paste0("'", type, "'", " is not one of the accepted values for 'type'"))
