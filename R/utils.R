@@ -1261,6 +1261,12 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
     sf::st_as_sf(coords = c(x = "lon" , y = "lat"),
                  crs = sf::st_crs(global.dist.01))
 
+    # filter out invalid shapes if the column exists
+    if ("shape_invalid" %in% names(global.dist.01)) {
+      global.dist.01 <- global.dist.01 |>
+        dplyr::filter(shape_invalid == FALSE)
+    }
+
   # spatial join to get district info
   suppressMessages(
     suppressWarnings({
@@ -2753,6 +2759,12 @@ process_spatial <- function(gdb_folder,
     dplyr::slice(row.num.dist) |>
     dplyr::select(ADM0_NAME, ADM1_NAME, ADM2_NAME, GUID, yr.st, yr.end, paste(sf_var_dist)) |>
     dplyr::arrange(ADM0_NAME)
+
+  # flag rows with invalid geometries based on row indices
+  global.dist.01 <- global.dist.01 |>
+    dplyr::mutate(
+      shape_invalid = dplyr::row_number() %in% row.num.dist
+    )
 
   sf::st_geometry(invalid.dist.shapes) <- NULL
 
