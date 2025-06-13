@@ -116,8 +116,8 @@ tidypolis_io <- function(
         return(x)
       }
     } else {
-      if (!grepl("\\.rds$|\\.rda$|\\.csv$|\\.qs$|\\.parquet$", file_path)) {
-        stop("At the moment only 'rds' 'rda' 'csv' 'qs' and 'parquet' are supported for reading.")
+      if (!grepl("\\.rds$|\\.rda$|\\.csv$|\\.qs2$|\\.parquet$", file_path)) {
+        stop("At the moment only 'rds' 'rda' 'csv' 'qs2' and 'parquet' are supported for reading.")
       }
 
       if (grepl("\\.rds$", file_path)) {
@@ -129,12 +129,15 @@ tidypolis_io <- function(
       }
 
       if (grepl("\\.csv$", file_path)) {
-        return(readr::read_csv(file_path, show_col_types = FALSE))
+        return(readr::read_csv(file_path,
+                               show_col_types = FALSE,
+                               col_types = readr::cols(
+                                 .default = "c"
+                               )))
       }
 
-      if (grepl("\\.qs$", file_path)) {
-        return(qs::qread(file_path,
-                         use_alt_rep = TRUE))
+      if (grepl("\\.qs2$", file_path)) {
+        return(qs2::qs_read(file_path))
       }
 
       if (grepl("\\.parquet$", file_path)) {
@@ -157,8 +160,8 @@ tidypolis_io <- function(
         azcontainer = azcontainer
       )
     } else {
-      if (!grepl("\\.rds$|\\.rda$|\\.csv$|\\.qs$|\\.parquet$", file_path)) {
-        stop("At the moment only 'rds' 'rda' 'csv' 'qs'  and 'parquet' are supported for writing")
+      if (!grepl("\\.rds$|\\.rda$|\\.csv$|\\.qs2$|\\.parquet$", file_path)) {
+        stop("At the moment only 'rds' 'rda' 'csv' 'qs2'  and 'parquet' are supported for writing")
       }
 
       if (grepl("\\.rds$", file_path)) {
@@ -173,8 +176,8 @@ tidypolis_io <- function(
         readr::write_csv(x = obj, file = file_path)
       }
 
-      if (grepl("\\.qs$", file_path)) {
-        qs::qsave(x = obj, file = file_path)
+      if (grepl("\\.qs2$", file_path)) {
+        qs2::qs_save(x = obj, file = file_path)
       }
 
       if (grepl("\\.parquet$", file_path)) {

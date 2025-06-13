@@ -12,14 +12,14 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.3.2
-Imports: 
+Imports:
   cli,
-  yaml, 
+  yaml,
   tibble,
   dplyr,
   readr,
   lubridate,
-  sirfunctions, 
+  sirfunctions,
   AzureStor,
   stringr,
   httr,
@@ -30,7 +30,7 @@ Imports:
   progressr,
   sf,
   skimr,
-  cluster, 
+  cluster,
   tidyr,
   stringi,
   readxl
@@ -40,7 +40,7 @@ Suggests:
     stats,
     utils,
     arrow,
-    qs,
+    qs2,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
 Roxygen: list(markdown = TRUE)

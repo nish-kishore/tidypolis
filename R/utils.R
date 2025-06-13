@@ -1479,8 +1479,6 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
                      "ADM1_NAME", "ADM2_NAME")) |>
     dplyr::mutate(geo.corrected = ifelse(is.na(geo.corrected), 0, geo.corrected))
 
-  df09$Shape <- NULL
-
   final.guid.check <- df09 |>
     dplyr::filter((paste0("{", stringr::str_to_upper(admin2guid), "}", sep = "") != Admin2GUID |
                      paste0("{", stringr::str_to_upper(admin1guid), "}", sep = "") != Admin1GUID |
