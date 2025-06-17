@@ -2116,6 +2116,29 @@ check_missingness <- function(data,
   return(missing_by_group)
 }
 
+#' Normalize and validate file output format
+#'
+#' Ensures the format has a leading dot and is lowercase (e.g., '.rds'),
+#' and checks that it is one of the supported formats.
+#'
+#' @param fmt A character string specifying the output format
+#'            (e.g., 'rds', '.qs2', 'CSV').
+#'
+#' @return A normalized format string with a leading dot (e.g., '.qs2').
+#' @noRd
+normalize_format <- function(fmt) {
+  # Ensure lowercase and leading dot
+  fmt <- tolower(gsub("^([^\\.])", ".\\1", fmt))
+
+  # Check if supported
+  valid_formats <- c(".rds", ".rda", ".csv", ".qs", ".qs2", ".parquet")
+  if (!fmt %in% valid_formats) {
+    stop("Currently, only 'rds', 'rda', 'csv', 'qs', 'qs2', and 'parquet' are supported.")
+  }
+
+  return(fmt)
+}
+
 #### Pre-processing ####
 
 
@@ -2152,25 +2175,9 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
 
   cli::cli_h1("Step 0/5: Set-up preprocessing environment")
 
-  # ensure leading dot in output_format
-  if (!startsWith(output_format, ".")) {
-    output_format <- paste0(".", output_format)
-  }
-
-  # ensure leading dot in raw_output_format
-  if (!startsWith(raw_output_format, ".")) {
-    raw_output_format <- paste0(".", raw_output_format)
-  }
-
-  # validate output_format
-  if (!output_format %in% c(".rds", ".rda", ".csv", ".qs", ".qs2", ".parquet")) {
-    stop("Currently, only 'rds', 'rda', 'csv', 'qs', 'qs2',  and 'parquet' are supported.")
-  }
-
-  # validate raw_output_format
-  if (!raw_output_format %in% c(".rds", ".rda", ".csv", ".qs", ".qs2", ".parquet")) {
-    stop("Currently, only 'rds', 'rda', 'csv', 'qs', 'qs2',  and 'parquet' are supported.")
-  }
+# normalize and validate both output formats
+  output_format <- normalize_format(output_format)
+  raw_output_format <- normalize_format(raw_output_format)
 
   # Static global variables used in some part of our code
   polis_data_folder <- file.path(polis_folder, "data")
@@ -3369,7 +3376,7 @@ s1_prep_polis_tables <- function(polis_folder, polis_data_folder,
 required_files <- c(
   case = file.path(polis_data_folder, paste0("case", raw_output_format)),
   es = file.path(polis_data_folder, paste0("environmental_sample", raw_output_format)),
-  virus file.path(polis_data_folder, paste0("virus", raw_output_format)),
+  virus = file.path(polis_data_folder, paste0("virus", raw_output_format)),
   sub_activ = file.path(polis_data_folder, paste0("sub_activity", raw_output_format)),
   activ = file.path(polis_data_folder, paste0("activity", raw_output_format))
 )

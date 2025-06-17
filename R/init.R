@@ -401,13 +401,24 @@ freeze_polis_data <- function(){
 #' @description
 #' Create standard analytic datasets from raw POLIS data
 #'
+#' @param polis_folder str: location of the POLIS data folder
 #' @param type str: specify the type of preprocessing to complete
 #' @param who_region str: optional WHO region to filter data
 #'      Available inputs include AFRO, AMRO, EMRO, EURO, SEARO and  WPRO.
-#'
 #' @param output_format str: output_format to save files as.
 #'    Available formats include 'rds' 'rda' 'csv' 'qs' and 'parquet', Defaults is
 #'    'rds'.
+#' @param raw_output_format str: raw_output_format of raw polis data based output_format
+#'    supplied to get_table_data and files saved as.
+#'    Available formats include 'rds' 'rda' 'csv' 'qs' and 'parquet', Defaults is
+#'    'rds'.
+#' @param who_region str: optional WHO region to filter data
+#'      Available inputs include AFRO, AMRO, EMRO, EURO, SEARO and  WPRO.
+#' @param archive Logical. Whether to archive previous output directories
+#'    before overwriting. Default is `TRUE`.
+#' @param keep_n_archives Numeric. Number of archive folders to retain.
+#'   Defaults to `Inf`, which keeps all archives. Set to a finite number
+#'   (e.g., 3) to automatically delete older archives beyond the N most recent.
 #'
 #' @import cli
 #' @returns Analytic rds files
@@ -416,22 +427,30 @@ freeze_polis_data <- function(){
 #' preprocess_data(type = "cdc") #must run init_tidypolis to specify POLIS data location first
 #' }
 #' @export
-preprocess_data <- function(type = "cdc", who_region = NULL, output_format = "rds"){
+preprocess_data <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
+                            type = "cdc", who_region = NULL, output_format = "rds",
+                            raw_output_format = "rds", archive = TRUE, keep_n_archives = Inf){
 
   types <- c("cdc")
-  outputs <- c("rds", "rda", "csv", "qs",  "parquet")
 
   if (!(type %in% types)) {
     cli::cli_abort(message = paste0("'", type, "'", " is not one of the accepted values for 'type'"))
   }
 
-  if (!(output_format %in% outputs)) {
-    cli::cli_abort(paste0("'", output_format, "'", " is not one of the accepted values for 'output_format'"))
-  }
+# normalize and validate both output formats
+  output_format <- normalize_format(output_format)
+  raw_output_format <- normalize_format(raw_output_format)
 
   #CDC pre-processing steps
   if (type == "cdc") {
-    preprocess_cdc(who_region = who_region, output_format = output_format)
+    preprocess_cdc(
+      polis_folder = polis_folder,
+      who_region = who_region,
+      output_format = output_format,
+      raw_output_format = raw_output_format,
+      archive = archive,
+      keep_n_archives = keep_n_archives
+    )
   }
 
 
