@@ -2128,6 +2128,10 @@ check_missingness <- function(data,
 #' @param output_format str: output_format to save files as.
 #'    Available formats include 'rds' 'rda' 'csv' 'qs' and 'parquet', Defaults is
 #'    'rds'.
+#' @param raw_output_format str: raw_output_format of raw polis data based output_format
+#'    supplied to get_table_data and files saved as.
+#'    Available formats include 'rds' 'rda' 'csv' 'qs' and 'parquet', Defaults is
+#'    'rds'.
 #' @param who_region str: optional WHO region to filter data
 #'      Available inputs include AFRO, AMRO, EMRO, EURO, SEARO and  WPRO.
 #' @param archive Logical. Whether to archive previous output directories
@@ -2142,6 +2146,7 @@ check_missingness <- function(data,
 preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
                            who_region = NULL,
                            output_format = "rds",
+                           raw_output_format = "rds",
                            archive = TRUE,
                            keep_n_archives = Inf) {
 
@@ -2152,14 +2157,19 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
     output_format <- paste0(".", output_format)
   }
 
+  # ensure leading dot in raw_output_format
+  if (!startsWith(raw_output_format, ".")) {
+    raw_output_format <- paste0(".", raw_output_format)
+  }
+
   # validate output_format
   if (!output_format %in% c(".rds", ".rda", ".csv", ".qs", ".qs2", ".parquet")) {
     stop("Currently, only 'rds', 'rda', 'csv', 'qs', 'qs2',  and 'parquet' are supported.")
   }
 
-  # ensure leading dot
-  if (!startsWith(output_format, ".")) {
-    output_format <- paste0(".", output_format)
+  # validate raw_output_format
+  if (!raw_output_format %in% c(".rds", ".rda", ".csv", ".qs", ".qs2", ".parquet")) {
+    stop("Currently, only 'rds', 'rda', 'csv', 'qs', 'qs2',  and 'parquet' are supported.")
   }
 
   # Static global variables used in some part of our code
@@ -2288,7 +2298,8 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
 
   s1_prep_polis_tables(polis_folder, polis_data_folder,
                        long.global.dist.01, ts, timestamp,
-                       who_region, output_format, archive = archive)
+                       who_region, output_format, raw_output_format,
+                       archive = archive)
 
   # Step 2 - Creating AFP and EPI datasets =====================================
 
@@ -3352,10 +3363,30 @@ check_missing_static_files <- function(core_files_folder_path,
 #'
 s1_prep_polis_tables <- function(polis_folder, polis_data_folder,
                                  long.global.dist.01, ts, timestamp, who_region,
-                                 output_format, archive) {
+                                 output_format, raw_output_format, archive) {
 
+# validate to see if polis raw files with raw_output_format exist for preprocessing
+required_files <- c(
+  case = file.path(polis_data_folder, paste0("case", raw_output_format)),
+  es = file.path(polis_data_folder, paste0("environmental_sample", raw_output_format)),
+  virus file.path(polis_data_folder, paste0("virus", raw_output_format)),
+  sub_activ = file.path(polis_data_folder, paste0("sub_activity", raw_output_format)),
+  activ = file.path(polis_data_folder, paste0("activity", raw_output_format))
+)
+
+missing_idx <- !file.exists(required_files)
+missing_files <- required_files[missing_idx]
+
+if (length(missing_files) > 0) {
+  cli::cli_abort(c(
+    "Missing {length(missing_files)} raw data file{?s}:",
+    setNames(as.character(missing_files), names(missing_files)),
+    "!" = "Please check that your {.field raw_output_format} matches the format used to save raw files (e.g., {.val '.rds'} or {.val '.qs2'})."
+  ))
+}
+
+# Set region-specific folder name
   if (!is.null(who_region)) {
-    # Set region-specific folder name
     output_folder_name <- paste0("Core_Ready_Files_", who_region)
   } else {output_folder_name <- "Core_Ready_Files"}
 
@@ -3368,7 +3399,7 @@ s1_prep_polis_tables <- function(polis_folder, polis_data_folder,
 
   cli::cli_h2("Case")
   api_case_data <- s1_clean_case_table(
-    path = file.path(polis_data_folder, "case.rds"),
+    path = required_files$case,
     crosswalk = crosswalk_data)
 
   if (!is.null(who_region)) {
@@ -3380,7 +3411,7 @@ s1_prep_polis_tables <- function(polis_folder, polis_data_folder,
 
   cli::cli_h2("Environmental Samples")
   api_es_data <- s1_clean_es_table(
-    path = file.path(polis_data_folder, "environmental_sample.rds"),
+    path = required_files$es,
     crosswalk = crosswalk_data
   )
 
@@ -3393,7 +3424,7 @@ s1_prep_polis_tables <- function(polis_folder, polis_data_folder,
 
   cli::cli_h2("Virus")
   api_virus_data <- s1_clean_virus_table(
-    path = file.path(polis_data_folder, "virus.rds"),
+    path = required_files$virus,
     crosswalk = crosswalk_data)
 
   if (!is.null(who_region)) {
@@ -3405,8 +3436,8 @@ s1_prep_polis_tables <- function(polis_folder, polis_data_folder,
 
   cli::cli_h2("Activity")
   api_activity_data <- s1_clean_activity_table(
-    path = file.path(polis_data_folder, "activity.rds"),
-    subactivity_path = file.path(polis_data_folder, "sub_activity.rds"),
+    path = required_files$activ,
+    subactivity_path = required_files$sub_activ,
     crosswalk = crosswalk_data
   )
 
@@ -3419,7 +3450,7 @@ s1_prep_polis_tables <- function(polis_folder, polis_data_folder,
 
   cli::cli_h2("Sub-activity")
   api_subactivity_data <- s1_clean_subactivity_table(
-    file.path(polis_data_folder, "sub_activity.rds"),
+    required_files$sub_activ,
     api_activity_data,
     crosswalk_data,
     long.global.dist.01
