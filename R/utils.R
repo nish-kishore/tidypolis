@@ -2139,8 +2139,8 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
   }
 
   # validate output_format
-  if (!output_format %in% c(".rds", ".rda", ".csv", ".qs", ".parquet")) {
-    stop("Currently, only 'rds', 'rda', 'csv', 'qs',  and 'parquet' are supported.")
+  if (!output_format %in% c(".rds", ".rda", ".csv", ".qs", ".qs2", ".parquet")) {
+    stop("Currently, only 'rds', 'rda', 'csv', 'qs', 'qs2',  and 'parquet' are supported.")
   }
 
   # ensure leading dot
