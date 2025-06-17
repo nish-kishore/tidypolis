@@ -1655,7 +1655,7 @@ f.summarise.metadata <- function(dataframe, categorical_max = 10){
     dplyr::select(var_name_class$var_name[var_name_class$character.n_unique <= categorical_max  & !is.na(var_name_class$character.n_unique)]) |>
     tidyr::pivot_longer(cols=tidyselect::everything(), names_to="var_name", values_to = "response") |>
     unique() |>
-    tidyr::pivot_wider(names_from=var_name, values_from=response) |>
+    tidyr::pivot_wider(names_from=var_name, values_from=response, values_fn = list ) |>
     tidyr::pivot_longer(cols=tidyselect::everything(), names_to="var_name", values_to="categorical_response_set")
 
   #Combine var names/classes/categorical-sets into a 'metadata table'
@@ -8187,12 +8187,10 @@ s5_fully_process_pos_data <- function(polis_folder,
 
   rm(afp.es.virus.02)
 
-  if (archive) {
   s5_pos_compare_with_archive(afp.es.virus.01, afp.es.virus.03,
                               polis_data_folder, latest_folder_in_archive,
                               output_folder_name = output_folder_name,
                               output_format = output_format)
-  }
 
   s5_pos_evaluate_unmatched_guids(afp.es.virus.03, long.global.dist.01,
                                   polis_data_folder,
