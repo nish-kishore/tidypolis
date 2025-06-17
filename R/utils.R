@@ -8465,7 +8465,7 @@ s5_pos_check_duplicates <- function(virus.01, polis_data_folder, output_folder_n
   # Script below will stop further execution if there is a duplicate virus, with same onset date, virus type, emergence group, ntchanges
   if (nrow(virus.dup.01) >= 1) {
     cli::cli_alert_warning("Duplicate viruses in the virus table data. Check the data for duplicate records.
-          If they are the exact same, then contact Ashley")
+          If they are the exact same, then contact polis@who.int")
     virus.dup.01 <- virus.dup.01[order(virus.dup.01$surveillance.type,virus.dup.01$virustype, virus.dup.01$yronset),] |>
       dplyr::select(-virus_dup)
 
