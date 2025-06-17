@@ -4,10 +4,14 @@
 \alias{get_polis_data}
 \title{Manager function to get and update POLIS data}
 \usage{
-get_polis_data(type = "all")
+get_polis_data(type = "all", output_format = "rds")
 }
 \arguments{
 \item{type}{choose to download population data ("pop") or all other data. Default's to "all"}
+
+\item{output_format}{str: output_format to save files as.
+Available formats include 'rds' 'rda' 'csv' 'qs' and 'parquet', Defaults is
+'rds'.}
 }
 \description{
 This function iterates through all tables and loads POLIS data. It
