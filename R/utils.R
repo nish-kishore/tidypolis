@@ -6,6 +6,9 @@
 #' @import cli lubridate dplyr readr
 #' @param api_key API Key
 #' @param .table Table value to retrieve
+#' @param output_format str: output_format to save files as.
+#'    Available formats include 'rds' 'rda' 'csv' 'qs' and 'parquet', Defaults is
+#'    'rds'.
 #' @returns Tibble with reference data
 #' @examples
 #' \dontrun{
@@ -13,7 +16,18 @@
 #' get_table_data(.table = "virus") #must run init_tidypolis first in order to specify API key
 #' }
 get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
-                           .table) {
+                           .table, output_format = "rds") {
+
+  # validate output_format
+  if (!output_format %in% c(".rds", ".rda", ".csv", ".qs", ".qs2", ".parquet")) {
+    stop("Currently, only 'rds', 'rda', 'csv', 'qs', 'qs2',  and 'parquet' are supported.")
+  }
+
+    # ensure leading dot
+  if (!startsWith(output_format, ".")) {
+      output_format <- paste0(".", output_format)
+   }
+
   base_url <- "https://extranet.who.int/polis/api/v2/"
   table_data <- get_polis_cache(.table = .table)
   table_url <- paste0(base_url, table_data$endpoint)
@@ -141,7 +155,7 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
       Sys.getenv("POLIS_DATA_CACHE"),
       "/",
       table_data$table,
-      ".rds"
+      output_format
     ))
     update_polis_log(.event = paste0(table_data$table, " data saved locally"),
                      .event_type = "PROCESS")
@@ -238,7 +252,7 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
             Sys.getenv("POLIS_DATA_CACHE"),
             "/",
             table_data$table,
-            ".rds"
+            output_format
           ))
         cli::cli_process_done()
         old_cache_n <- nrow(old_cache)
@@ -372,7 +386,7 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
             Sys.getenv("POLIS_DATA_CACHE"),
             "/",
             table_data$table,
-            ".rds"
+            output_format
           ))
           update_polis_log(.event = paste0(table_data$table, " data saved locally"),
                            .event_type = "PROCESS")
@@ -401,7 +415,7 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
                          Sys.getenv("POLIS_DATA_CACHE"),
                          "/",
                          table_data$table,
-                         ".rds"
+                        output_format
                        ))
           update_polis_log(.event = paste0(table_data$table, " data saved locally"),
                            .event_type = "PROCESS")
