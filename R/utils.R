@@ -1267,7 +1267,7 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
         dplyr::filter(shape_invalid == FALSE)
     } else {
       global.dist.01 <- global.dist.01 |>
-        dplyr::mutate(valid = sf::st_is_valid(geometry)) |>
+        dplyr::mutate(valid = sf::st_is_valid(Shape)) |>
         dplyr::filter(valid) |>
         dplyr::select(-valid)
     }
