@@ -19,14 +19,7 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
                            .table, output_format = "rds") {
 
   # validate output_format
-  if (!output_format %in% c(".rds", ".rda", ".csv", ".qs", ".qs2", ".parquet")) {
-    stop("Currently, only 'rds', 'rda', 'csv', 'qs', 'qs2',  and 'parquet' are supported.")
-  }
-
-    # ensure leading dot
-  if (!startsWith(output_format, ".")) {
-      output_format <- paste0(".", output_format)
-   }
+  output_format <- normalize_format(output_format)
 
   base_url <- "https://extranet.who.int/polis/api/v2/"
   table_data <- get_polis_cache(.table = .table)
@@ -3406,7 +3399,7 @@ if (length(missing_files) > 0) {
 
   cli::cli_h2("Case")
   api_case_data <- s1_clean_case_table(
-    path = required_files$case,
+    path = required_files[["case"]],
     crosswalk = crosswalk_data)
 
   if (!is.null(who_region)) {
@@ -3418,7 +3411,7 @@ if (length(missing_files) > 0) {
 
   cli::cli_h2("Environmental Samples")
   api_es_data <- s1_clean_es_table(
-    path = required_files$es,
+    path = required_files[["es"]],
     crosswalk = crosswalk_data
   )
 
@@ -3431,7 +3424,7 @@ if (length(missing_files) > 0) {
 
   cli::cli_h2("Virus")
   api_virus_data <- s1_clean_virus_table(
-    path = required_files$virus,
+    path = required_files[["virus"]],
     crosswalk = crosswalk_data)
 
   if (!is.null(who_region)) {
@@ -3443,8 +3436,8 @@ if (length(missing_files) > 0) {
 
   cli::cli_h2("Activity")
   api_activity_data <- s1_clean_activity_table(
-    path = required_files$activ,
-    subactivity_path = required_files$sub_activ,
+    path = required_files[["activ"]],
+    subactivity_path = required_files["sub_activ"],
     crosswalk = crosswalk_data
   )
 
@@ -3457,7 +3450,7 @@ if (length(missing_files) > 0) {
 
   cli::cli_h2("Sub-activity")
   api_subactivity_data <- s1_clean_subactivity_table(
-    required_files$sub_activ,
+    required_files[["sub_activ"]],
     api_activity_data,
     crosswalk_data,
     long.global.dist.01

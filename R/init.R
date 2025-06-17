@@ -324,6 +324,8 @@ init_tidypolis <- function(
 #' @export
 get_polis_data <- function(type = "all", output_format = "rds"){
 
+  output_format <- normalize_format(output_format)
+
   if(type == "all"){
 
     tables <- c("virus", "case", "human_specimen", "environmental_sample",
