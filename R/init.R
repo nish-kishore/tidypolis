@@ -313,13 +313,16 @@ init_tidypolis <- function(
 #' checks to ensure that new rows are created, data are updated accordingly and
 #' deleted rows are reflected in the local system.
 #' @param type choose to download population data ("pop") or all other data. Default's to "all"
+#' @param output_format str: output_format to save files as.
+#'    Available formats include 'rds' 'rda' 'csv' 'qs' and 'parquet', Defaults is
+#'    'rds'.
 #' @import dplyr
 #' @examples
 #' \dontrun{
 #' get_polis_data() #must be run after using init_tidypolis and providing a valid API key
 #' }
 #' @export
-get_polis_data <- function(type = "all"){
+get_polis_data <- function(type = "all", output_format = "rds"){
 
   if(type == "all"){
 
@@ -329,7 +332,7 @@ get_polis_data <- function(type = "all"){
     update_polis_log(.event = paste0("Start POLIS download of: ", paste(tables, collapse = ", ")),
                      .event_type = "START")
 
-    sapply(tables, function(x) get_table_data(.table = x))
+    sapply(tables, function(x) get_table_data(.table = x, output_format))
 
   }
 
@@ -338,7 +341,7 @@ get_polis_data <- function(type = "all"){
     update_polis_log(.event = "Start POLIS pop download",
                      .event_type = "START")
 
-    get_table_data(.table = "pop")
+    get_table_data(.table = "pop", output_format)
 
     update_polis_log(.event = "POLIS Pop file donwloaded",
                      .event_type = "END")
