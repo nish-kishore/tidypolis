@@ -5889,7 +5889,7 @@ s2_create_afp_variables <- function(data) {
       `emergence.group(s)` = "emergence.group"
     ) |>
     dplyr::filter(!is.na(epid)) |>
-    dplyr::select(-dplyr::any_of(c(Admin2GUID, Admin1GUID, Admin0GUID)))
+    dplyr::select(-dplyr::any_of(c("Admin2GUID", "Admin1GUID", "Admin0GUID")))
 
   cli::cli_process_done()
 
