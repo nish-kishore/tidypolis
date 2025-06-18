@@ -19,7 +19,7 @@ s1_create_core_ready_dir(
 \item{output_folder_name}{str: Name of the output directory where processed
 files will be saved. Defaults to "Core_Ready_Files". For
 region-specific processing, this should be set to
-"Core_Ready_Files_\link{REGION}" (e.g., "Core_Ready_Files_AFRO").}
+"Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").}
 
 \item{archive}{Logical. Whether to archive previous output directories
 before overwriting. Default is \code{TRUE}.}
