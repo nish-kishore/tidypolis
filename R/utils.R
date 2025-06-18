@@ -4857,7 +4857,7 @@ s2_standardize_dates <- function(data) {
     ) |>
     dplyr::mutate(
       dplyr::across(
-        dplyr::all_of(c(
+        dplyr::any_of(c(
           "date.notification.to.hq", "results.seq.date.to.program",
           "specimen.date", "stool.date.sent.to.ic.lab",
           "case.date", "stool.date.sent.to.lab",
