@@ -5881,15 +5881,15 @@ s2_create_afp_variables <- function(data) {
       )
     ) |>
     # Rename variables for consistency with existing naming conventions
-    dplyr::rename(
-      adequate.stool = stool.adequacy,
-      datasetlab = dataset.lab,
-      doses.total = doses,
-      virus.cluster = `virus.cluster(s)`,
-      emergence.group = `emergence.group(s)`
+    dplyr::rename_with(recode,
+      stool.adequacy = "adequate.stool",
+      dataset.lab = "datasetlab",
+      doses = "doses.total",
+      `virus.cluster(s)` = "virus.cluster",
+      `emergence.group(s)` = "emergence.group"
     ) |>
     dplyr::filter(!is.na(epid)) |>
-    dplyr::select(-c(Admin2GUID, Admin1GUID, Admin0GUID))
+    dplyr::select(-dplyr::any_of(c(Admin2GUID, Admin1GUID, Admin0GUID)))
 
   cli::cli_process_done()
 
