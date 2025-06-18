@@ -11,7 +11,7 @@ s2_export_afp_outputs(
   col_afp_raw,
   output_folder_name,
   output_format,
-  archive
+  archive = TRUE
 )
 }
 \arguments{
