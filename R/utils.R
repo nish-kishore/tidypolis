@@ -3538,10 +3538,10 @@ s1_clean_case_table <- function(path, crosswalk,
         TRUE ~ NA_character_
       )
     ) |>
-    dplyr::select(c(crosswalk$Web_Name[crosswalk$Table %in% c("Case") &
+    dplyr::select(dplyr::any_of(c(crosswalk$Web_Name[crosswalk$Table %in% c("Case") &
                                          !is.na(crosswalk$Web_Name)],
                     crosswalk$API_Name[crosswalk$Table %in% c("Case") &
-                                         is.na(crosswalk$Web_Name)]))
+                                         is.na(crosswalk$Web_Name)])))
   rm(api_case_sub2)
   cli::cli_process_done()
 
