@@ -4815,27 +4815,27 @@ s2_standardize_dates <- function(data) {
     ) |>
     dplyr::mutate(
       dateonset = lubridate::ymd(
-        as.Date(date.onset, "%Y-%m-%dT%H:%M:%S"),
+        as.Date(date.onset, tryFormats = c("%Y-%m-%dT%H:%M:%S", "%d/%m/%Y")),
         quiet = TRUE
       ),
       datenotify = lubridate::ymd(
-        as.Date(notification.date, "%Y-%m-%dT%H:%M:%S"),
+        as.Date(notification.date, tryFormats = c("%Y-%m-%dT%H:%M:%S", "%d/%m/%Y")),
         quiet = TRUE
       ),
       dateinvest = lubridate::ymd(
-        as.Date(investigation.date, "%Y-%m-%dT%H:%M:%S"),
+        as.Date(investigation.date, tryFormats = c("%Y-%m-%dT%H:%M:%S", "%d/%m/%Y")),
         quiet = TRUE
       ),
       datestool1 = lubridate::ymd(
-        as.Date(stool.1.collection.date, "%Y-%m-%dT%H:%M:%S"),
+        as.Date(stool.1.collection.date, tryFormats = c("%Y-%m-%dT%H:%M:%S", "%d/%m/%Y")),
         quiet = TRUE
       ),
       datestool2 = lubridate::ymd(
-        as.Date(stool.2.collection.date, "%Y-%m-%dT%H:%M:%S"),
+        as.Date(stool.2.collection.date, tryFormats = c("%Y-%m-%dT%H:%M:%S", "%d/%m/%Y")),
         quiet = TRUE
       ),
       followup.date = lubridate::ymd(
-        as.Date(followup.date, "%Y-%m-%dT%H:%M:%S"),
+        as.Date(followup.date, tryFormats = c("%Y-%m-%dT%H:%M:%S", "%d/%m/%Y")),
         quiet = TRUE
       ),
       yronset = lubridate::year(dateonset),
@@ -4863,7 +4863,7 @@ s2_standardize_dates <- function(data) {
           "case.date", "stool.date.sent.to.lab",
           "clinical.admitted.date", "followup.date"
         )),
-        ~ lubridate::ymd(as.Date(., "%Y-%m-%dT%H:%M:%S"), quiet = TRUE)
+        ~ lubridate::ymd(as.Date(., tryFormats = c("%Y-%m-%dT%H:%M:%S", "%d/%m/%Y")), quiet = TRUE)
       )
     ) |>
     dplyr::mutate(datenotificationtohq = date.notification.to.hq,
@@ -5749,7 +5749,7 @@ s2_create_afp_variables <- function(data) {
       ),
       # Re-parse followup date to ensure consistency
       followup.date = lubridate::ymd(
-        as.Date(followup.date, "%Y-%m-%dT%H:%M:%S")
+        as.Date(followup.date, tryFormats = c("%Y-%m-%dT%H:%M:%S", "%d/%m/%Y"))
       ),
 
       # Additional date quality flags
