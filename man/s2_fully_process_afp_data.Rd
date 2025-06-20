@@ -12,7 +12,7 @@ s2_fully_process_afp_data(
   latest_folder_in_archive_path,
   output_folder_name,
   output_format,
-  archive
+  archive = TRUE
 )
 }
 \arguments{
@@ -31,7 +31,7 @@ validation.}
 \item{output_folder_name}{str: Name of the output directory where processed
 files will be saved. Defaults to "Core_Ready_Files". For
 region-specific processing, this should be set to
-"Core_Ready_Files_\link{REGION}" (e.g., "Core_Ready_Files_AFRO").}
+"Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").}
 
 \item{output_format}{str: output_format to save files as.
 Available formats include 'rds' 'rda' 'csv' 'qs' and 'parquet', Defaults is
