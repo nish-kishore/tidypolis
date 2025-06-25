@@ -1,4 +1,10 @@
 # tidypolis
+
+<!-- badges: start -->
+[![R-CMD-check](https://github.com/nish-kishore/tidypolis/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/nish-kishore/tidypolis/actions/workflows/R-CMD-check.yaml)
+<!-- badges: end -->
+
+
 A package to simplify downloading, caching and updating POLIS data. Functions 
 to clarify agency specific pre-processing and data cleaning steps are also included. 
 
