@@ -2,6 +2,7 @@
 
 export(call_single_url)
 export(cluster_dates)
+export(crosswalk_frontend_case_table)
 export(freeze_polis_data)
 export(get_polis_data)
 export(get_table_size)

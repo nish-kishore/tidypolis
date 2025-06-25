@@ -1793,7 +1793,7 @@ archive_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
 #' @param output_folder_name str: Name of the output directory where processed
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
-#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#'        "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").
 #'
 #' @return outputs a saved reference table of original date vars and a smaller
 #' core ready file without character dates
@@ -2045,7 +2045,7 @@ cluster_dates <- function(x,
 #' @param output_folder_name str: Name of the output directory where processed
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
-#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#'        "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").
 check_missingness <- function(data,
                               type, output_folder_name) {
 
@@ -2286,7 +2286,8 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
     timestamp = timestamp,
     latest_folder_in_archive_path = latest_folder_in_archive,
     output_folder_name = output_folder_name,
-    output_format = output_format)
+    output_format = output_format,
+    archive = archive)
 
   invisible(gc())
 
@@ -3538,10 +3539,10 @@ s1_clean_case_table <- function(path, crosswalk,
         TRUE ~ NA_character_
       )
     ) |>
-    dplyr::select(c(crosswalk$Web_Name[crosswalk$Table %in% c("Case") &
+    dplyr::select(dplyr::any_of(c(crosswalk$Web_Name[crosswalk$Table %in% c("Case") &
                                          !is.na(crosswalk$Web_Name)],
                     crosswalk$API_Name[crosswalk$Table %in% c("Case") &
-                                         is.na(crosswalk$Web_Name)]))
+                                         is.na(crosswalk$Web_Name)])))
   rm(api_case_sub2)
   cli::cli_process_done()
 
@@ -3989,7 +3990,7 @@ s1_clean_subactivity_table <- function(path, activity_table, crosswalk,
 #' @param output_folder_name str: Name of the output directory where processed
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
-#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#'        "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").
 #' @param archive Logical. Whether to archive previous output directories
 #'    before overwriting. Default is `TRUE`.
 #'
@@ -4040,7 +4041,7 @@ s1_create_core_ready_dir <- function(polis_data_folder, timestamp,
 #' @param output_folder_name str: Name of the output directory where processed
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
-#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#'        "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").
 #'
 #' @returns `list` With names of the most recent files that matches the patterns.
 #' @keywords internal
@@ -4069,7 +4070,7 @@ s1_get_most_recent_files <- function(polis_data_folder, patterns,
 #' @param output_folder_name str: Name of the output directory where processed
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
-#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#'        "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").
 #' @param archive Logical. Whether to archive previous output directories
 #'    before overwriting. Default is `TRUE`.
 #'
@@ -4254,7 +4255,7 @@ s1_create_change_log <- function(polis_data_folder,
 #' @param output_folder_name str: Name of the output directory where processed
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
-#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#'        "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").
 #' @param output_format str: output_format to save files as.
 #'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
 #'    'rds'.
@@ -4310,7 +4311,7 @@ s1_archive_old_files <- function(polis_data_folder, timestamp, output_folder_nam
 #' @param output_folder_name str: Name of the output directory where processed
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
-#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#'        "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").
 #' @param output_format str: output_format to save files as.
 #'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
 #'    'rds'.
@@ -4455,16 +4456,19 @@ s2_trim_archives <- function(polis_data_folder, output_folder_name, keep_n = 3) 
 #' @param output_folder_name str: Name of the output directory where processed
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
-#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#'        "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").
 #' @param output_format str: output_format to save files as.
 #'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
 #'    'rds'.
+#' @param archive Logical. Whether to archive previous output directories
+#'    before overwriting. Default is `TRUE`.
 #'
 #' @export
 s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
                                       long.global.dist.01, timestamp,
                                       latest_folder_in_archive_path,
-                                      output_folder_name, output_format) {
+                                      output_folder_name, output_format,
+                                      archive = TRUE) {
 
   if (!tidypolis_io(io = "exists.dir",
                     file_path = file.path(polis_data_folder, output_folder_name))) {
@@ -4571,7 +4575,7 @@ s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
 #' @param output_folder_name str: Name of the output directory where processed
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
-#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#'        "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").
 #'
 #' @return `str` containing either the name of the most recent
 #'   archive folder or the current timestamp if no archives exist
@@ -4668,7 +4672,7 @@ s2_read_afp_data <- function(file_path) {
 #' @param output_folder_name str: Name of the output directory where processed
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
-#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#'        "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").
 #'
 #' @return Logical. TRUE if duplicates found, FALSE if no duplicates
 #'
@@ -4811,27 +4815,27 @@ s2_standardize_dates <- function(data) {
     ) |>
     dplyr::mutate(
       dateonset = lubridate::ymd(
-        as.Date(date.onset, "%Y-%m-%dT%H:%M:%S"),
+        as.Date(date.onset, tryFormats = c("%Y-%m-%dT%H:%M:%S", "%d/%m/%Y")),
         quiet = TRUE
       ),
       datenotify = lubridate::ymd(
-        as.Date(notification.date, "%Y-%m-%dT%H:%M:%S"),
+        as.Date(notification.date, tryFormats = c("%Y-%m-%dT%H:%M:%S", "%d/%m/%Y")),
         quiet = TRUE
       ),
       dateinvest = lubridate::ymd(
-        as.Date(investigation.date, "%Y-%m-%dT%H:%M:%S"),
+        as.Date(investigation.date, tryFormats = c("%Y-%m-%dT%H:%M:%S", "%d/%m/%Y")),
         quiet = TRUE
       ),
       datestool1 = lubridate::ymd(
-        as.Date(stool.1.collection.date, "%Y-%m-%dT%H:%M:%S"),
+        as.Date(stool.1.collection.date, tryFormats = c("%Y-%m-%dT%H:%M:%S", "%d/%m/%Y")),
         quiet = TRUE
       ),
       datestool2 = lubridate::ymd(
-        as.Date(stool.2.collection.date, "%Y-%m-%dT%H:%M:%S"),
+        as.Date(stool.2.collection.date, tryFormats = c("%Y-%m-%dT%H:%M:%S", "%d/%m/%Y")),
         quiet = TRUE
       ),
       followup.date = lubridate::ymd(
-        as.Date(followup.date, "%Y-%m-%dT%H:%M:%S"),
+        as.Date(followup.date, tryFormats = c("%Y-%m-%dT%H:%M:%S", "%d/%m/%Y")),
         quiet = TRUE
       ),
       yronset = lubridate::year(dateonset),
@@ -4853,13 +4857,13 @@ s2_standardize_dates <- function(data) {
     ) |>
     dplyr::mutate(
       dplyr::across(
-        dplyr::all_of(c(
+        dplyr::any_of(c(
           "date.notification.to.hq", "results.seq.date.to.program",
           "specimen.date", "stool.date.sent.to.ic.lab",
           "case.date", "stool.date.sent.to.lab",
           "clinical.admitted.date", "followup.date"
         )),
-        ~ lubridate::ymd(as.Date(., "%Y-%m-%dT%H:%M:%S"), quiet = TRUE)
+        ~ lubridate::ymd(as.Date(., tryFormats = c("%Y-%m-%dT%H:%M:%S", "%d/%m/%Y")), quiet = TRUE)
       )
     ) |>
     dplyr::mutate(datenotificationtohq = date.notification.to.hq,
@@ -4885,7 +4889,7 @@ s2_standardize_dates <- function(data) {
 #' @param output_folder_name str: Name of the output directory where processed
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
-#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#'        "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").
 #'
 #' @return Invisibly returns the filtered data frame of records with missing
 #'    onset dates
@@ -4924,7 +4928,7 @@ s2_export_missing_onsets <- function(data, polis_data_folder, output_folder_name
 #' @param output_folder_name str: Name of the output directory where processed
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
-#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#'        "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").
 #'
 #' @return Invisibly returns the missingness summary
 #' @export
@@ -5532,7 +5536,7 @@ s2_fix_admin_guids <- function(data, shape_data) {
 #' @param output_folder_name str: Name of the output directory where processed
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
-#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#'        "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").
 #'
 #' @return A tibble with processed coordinate data
 #' @export
@@ -5745,7 +5749,7 @@ s2_create_afp_variables <- function(data) {
       ),
       # Re-parse followup date to ensure consistency
       followup.date = lubridate::ymd(
-        as.Date(followup.date, "%Y-%m-%dT%H:%M:%S")
+        as.Date(followup.date, tryFormats = c("%Y-%m-%dT%H:%M:%S", "%d/%m/%Y"))
       ),
 
       # Additional date quality flags
@@ -5877,15 +5881,15 @@ s2_create_afp_variables <- function(data) {
       )
     ) |>
     # Rename variables for consistency with existing naming conventions
-    dplyr::rename(
-      adequate.stool = stool.adequacy,
-      datasetlab = dataset.lab,
-      doses.total = doses,
-      virus.cluster = `virus.cluster(s)`,
-      emergence.group = `emergence.group(s)`
+    dplyr::rename_with(recode,
+      stool.adequacy = "adequate.stool",
+      dataset.lab = "datasetlab",
+      doses = "doses.total",
+      `virus.cluster(s)` = "virus.cluster",
+      `emergence.group(s)` = "emergence.group"
     ) |>
     dplyr::filter(!is.na(epid)) |>
-    dplyr::select(-c(Admin2GUID, Admin1GUID, Admin0GUID))
+    dplyr::select(-dplyr::any_of(c("Admin2GUID", "Admin1GUID", "Admin0GUID")))
 
   cli::cli_process_done()
 
@@ -5906,7 +5910,7 @@ s2_create_afp_variables <- function(data) {
 #' @param output_folder_name str: Name of the output directory where processed
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
-#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#'        "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").
 #' @param output_format str: output_format to save files as.
 #'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
 #'    'rds'.
@@ -5917,7 +5921,7 @@ s2_create_afp_variables <- function(data) {
 #' @export
 s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
                                   col_afp_raw, output_folder_name, output_format,
-                                  archive) {
+                                  archive = TRUE) {
 
   cli::cli_process_start("Exporting AFP outputs",
                          msg_done = "Exported AFP outputs")
@@ -6241,7 +6245,7 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
 #' @param output_folder_name str: Name of the output directory where processed
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
-#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#'        "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").
 #'
 #' @return A list containing comparison results:
 #'   - metadata_comparison: Structural differences between datasets
@@ -6424,7 +6428,7 @@ s2_compare_with_archive <- function(data,
 #' @param output_folder_name str: Name of the output directory where processed
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
-#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#'        "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").
 #' @param output_format str: output_format to save files as.
 #'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
 #'    'rds'.
@@ -6495,7 +6499,7 @@ s3_fully_process_sia_data <- function(long.global.dist.01, polis_data_folder,
 #' @param output_folder_name str: Name of the output directory where processed
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
-#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#'        "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").
 #'
 #' @returns `tiblle` sia.01.new - the latest SIA data quality checked for variable
 #' stability against the last download if it exists
@@ -6885,7 +6889,7 @@ s3_sia_check_duplicates <- function(sia.05){
 #' @param output_folder_name str: Name of the output directory where processed
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
-#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#'        "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").
 #' @returns NULL
 #' @keywords internal
 #'
@@ -6977,7 +6981,7 @@ s3_sia_check_metadata <- function(sia.06, polis_data_folder, latest_folder_in_ar
 #' @param output_folder_name str: Name of the output directory where processed
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
-#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#'        "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").
 #' @param output_format str: output_format to save files as.
 #'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
 #'    'rds'.
@@ -7274,7 +7278,7 @@ s3_sia_cluster_dates_by_vax_type <- function(data,
 #' @param output_folder_name str: Name of the output directory where processed
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
-#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#'        "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").
 #' @param output_format Output format of the SIA dataset.
 #'
 #' @returns `NULL` silently.
@@ -7362,7 +7366,7 @@ s3_sia_merge_cluster_dates_final_data <- function(
 #' @param output_folder_name str: Name of the output directory where processed
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
-#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#'        "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").
 #'
 #' @returns `NULL` silently.
 #' @keywords internal
@@ -7420,7 +7424,7 @@ s3_sia_evaluate_unmatched_guids <- function(sia.05, polis_data_folder, output_fo
 #' @param output_folder_name str: Name of the output directory where processed
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
-#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#'        "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").
 #' @param output_format str: output_format to save files as.
 #'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
 #'    'rds'.
@@ -7470,7 +7474,7 @@ s4_fully_process_es_data <- function(
 #' @param output_folder_name str: Name of the output directory where processed
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
-#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#'        "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").
 #'
 #' @returns `tiblle` es.01.new - the latest SIA data quality checked for variable
 #' stability against the last download if it exists
@@ -7578,7 +7582,7 @@ s4_es_load_data <- function(polis_data_folder, latest_folder_in_archive,
 #' @param output_folder_name str: Name of the output directory where processed
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
-#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#'        "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").
 #' @param polis_data_folder `str` Path to the POLIS data folder.
 #'
 #' @returns `tibble` es.02 SIA data with outputs validated
@@ -7835,7 +7839,7 @@ s4_es_validate_sites <- function(es.02){
 #' @param output_folder_name str: Name of the output directory where processed
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
-#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#'        "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").
 #'
 #' @returns `tibble` es.05 SIA data with CDC variables enforced
 #' @keywords internal
@@ -7924,7 +7928,7 @@ s4_es_create_cdc_vars <- function(es.02, polis_folder, output_folder_name){
 #' @param output_folder_name str: Name of the output directory where processed
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
-#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#'        "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").
 #'
 #' @returns `NULL` invisible return with write out to logs if necessary
 #' @keywords internal
@@ -8028,7 +8032,7 @@ s4_es_check_metadata <- function(polis_data_folder, es.05,
 #' @param output_folder_name str: Name of the output directory where processed
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
-#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#'        "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").
 #' @param output_format str: output_format to save files as.
 #'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
 #'    'rds'.
@@ -8080,7 +8084,7 @@ s4_es_write_data <- function(polis_data_folder, es.05, output_folder_name, outpu
 #' @param output_folder_name str: Name of the output directory where processed
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
-#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#'        "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").
 #'
 #'   validation.
 #' @param output_format str: output_format to save files as.

@@ -14,7 +14,7 @@ s2_export_missing_onsets(data, polis_data_folder, output_folder_name)
 \item{output_folder_name}{str: Name of the output directory where processed
 files will be saved. Defaults to "Core_Ready_Files". For
 region-specific processing, this should be set to
-"Core_Ready_Files_\link{REGION}" (e.g., "Core_Ready_Files_AFRO").}
+"Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").}
 }
 \value{
 Invisibly returns the filtered data frame of records with missing
