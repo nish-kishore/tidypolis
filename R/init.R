@@ -4,9 +4,8 @@
 #' Initialize API Key and local data cache for tidypolis. Inspired by the
 #' tidycensus process for managing their API secrets.
 #'
-#' @import cli yaml tibble dplyr readr lubridate sirfunctions
 #' @param polis_folder `str` Location of folder where to store all information from POLIS.
-#' @param edav `bool` Should the system use EDAV as it's cache; default `FALSE`.
+#' @param edav `logical` Should the system use EDAV as it's cache; default `FALSE`.
 #' @param api_debug boolean: if true will log all api calls
 #' @returns Messages on process.
 #' @examples
@@ -313,7 +312,6 @@ init_tidypolis <- function(
 #' checks to ensure that new rows are created, data are updated accordingly and
 #' deleted rows are reflected in the local system.
 #' @param type choose to download population data ("pop") or all other data. Default's to "all"
-#' @import dplyr
 #' @examples
 #' \dontrun{
 #' get_polis_data() #must be run after using init_tidypolis and providing a valid API key
@@ -351,7 +349,6 @@ get_polis_data <- function(type = "all"){
 #' Run diagnostic test on polis connections
 #'
 #' @description Run diagnostics of API connection with POLIS
-#' @import dplyr
 #' @returns tibble with diagnostic results
 #' @export
 run_diagnostics <- function(){
@@ -367,7 +364,6 @@ run_diagnostics <- function(){
 #' Build a freeze of POLIS data on a specific date
 #'
 #' @description Zip all POLIS data that is used to work on a specific date
-#' @import cli
 #' @returns Location of zipped and frozen POLIS data
 #' @export
 freeze_polis_data <- function(){
@@ -406,7 +402,6 @@ freeze_polis_data <- function(){
 #'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
 #'    'rds'.
 #'
-#' @import cli
 #' @returns Analytic rds files
 #' @examples
 #' \dontrun{

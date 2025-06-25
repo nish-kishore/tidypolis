@@ -5,18 +5,17 @@
 #' @description
 #' Manages read/write/list/create/delete functions for tidypolis
 #'
-#' @import sirfunctions dplyr AzureStor readr stringr cli
 #' @param obj `str` Object to be loaded into EDAV.
 #' @param io `str` read/write/list/exists/create/delete
 #' @param file_path `str` Absolute path of file.
-#' @param edav `bool` Whether to interact with EDAV files. Defaults to `FALSE`.
+#' @param edav `logical` Whether to interact with EDAV files. Defaults to `FALSE`.
 #' @param azcontainer `Azure container` An Azure container object.
-#' @param full_names `bool` If you want to include the full reference path in the response, default `FALSE`.
+#' @param full_names `logical` If you want to include the full reference path in the response, default `FALSE`.
 #' @param edav_default_dir `str` If `edav = TRUE`, specify the default directory used for `sirfunctions::edav_io()`.
 #' By default, this is `"GID/PEB/SIR"`.
 #'
 #' @returns Conditional on `io`. If `io` is "read", then it will return a tibble. If `io` is `"list"`, it will return a
-#' list of file names. Otherwise, the function will return `NULL`. `exists.dir` and `exists.file` will return a `bool`.
+#' list of file names. Otherwise, the function will return `NULL`. `exists.dir` and `exists.file` will return a `logical`.
 #' @keywords internal
 tidypolis_io <- function(
     obj = NULL,
@@ -225,7 +224,6 @@ tidypolis_io <- function(
 #' files in the data folder used when recreating `raw.data` with updated dataset.
 #' It will also copy the newly preprocessed files to the data folder.
 #'
-#' @import sirfunctions dplyr AzureStor readr cli stringr
 #' @param core_ready_folder `str` Local folder with CDC processed files.
 #' @param azcontainer `Azure container` Azure Token Container Object.
 #' @param output_folder `str` Location to write out Core Files.

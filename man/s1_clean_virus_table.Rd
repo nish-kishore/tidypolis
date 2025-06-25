@@ -12,7 +12,7 @@ s1_clean_virus_table(path, crosswalk, edav = Sys.getenv("POLIS_EDAV_FLAG"))
 \item{crosswalk}{\code{tibble} The crosswalk table. This is the output of
 \code{\link[=get_crosswalk_data]{get_crosswalk_data()}}.}
 
-\item{edav}{\code{bool} Data located on EDAV? Defaults to the
+\item{edav}{\code{logical} Data located on EDAV? Defaults to the
 EDAV flag.}
 }
 \value{

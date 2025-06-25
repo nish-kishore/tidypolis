@@ -23,7 +23,7 @@ s1_clean_subactivity_table(
 \item{long_dist_sf}{\code{tibble} District shapefile in long format. The output of
 \code{sirfunctions::load_clean_dist_sp(type = "long")}.}
 
-\item{edav}{\code{bool} Data located on EDAV? Defaults to the
+\item{edav}{\code{logical} Data located on EDAV? Defaults to the
 EDAV flag.}
 }
 \value{
