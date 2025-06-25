@@ -457,7 +457,7 @@ get_table_size <- function(.table,
 
   out <- jsonlite::fromJSON(rawToChar(response$content))
 
-  #tibble::as_tibble(out$value)
+  #dplyr::as_tibble(out$value)
 
 
   table_size <- response |>
@@ -660,7 +660,7 @@ call_single_url <- function(url,
 
   out <- jsonlite::fromJSON(rawToChar(response$content))
 
-  tibble::as_tibble(out$value)
+  dplyr::as_tibble(out$value)
 
   #Sys.sleep(1.25)
 
@@ -750,7 +750,7 @@ run_single_table_diagnostic <-
     id_time <- tock - tick
 
     return(
-      tibble::tibble(
+      dplyr::tibble(
         "table" = .table,
         "data" = ifelse(is.data.frame(data_return), "Success", "Error"),
         "data_time" = data_time,
@@ -793,11 +793,11 @@ update_polis_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
       capture.output(
         log_file |>
           cbind(event_type = NA) |>
-          tibble::add_row(time = .time,
+          dplyr::add_row(time = .time,
                           user = .user,
                           event_type = "INFO",
                           event = "Updating log format") |>
-          tibble::add_row(time = .time,
+          dplyr::add_row(time = .time,
                           user = .user,
                           event_type = .event_type,
                           event = .event) |>
@@ -811,7 +811,7 @@ update_polis_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
     invisible(
       capture.output(
         log_file |>
-          tibble::add_row(time = .time,
+          dplyr::add_row(time = .time,
                           user = .user,
                           event_type = .event_type,
                           event = .event) |>
@@ -1021,8 +1021,8 @@ bind_and_reconcile <- function(new_data, old_data) {
 
   }
 
-  new_data <- tibble::as_tibble(new_data)
-  old_data <- tibble::as_tibble(old_data)
+  new_data <- dplyr::as_tibble(new_data)
+  old_data <- dplyr::as_tibble(old_data)
 
   return(dplyr::bind_rows(old_data, new_data))
 
@@ -1264,7 +1264,7 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
   global.dist.02 <- sf::st_make_valid(global.dist.01)
 
   #identify bad shape rows after make_valid
-  check.dist.2 <- tibble::as_tibble(sf::st_is_valid(global.dist.02))
+  check.dist.2 <- dplyr::as_tibble(sf::st_is_valid(global.dist.02))
 
   #removing all bad shapes post make valid
   valid.shapes <- global.dist.02[check.dist.2$value, ] |>
@@ -1357,7 +1357,7 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
 
   #bring df05 and dropped observations back together, create lat/lon var from sf object previously created
   df07 <- dplyr::bind_cols(
-    tibble::as_tibble(df06),
+    dplyr::as_tibble(df06),
     sf::st_coordinates(df06) %>%
       {if (nrow(df06) == 0) {
         # if df06 is empty, as_tibble won't work and we need to create it manually
@@ -1386,7 +1386,7 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
   if (nrow(empty.coord |> dplyr::filter(Admin2GUID != "{NA}")) > 0) {
     # remove NAs because can't be sampled
     empty.coord.01 <- empty.coord |>
-      tibble::as_tibble() |>
+      dplyr::as_tibble() |>
       dplyr::group_by(Admin2GUID) |>
       dplyr::summarise(nperarm = dplyr::n()) |>
       dplyr::arrange(Admin2GUID) |>
@@ -1440,16 +1440,16 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
     pt01_joined <- dplyr::bind_cols(
       pt01,
       empty.coord.02 |>
-        tibble::as_tibble() |>
+        dplyr::as_tibble() |>
         dplyr::select(GUID, nperarm) |>
         tidyr::uncount(nperarm)
     ) |>
-      dplyr::left_join(tibble::as_tibble(empty.coord.02) |>
+      dplyr::left_join(dplyr::as_tibble(empty.coord.02) |>
                          dplyr::select(-Shape),
                        by = "GUID")
 
     pt02 <- pt01_joined |>
-      tibble::as_tibble() |>
+      dplyr::as_tibble() |>
       dplyr::select(-nperarm, -id) |>
       dplyr::group_by(GUID) |>
       dplyr::arrange(GUID, .by_group = TRUE) |>
@@ -1466,9 +1466,9 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
 
     pt05 <- pt04 |>
       dplyr::bind_cols(
-        tibble::as_tibble(pt04$x),
+        dplyr::as_tibble(pt04$x),
         sf::st_coordinates(pt04$x) |>
-          tibble::as_tibble() |>
+          dplyr::as_tibble() |>
           dplyr::rename("lon" = "X", "lat" = "Y")) |>
       dplyr::select(-id)
 
@@ -1644,7 +1644,7 @@ f.summarise.metadata <- function(dataframe, categorical_max = 10){
   var_name_class <- skimr::skim(dataframe) |>
     dplyr::select(skim_type, skim_variable, character.n_unique)
 
-  var_name_class <- tibble::tibble(
+  var_name_class <- dplyr::tibble(
     "var_name" = var_name_class$skim_variable,
     "var_class" = var_name_class$skim_type,
     "character.n_unique" = var_name_class$character.n_unique
@@ -1653,10 +1653,10 @@ f.summarise.metadata <- function(dataframe, categorical_max = 10){
   #categorical sets: for categorical variables with <= n unique values, get a list of unique values
   categorical_vars <- dataframe |>
     dplyr::select(var_name_class$var_name[var_name_class$character.n_unique <= categorical_max  & !is.na(var_name_class$character.n_unique)]) |>
-    tidyr::pivot_longer(cols=tidyselect::everything(), names_to="var_name", values_to = "response") |>
+    tidyr::pivot_longer(cols=dplyr::everything(), names_to="var_name", values_to = "response") |>
     unique() |>
     tidyr::pivot_wider(names_from=var_name, values_from=response) |>
-    tidyr::pivot_longer(cols=tidyselect::everything(), names_to="var_name", values_to="categorical_response_set")
+    tidyr::pivot_longer(cols=dplyr::everything(), names_to="var_name", values_to="categorical_response_set")
 
   #Combine var names/classes/categorical-sets into a 'metadata table'
   table_metadata <- var_name_class |>
@@ -2182,6 +2182,13 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
 
     # trim the archives if a limit is set
     if (!is.infinite(keep_n_archives)) {
+
+      if (!requireNamespace("fs", quietly = TRUE)) {
+        stop('Package "fs" must be installed to enable trimming of archives.',
+             .call = FALSE)
+      }
+
+
       s2_trim_archives(
         polis_data_folder = polis_data_folder,
         output_folder_name = output_folder_name,
@@ -2409,6 +2416,12 @@ process_spatial <- function(gdb_folder,
 
   cli::cli_process_start("Loading raw spatial data")
   if (edav) {
+
+    if (!requireNamespace("AzureStor", quietly = TRUE)) {
+      stop('Package "AzureStor" must be installed to run process_spatial() on EDAV.',
+      .call = FALSE)
+      }
+
     dest <- tempdir()
     AzureStor::storage_download(container = azcontainer, gdb_folder, paste0(dest, "/gdb.zip"), overwrite = T)
 
@@ -2481,7 +2494,7 @@ process_spatial <- function(gdb_folder,
 
   cli::cli_process_start("Checking country shapes for validity")
   #identifying bad shapes
-  check.ctry.valid <- tibble::as_tibble(sf::st_is_valid(global.ctry.01))
+  check.ctry.valid <- dplyr::as_tibble(sf::st_is_valid(global.ctry.01))
   row.num.ctry <- which(check.ctry.valid$value == FALSE)
   invalid.ctry.shapes <- global.ctry.01 |>
     dplyr::slice(row.num.ctry) |>
@@ -2616,7 +2629,7 @@ process_spatial <- function(gdb_folder,
   sf_var_prov <- names(global.prov.01)[sf_columns_prov]
 
   cli::cli_process_start("Checking province shape validity")
-  check.prov.valid <- tibble::as_tibble(sf::st_is_valid(global.prov.01))
+  check.prov.valid <- dplyr::as_tibble(sf::st_is_valid(global.prov.01))
   row.num.prov <- which(check.prov.valid$value == FALSE)
   invalid.prov.shapes <- global.prov.01 |>
     dplyr::slice(row.num.prov) |>
@@ -2745,7 +2758,7 @@ process_spatial <- function(gdb_folder,
   sf_var_dist <- names(global.dist.01)[sf_columns_dist]
 
   cli::cli_process_start("Checking district shape validity")
-  check.dist.valid <- tibble::as_tibble(sf::st_is_valid(global.dist.01))
+  check.dist.valid <- dplyr::as_tibble(sf::st_is_valid(global.dist.01))
   row.num.dist <- which(check.dist.valid$value == FALSE)
   invalid.dist.shapes <- global.dist.01 |>
     dplyr::slice(row.num.dist) |>
@@ -2989,7 +3002,7 @@ add_gpei_cases <- function(azcontainer = suppressMessages(get_azure_storage_conn
   if(nrow(proxy.data.fill.prov) >= 1) {
     #feed only cases with empty coordinates into st_sample (vars = GUID, nperarm, id, Shape)
     proxy.data.fill.prov.01 <- proxy.data.fill.prov |>
-      tibble::as_tibble() |>
+      dplyr::as_tibble() |>
       dplyr::group_by(adm1guid) |>
       dplyr::summarise(nperarm = dplyr::n()) |>
       dplyr::arrange(adm1guid) |>
@@ -3036,16 +3049,16 @@ add_gpei_cases <- function(azcontainer = suppressMessages(get_azure_storage_conn
     pt01_joined <- dplyr::bind_cols(
       pt01,
       proxy.data.fill.prov.02 |>
-        tibble::as_tibble() |>
+        dplyr::as_tibble() |>
         dplyr::select(GUID, nperarm) |>
         tidyr::uncount(nperarm)
     ) |>
-      dplyr::left_join(tibble::as_tibble(proxy.data.fill.prov.02) |>
+      dplyr::left_join(dplyr::as_tibble(proxy.data.fill.prov.02) |>
                          dplyr::select(-Shape),
                        by = "GUID")
 
     pt02 <- pt01_joined |>
-      tibble::as_tibble() |>
+      dplyr::as_tibble() |>
       dplyr::select(-nperarm, -id) |>
       dplyr::group_by(GUID)|>
       dplyr::arrange(GUID, .by_group = TRUE) |>
@@ -3062,9 +3075,9 @@ add_gpei_cases <- function(azcontainer = suppressMessages(get_azure_storage_conn
 
     proxy.data.prov.final <- pt04 |>
       dplyr::bind_cols(
-        tibble::as_tibble(pt04$x),
+        dplyr::as_tibble(pt04$x),
         sf::st_coordinates(pt04$x) |>
-          tibble::as_tibble() |>
+          dplyr::as_tibble() |>
           dplyr::rename("lon" = "X", "lat" = "Y")) |>
       dplyr::mutate(longitude = lon,
                     latitude = lat) |>
@@ -3086,7 +3099,7 @@ add_gpei_cases <- function(azcontainer = suppressMessages(get_azure_storage_conn
 
   if(nrow(proxy.data.fill.ctry) >= 1) {
     proxy.data.fill.ctry.01 <- proxy.data.fill.ctry |>
-      tibble::as_tibble() |>
+      dplyr::as_tibble() |>
       dplyr::group_by(adm0guid) |>
       dplyr::summarise(nperarm = dplyr::n()) |>
       dplyr::arrange(adm0guid) |>
@@ -3132,16 +3145,16 @@ add_gpei_cases <- function(azcontainer = suppressMessages(get_azure_storage_conn
     pt01_joined <- dplyr::bind_cols(
       pt01,
       proxy.data.fill.ctry.02 |>
-        tibble::as_tibble() |>
+        dplyr::as_tibble() |>
         dplyr::select(GUID, nperarm) |>
         tidyr::uncount(nperarm)
     ) |>
-      dplyr::left_join(tibble::as_tibble(proxy.data.fill.ctry.02) |>
+      dplyr::left_join(dplyr::as_tibble(proxy.data.fill.ctry.02) |>
                          dplyr::select(-Shape),
                        by = "GUID")
 
     pt02 <- pt01_joined |>
-      tibble::as_tibble() |>
+      dplyr::as_tibble() |>
       dplyr::select(-nperarm, -id) |>
       dplyr::group_by(GUID)|>
       dplyr::arrange(GUID, .by_group = TRUE) |>
@@ -3158,9 +3171,9 @@ add_gpei_cases <- function(azcontainer = suppressMessages(get_azure_storage_conn
 
     proxy.data.ctry.final <- pt04 |>
       dplyr::bind_cols(
-        tibble::as_tibble(pt04$x),
+        dplyr::as_tibble(pt04$x),
         sf::st_coordinates(pt04$x) |>
-          tibble::as_tibble() |>
+          dplyr::as_tibble() |>
           dplyr::rename("lon" = "X", "lat" = "Y")) |>
       dplyr::mutate(longitude = lon,
                     latitude = lat) |>
@@ -4543,7 +4556,7 @@ s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
     polis_data_folder = polis_data_folder,
     polis_folder = polis_folder,
     output_folder_name = output_folder_name) |>
-    dplyr::select(polis.case.id, epid, tidyr::everything())
+    dplyr::select(polis.case.id, epid, dplyr::everything())
 
   # Step 2j: Create key AFP variables
   afp_final <- s2_create_afp_variables(data = afp_processed)
@@ -5356,7 +5369,7 @@ s2_fix_admin_guids <- function(data, shape_data) {
 
   # Extract country level data
   shapes_country <- shape_data |>
-    tibble::as_tibble() |>
+    dplyr::as_tibble() |>
     dplyr::select(ADM0_GUID, active.year.01) |>
     dplyr::distinct()
 
@@ -5380,13 +5393,13 @@ s2_fix_admin_guids <- function(data, shape_data) {
 
   # Extract province level data
   shapes_prov <- shape_data |>
-    tibble::as_tibble() |>
+    dplyr::as_tibble() |>
     dplyr::select(ADM0_GUID, ADM1_GUID, active.year.01) |>
     dplyr::distinct()
 
   # Extract province names
   shapenames_prov <- shape_data |>
-    tibble::as_tibble() |>
+    dplyr::as_tibble() |>
     dplyr::filter(
       !(ADM0_NAME == "SUDAN" & yr.st == 2000 & active.year.01 == 2011)
     ) |>
@@ -5432,13 +5445,13 @@ s2_fix_admin_guids <- function(data, shape_data) {
 
   # Extract district level data
   shapes_dist <- shape_data |>
-    tibble::as_tibble() |>
+    dplyr::as_tibble() |>
     dplyr::select(ADM0_GUID, ADM1_GUID, GUID, active.year.01) |>
     dplyr::distinct()
 
   # Extract district names
   shapenames_dist <- shape_data |>
-    tibble::as_tibble() |>
+    dplyr::as_tibble() |>
     dplyr::filter(
       !(ADM0_NAME == "SUDAN" & yr.st == 2000 & active.year.01 == 2011)
     ) |>
@@ -6782,7 +6795,7 @@ s3_sia_check_guids <- function(sia.02, long.global.dist.01){
     dplyr::filter(no_match==1) |>
     #left join based on location names and year
     dplyr::left_join(long.global.dist.01 |>
-                       tibble::as_tibble() |>
+                       dplyr::as_tibble() |>
                        dplyr::select(GUID, ADM0_NAME, ADM1_NAME,
                                      ADM2_NAME, active.year.01),
                      by = c("place.admin.0" = "ADM0_NAME",
@@ -8506,7 +8519,7 @@ s5_pos_process_human_virus <- function(virus.01, polis_data_folder, output_folde
     cli::cli_warn(
       "No contact or community sampling surveillance data found for {region}"
     )
-    non.afp.01 <- tibble::tibble(
+    non.afp.01 <- dplyr::tibble(
       epid = character(),
       lat = numeric(),
       lon = numeric(),
@@ -8581,9 +8594,9 @@ s5_pos_process_human_virus <- function(virus.01, polis_data_folder, output_folde
   cli::cli_process_start("Removing duplicates from virus table - human")
 
   human.virus.05 <- human.virus.04 |>
-    dplyr::mutate(place.admin.0 =  stringi::stri_trim(place.admin.0, "left"),
-                  place.admin.1 =  stringi::stri_trim(place.admin.1, "left"),
-                  place.admin.2 =  stringi::stri_trim(place.admin.2, "left"))
+    dplyr::mutate(place.admin.0 =  stringr::str_trim(place.admin.0, "left"),
+                  place.admin.1 =  stringr::str_trim(place.admin.1, "left"),
+                  place.admin.2 =  stringr::str_trim(place.admin.2, "left"))
 
   cli::cli_process_done()
 
@@ -8688,9 +8701,9 @@ s5_pos_process_es_virus <- function(virus.01, polis_data_folder, output_folder_n
     dplyr::select(-x, -y, -lat, -lon)
 
   env.virus.04 <- env.virus.03 |>
-    dplyr::mutate(place.admin.0 =  stringi::stri_trim(place.admin.0, "left"),
-                  place.admin.1 =  stringi::stri_trim(place.admin.1, "left"),
-                  place.admin.2 =  stringi::stri_trim(place.admin.2, "left"))
+    dplyr::mutate(place.admin.0 =  stringr::str_trim(place.admin.0, "left"),
+                  place.admin.1 =  stringr::str_trim(place.admin.1, "left"),
+                  place.admin.2 =  stringr::str_trim(place.admin.2, "left"))
 
   cli::cli_process_done()
 

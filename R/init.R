@@ -140,7 +140,7 @@ init_tidypolis <- function(
     }
   }else{
 
-    cache_tibble <- tibble::tibble(
+    cache_tibble <- dplyr::tibble(
       "table" = c("cache", "virus", "case", "human_specimen", "environmental_sample",
                   "activity", "sub_activity", "lqas", "im", "population", "geography",
                   "synonym", "indicator", "reference_data", "pop"),
@@ -175,7 +175,7 @@ init_tidypolis <- function(
     cli::cli_alert_success("Previous log located!")
   }else{
     invisible(capture.output(
-      tibble::tibble(
+      dplyr::tibble(
         "time" = Sys.time(),
         "user" = Sys.getenv("USERNAME"),
         "event" = "Log created"
@@ -192,7 +192,7 @@ init_tidypolis <- function(
 
   if(!log_exists){
     cli::cli_alert_success("No API call log located, creating log file.")
-    tibble::tibble(
+    dplyr::tibble(
       time = Sys.time(),
       call = "INIT",
       event = "INIT"

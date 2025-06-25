@@ -88,6 +88,11 @@ tidypolis_io <- function(
 
   if (io == "read") {
     if (edav) {
+      if (!requireNamespace("AzureStor", quietly = TRUE)) {
+            stop('Package "AzureStor" must be installed to read from EDAV.',
+            .call = FALSE)
+            }
+
       corrupted.rds <- NULL
       tryCatch(
         {
@@ -133,6 +138,10 @@ tidypolis_io <- function(
       }
 
       if (grepl("\\.parquet$", file_path)) {
+          if (!requireNamespace("arrow", quietly = TRUE)) {
+            stop('Package "arrow" must be installed to read parquet files.',
+            .call = FALSE)
+            }
         return(arrow::read_parquet(file_path))
       }
 
@@ -169,6 +178,11 @@ tidypolis_io <- function(
       }
 
       if (grepl("\\.parquet$", file_path)) {
+        if (!requireNamespace("arrow", quietly = TRUE)) {
+          stop('Package "arrow" must be installed to write parquet files.',
+          .call = FALSE)
+          }
+
         arrow::write_parquet(obj, file_path)
       }
     }
