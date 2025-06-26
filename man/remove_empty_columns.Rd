@@ -7,10 +7,10 @@
 remove_empty_columns(dataframe)
 }
 \arguments{
-\item{dataframe}{tibble: df}
+\item{dataframe}{\code{tibble} df}
 }
 \value{
-tibble: without any empty columns
+\code{tibble} without any empty columns
 }
 \description{
 Utility function to return tibble without empty columns

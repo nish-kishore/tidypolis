@@ -7,9 +7,9 @@
 get_polis_cache(cache_file = Sys.getenv("POLIS_CACHE_FILE"), .table)
 }
 \arguments{
-\item{cache_file}{str: location of cache file}
+\item{cache_file}{\code{str} location of cache file}
 
-\item{.table}{str: table to be loaded}
+\item{.table}{\code{str} table to be loaded}
 }
 \value{
 Return tibble with table information

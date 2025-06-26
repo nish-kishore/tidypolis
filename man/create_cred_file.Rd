@@ -7,7 +7,7 @@
 create_cred_file(polis_data_folder)
 }
 \arguments{
-\item{polis_data_folder}{str: location of POLIS data folder}
+\item{polis_data_folder}{\code{str} location of POLIS data folder}
 }
 \value{
 boolean for folder creation

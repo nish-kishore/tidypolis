@@ -7,7 +7,7 @@
 test_polis_key(key)
 }
 \arguments{
-\item{key}{str: POLIS API Key}
+\item{key}{\code{str} POLIS API Key}
 }
 \value{
 boolean

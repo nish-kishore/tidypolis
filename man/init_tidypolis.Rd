@@ -22,10 +22,12 @@ tidycensus process for managing their API secrets.
 }
 \examples{
 \dontrun{
-#create a polis data cache on CDC EDAV
+# create a polis data cache on CDC EDAV
 init_tidypolis(polis_folder = "POLIS", data_folder = "Data", edav = T)
 init_tidypolis("C:/Users/user_name/Desktop/polis",
-               "C:/Users/user_name/Desktop/data", edav = F)
-#create a polis data cache on your local desktop
+  "C:/Users/user_name/Desktop/data",
+  edav = F
+)
+# create a polis data cache on your local desktop
 }
 }

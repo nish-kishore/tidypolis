@@ -7,11 +7,11 @@
 get_table_ids(.table, .id, api_key = Sys.getenv("POLIS_API_KEY"))
 }
 \arguments{
-\item{.table}{str: table}
+\item{.table}{\code{str} table}
 
-\item{.id}{str: id variable}
+\item{.id}{\code{str} id variable}
 
-\item{api_key}{str: POLIS API Key}
+\item{api_key}{\code{str} POLIS API Key}
 }
 \value{
 character array of ids

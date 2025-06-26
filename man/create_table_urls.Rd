@@ -7,11 +7,11 @@
 create_table_urls(url, table_size, type)
 }
 \arguments{
-\item{url}{str: base url to be queried}
+\item{url}{\code{str} base url to be queried}
 
-\item{table_size}{int: integer of download}
+\item{table_size}{\code{int} integer of download}
 
-\item{type}{str: "full" or "partial"}
+\item{type}{\code{str} "full" or "partial"}
 }
 \value{
 array of urls

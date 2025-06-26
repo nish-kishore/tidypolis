@@ -12,7 +12,7 @@ data folder containing Core Ready Files}
 
 \item{timestamp}{\code{str} Time stamp}
 
-\item{output_folder_name}{str: Name of the output directory where processed
+\item{output_folder_name}{\code{str} Name of the output directory where processed
 files will be saved. Defaults to "Core_Ready_Files". For
 region-specific processing, this should be set to
 "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").}

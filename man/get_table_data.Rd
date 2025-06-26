@@ -20,6 +20,6 @@ Get POLIS table Data
 \examples{
 \dontrun{
 get_table_data(.table = "case")
-get_table_data(.table = "virus") #must run init_tidypolis first in order to specify API key
+get_table_data(.table = "virus") # must run init_tidypolis first in order to specify API key
 }
 }

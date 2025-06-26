@@ -12,7 +12,7 @@ f.download.compare.01(old.download, new.download)
 \item{new.download}{tibble}
 }
 \value{
-tibble: variables that are new or unaccounted for
+\code{tibble} variables that are new or unaccounted for
 }
 \description{
 Compared downloade data

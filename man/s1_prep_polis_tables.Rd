@@ -16,7 +16,7 @@ s1_prep_polis_tables(
 )
 }
 \arguments{
-\item{polis_folder}{str: location of the POLIS data folder}
+\item{polis_folder}{\code{str} location of the POLIS data folder}
 
 \item{polis_data_folder}{\code{str} Data folder within the POLIS folder.}
 
@@ -26,10 +26,10 @@ s1_prep_polis_tables(
 
 \item{timestamp}{\code{str} Formatted time stamp.}
 
-\item{who_region}{str: optional WHO region to filter data
+\item{who_region}{\code{str} optional WHO region to filter data
 Available inputs include AFRO, AMRO, EMRO, EURO, SEARO and  WPRO.}
 
-\item{output_format}{str: output_format to save files as.
+\item{output_format}{\code{str} output_format to save files as.
 Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
 'rds'.}
 

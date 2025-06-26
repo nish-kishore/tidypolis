@@ -23,14 +23,14 @@ further using \code{\link[=remove_character_dates]{remove_character_dates()}} an
 
 \item{latest_folder_in_archive}{\code{str} Name of the latest folder in the archive, if one exists.}
 
-\item{output_folder_name}{str: Name of the output directory where processed
+\item{output_folder_name}{\code{str} Name of the output directory where processed
 files will be saved. Defaults to "Core_Ready_Files". For
 region-specific processing, this should be set to
 "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").
 
 validation.}
 
-\item{output_format}{str: output_format to save files as.
+\item{output_format}{\code{str} output_format to save files as.
 Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
 'rds'.}
 }

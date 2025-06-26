@@ -12,7 +12,7 @@ f.compare.dataframe.cols(old, new)
 \item{new}{str/array: array of character colunm names}
 }
 \value{
-str: Stop error or continue
+\code{str} Stop error or continue
 }
 \description{
 Check if sets of names are the same and return stop error if not

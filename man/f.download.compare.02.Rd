@@ -13,7 +13,7 @@ f.download.compare.02(
 )
 }
 \arguments{
-\item{df.from.f.download.compare.01}{tibble: output from f.download.compare.01}
+\item{df.from.f.download.compare.01}{\code{tibble} output from f.download.compare.01}
 
 \item{old.download}{tibble}
 
