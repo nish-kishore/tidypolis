@@ -12,7 +12,7 @@ check_missing_static_files(
 \arguments{
 \item{core_files_folder_path}{\code{str} Path to the \code{core_files_to_combine} folder.}
 
-\item{edav}{\code{logical} Check static files on EDAV?}
+\item{edav_flag}{\code{logical} Check static files on EDAV?}
 }
 \value{
 \code{list} A list of missing files.

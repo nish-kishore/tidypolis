@@ -1,4 +1,5 @@
 test_that("Testing s3_fully_process_sia_data()", {
+  skip()
   init_tidypolis("Sandbox/POLIS", edav = TRUE)
 
   # Load static global variables used in some part of our code

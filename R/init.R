@@ -10,8 +10,10 @@
 #' @returns Messages on process.
 #' @examples
 #' \dontrun{
-#' init_tidypolis(polis_folder = "POLIS", data_folder = "Data", edav = T) #create a polis data cache on CDC EDAV
-#' init_tidypolis("C:/Users/user_name/Desktop/polis", "C:/Users/user_name/Desktop/data", edav = F)
+#' #create a polis data cache on CDC EDAV
+#' init_tidypolis(polis_folder = "POLIS", data_folder = "Data", edav = T)
+#' init_tidypolis("C:/Users/user_name/Desktop/polis",
+#'                "C:/Users/user_name/Desktop/data", edav = F)
 #' #create a polis data cache on your local desktop
 #' }
 #' @export

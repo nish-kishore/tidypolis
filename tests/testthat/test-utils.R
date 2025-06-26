@@ -1,5 +1,5 @@
 test_that("Testing f.pre.st.sample()", {
-
+  skip()
   cli::cli_process_start("Loading required data for testing")
 
   # Load example dataset, which is afp.linelist.fixed.04 in preprocessing

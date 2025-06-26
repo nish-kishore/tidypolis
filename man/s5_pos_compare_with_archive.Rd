@@ -14,9 +14,9 @@ s5_pos_compare_with_archive(
 )
 }
 \arguments{
-\item{afp.es.virus.01}{\code{tibble} Output of \code{\link[=s5_pos_create_final_virus]{s5_pos_create_final_virus()}}.}
+\item{afp.es.virus.01}{\code{tibble} Output of \code{\link[=s5_pos_create_final_virus_data]{s5_pos_create_final_virus_data()}}.}
 
-\item{afp.es.virus.03}{\code{tibble} Output of \code{\link[=s5_pos_create_final_virus]{s5_pos_create_final_virus()}} but processed
+\item{afp.es.virus.03}{\code{tibble} Output of \code{\link[=s5_pos_create_final_virus_data]{s5_pos_create_final_virus_data()}} but processed
 further using \code{\link[=remove_character_dates]{remove_character_dates()}} and \code{\link[=create_response_vars]{create_response_vars()}}.}
 
 \item{polis_data_folder}{\code{str} The data folder within the POLIS folder.}

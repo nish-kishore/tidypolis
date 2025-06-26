@@ -15,7 +15,7 @@ s1_clean_subactivity_table(
 \arguments{
 \item{path}{\code{str} File path to the table.}
 
-\item{activity_table}{\code{tibble} Output of \code{\link[=clean_activity_table]{clean_activity_table()}}.}
+\item{activity_table}{\code{tibble} Output of \code{\link[=s1_clean_activity_table]{s1_clean_activity_table()}}.}
 
 \item{crosswalk}{\code{tibble} The crosswalk table. This is the output of
 \code{\link[=get_crosswalk_data]{get_crosswalk_data()}}.}

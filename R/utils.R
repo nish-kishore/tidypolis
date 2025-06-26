@@ -1606,11 +1606,6 @@ f.compare.metadata <- function(new_table_metadata, old_table_metadata, table){
 #' @returns tibble: metadata
 f.summarise.metadata <- function(dataframe, categorical_max = 10){
 
-  if (!requireNamespace("tidyselect", quietly = TRUE)) {
-    stop('Package "tidyselect" must be installed to use this function.',
-         .call = FALSE
-    )
-  }
   #ungroup dataframe
   dataframe <- dataframe |>
     dplyr::ungroup()
@@ -2132,7 +2127,7 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
     # 2a. Validate region code
     valid <- c("AFRO","AMRO","EMRO","EURO","SEARO","WPRO")
     if (!who_region %in% valid) {
-      cli::cli_abort("‘{who_region}’ is not a valid WHO region.")
+      cli::cli_abort("\u2018{who_region}\u2019 is not a valid WHO region.")
     }
 
     # Set region-specific folder name
@@ -2171,12 +2166,6 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
 
   if (!requireNamespace("purrr", quietly = TRUE)) {
     stop('Package "purrr" must be installed to use this function.',
-         .call = FALSE
-    )
-  }
-
-  if (!requireNamespace("tidyselect", quietly = TRUE)) {
-    stop('Package "tidyselect" must be installed to use this function.',
          .call = FALSE
     )
   }
@@ -3204,7 +3193,7 @@ add_gpei_cases <- function(azcontainer = suppressMessages(get_azure_storage_conn
 #' Performs a check for the static files.
 #'
 #' @param core_files_folder_path `str` Path to the `core_files_to_combine` folder.
-#' @param edav `logical` Check static files on EDAV?
+#' @param edav_flag `logical` Check static files on EDAV?
 #'
 #' @returns `list` A list of missing files.
 #' @keywords internal
@@ -3820,7 +3809,7 @@ s1_clean_activity_table <- function(path, subactivity_path, crosswalk,
 #' empty columns.
 #'
 #' @inheritParams s1_clean_case_table
-#' @param activity_table `tibble` Output of [clean_activity_table()].
+#' @param activity_table `tibble` Output of [s1_clean_activity_table()].
 #' @param long_dist_sf `tibble` District shapefile in long format. The output of
 #' `sirfunctions::load_clean_dist_sp(type = "long")`.
 #'
@@ -6986,7 +6975,7 @@ s3_sia_write_precluster_data <- function(sia.06, polis_data_folder,
 
 #' Read in SIA data pre 2020 and combine with current SIA data
 #'
-#' @param sia.06 `tibble` The latest SIA download with variables checked and
+#' @param sia.new `tibble` The latest SIA download with variables checked and
 #' against the last download, CDC variables created, GUIDs validated and
 #' deduplicated
 #' @param polis_data_folder `str` Path to the POLIS data folder.
@@ -8414,8 +8403,6 @@ s5_pos_write_missing_onsets <- function(virus.01, polis_data_folder, output_fold
 #'
 #'
 #' @inheritParams s5_pos_check_duplicates
-#' @param startyr `int` Start year to process the positives dataset.
-#' @param endyr `int` End year to process the positives dataset.
 #' @param output_format str: output_format to save files as.
 #'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
 #'    'rds'.
@@ -8715,8 +8702,8 @@ s5_pos_create_final_virus_data <- function(human.virus.05, env.virus.04) {
 #' any changes, including the number of records that changed since the last run. Changes
 #' are also added into the `polis_data_folder` as csv files.
 #'
-#' @param afp.es.virus.01 `tibble` Output of [s5_pos_create_final_virus()].
-#' @param afp.es.virus.03 `tibble` Output of [s5_pos_create_final_virus()] but processed
+#' @param afp.es.virus.01 `tibble` Output of [s5_pos_create_final_virus_data()].
+#' @param afp.es.virus.03 `tibble` Output of [s5_pos_create_final_virus_data()] but processed
 #' further using [remove_character_dates()] and [create_response_vars()].
 #' @inheritParams s5_fully_process_pos_data
 #' @param output_format str: output_format to save files as.

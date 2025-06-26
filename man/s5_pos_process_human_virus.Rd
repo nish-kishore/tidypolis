@@ -26,10 +26,6 @@ validation.}
 \item{output_format}{str: output_format to save files as.
 Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
 'rds'.}
-
-\item{startyr}{\code{int} Start year to process the positives dataset.}
-
-\item{endyr}{\code{int} End year to process the positives dataset.}
 }
 \value{
 \code{tibble} Cleaned positives dataset containing human cases only.
