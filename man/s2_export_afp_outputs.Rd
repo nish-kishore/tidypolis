@@ -42,3 +42,4 @@ Invisibly returns NULL
 Creates and exports various AFP data files including the main AFP linelist,
 spatial data files, and comparison with previous datasets.
 }
+\keyword{internal}

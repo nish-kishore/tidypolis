@@ -15,5 +15,8 @@ log_report(
 \item{polis_data_folder}{str: location of the POLIS data folder}
 }
 \description{
-Read log entries from the latest download and preprocessing run, create report to send to team
+Read log entries from the latest download and preprocessing run,
+create report to send to Teams chat. This function is not meant to be used outside
+of the SIR team at its current iteration. Future versions may allow for
+more flexibility in the function.
 }

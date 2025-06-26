@@ -30,3 +30,4 @@ core ready file without character dates
 \description{
 remove original date variables from POLIS tables
 }
+\keyword{internal}

@@ -26,3 +26,4 @@ Return true if cache updated
 \description{
 Update the POLIS cache directory
 }
+\keyword{internal}

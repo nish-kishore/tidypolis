@@ -28,3 +28,4 @@ global Polio SIAs}
 \description{
 Wrapper around the cluster_dates function to do some error checking
 }
+\keyword{internal}

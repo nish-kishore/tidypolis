@@ -19,3 +19,4 @@ meta data comparisons
 \description{
 compare meta data outputs between two datasets
 }
+\keyword{internal}

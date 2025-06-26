@@ -32,3 +32,4 @@ Handles missing coordinates, validates existing ones, and ensures that all
 AFP cases have accurate geographic coordinates for mapping and spatial
 analysis.
 }
+\keyword{internal}

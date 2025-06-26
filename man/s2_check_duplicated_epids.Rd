@@ -38,3 +38,4 @@ The function:
 s2_check_duplicated_epids(afp_data, "path/to/polis/folder")
 }
 }
+\keyword{internal}

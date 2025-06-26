@@ -17,5 +17,6 @@ region-specific processing, this should be set to
 "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").}
 }
 \description{
-a function to assess key variable missingness
+A function to assess key variable missingness
 }
+\keyword{internal}

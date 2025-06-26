@@ -17,3 +17,4 @@ tibble with lat/lon for all unsampled locations
 \description{
 Create random samples of points for missing GPS data
 }
+\keyword{internal}

@@ -7,13 +7,14 @@
 bind_and_reconcile(new_data, old_data)
 }
 \arguments{
-\item{new_data}{tibble: Tibble to be converted and bound}
+\item{new_data}{\code{tibble} Tibble to be converted and bound.}
 
-\item{old_data}{tibble: Tibble to be referenced}
+\item{old_data}{\code{tibble} Tibble to be referenced.}
 }
 \value{
-tibble: bound tibble
+\code{tibble} Bounded tibble.
 }
 \description{
 Reconcile classes and bind two tibbles
 }
+\keyword{internal}

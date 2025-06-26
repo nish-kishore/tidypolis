@@ -29,3 +29,4 @@ Return true if cache updated
 \description{
 Update the POLIS log
 }
+\keyword{internal}

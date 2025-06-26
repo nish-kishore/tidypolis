@@ -17,3 +17,4 @@ tibble: metadata
 \description{
 Summarize metadata from tibble
 }
+\keyword{internal}

@@ -15,5 +15,5 @@ archive_log(
 \item{polis_data_folder}{str: location of the POLIS data folder}
 }
 \description{
-Function to read in log file and archive entries older than 3 months
+Function to read in log file and archive entries older than 3 months.
 }

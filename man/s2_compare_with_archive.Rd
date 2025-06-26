@@ -54,3 +54,4 @@ This function performs a comprehensive comparison by:
 \item Generating a detailed report of differences
 }
 }
+\keyword{internal}

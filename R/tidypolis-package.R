@@ -15,6 +15,7 @@
 #' @importFrom httr set_config
 #' @importFrom httr status_code
 #' @importFrom jsonlite fromJSON
+#' @importFrom lifecycle deprecated
 #' @importFrom progressr handlers
 #' @importFrom progressr progressor
 #' @importFrom progressr with_progress

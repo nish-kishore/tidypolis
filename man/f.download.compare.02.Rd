@@ -28,3 +28,4 @@ tibble of variables to compare
 \description{
 List out distinct values that are not the same by variable
 }
+\keyword{internal}

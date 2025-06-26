@@ -27,3 +27,4 @@ This function takes in a set of dates (primarily used for immunization
 campaigns) and clusters them into likely "rounds" which is not readily
 captured in the data using K-means clustering
 }
+\keyword{internal}

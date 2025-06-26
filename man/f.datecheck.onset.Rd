@@ -17,3 +17,4 @@ quality controlled date variable
 \description{
 function creates a new variable when combined with a mutate statement in R code
 }
+\keyword{internal}

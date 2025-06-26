@@ -15,3 +15,4 @@ tibble: without any empty columns
 \description{
 Utility function to return tibble without empty columns
 }
+\keyword{internal}

@@ -25,3 +25,4 @@ Invisibly returns the missingness summary
 Analyzes and exports information about missingness in key variables that are
 critical for AFP surveillance. This helps with data quality assessment.
 }
+\keyword{internal}

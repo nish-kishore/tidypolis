@@ -27,3 +27,4 @@ The function checks for the following issues:
 
 Known issues are filtered against a predefined whitelist
 }
+\keyword{internal}

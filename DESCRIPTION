@@ -31,7 +31,8 @@ Imports:
     sf,
     foreach,
     yaml,
-    utils
+    utils,
+    lifecycle
 Suggests:
     fs,
     stats,

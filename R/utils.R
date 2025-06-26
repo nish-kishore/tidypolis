@@ -767,6 +767,7 @@ run_single_table_diagnostic <-
 #' @param .event_type str: INIT, START, PROCESS, INFO, ERROR, ALERT, END
 #' @param .event str: event to be logged
 #' @returns Return true if cache updated
+#' @keywords internal
 update_polis_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
                              .time = Sys.time(),
                              .user = Sys.getenv("USERNAME"),
@@ -824,6 +825,7 @@ update_polis_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
 #' @param cache_file str: location of cache file
 #' @param .table str: table to be loaded
 #' @returns Return tibble with table information
+#' @export
 get_polis_cache <- function(cache_file = Sys.getenv("POLIS_CACHE_FILE"),
                             .table) {
   cache <- tidypolis_io(io = "read", file_path = cache_file)
@@ -847,6 +849,7 @@ get_polis_cache <- function(cache_file = Sys.getenv("POLIS_CACHE_FILE"),
 #' @param .nrow double: nrow of table to be updated
 #' @param .update_val str: value to update data
 #' @returns Return true if cache updated
+#' @keywords internal
 update_polis_cache <- function(cache_file = Sys.getenv("POLIS_CACHE_FILE"),
                                .table,
                                .nrow,
@@ -880,6 +883,7 @@ update_polis_cache <- function(cache_file = Sys.getenv("POLIS_CACHE_FILE"),
 #' Get all data from crosswalk location
 #' @param file_loc `str` location of crosswalk file
 #' @returns `tibble` crosswalk data
+#' @keywords internal
 get_crosswalk_data <- function(
     file_loc = file.path(Sys.getenv("POLIS_DATA_FOLDER"),
                          "misc",
@@ -926,6 +930,7 @@ get_env_site_data <- function(file_loc = file.path(Sys.getenv("POLIS_DATA_FOLDER
 #' @param vals array:
 #' @param max_i int:
 #' @returns val from `vals` or stops output
+#' @keywords internal
 request_input <- function(request,
                           vals,
                           error_resp = "Valid input not chosen",
@@ -995,9 +1000,10 @@ create_table_urls <- function(url,
 
 #' Reconcile classes and bind two tibbles
 #'
-#' @param new_data tibble: Tibble to be converted and bound
-#' @param old_data tibble: Tibble to be referenced
-#' @returns tibble: bound tibble
+#' @param new_data `tibble` Tibble to be converted and bound.
+#' @param old_data `tibble` Tibble to be referenced.
+#' @returns `tibble` Bounded tibble.
+#' @keywords internal
 bind_and_reconcile <- function(new_data, old_data) {
   old_names <- names(old_data)
   classes_old <- sapply(old_data, class)
@@ -1022,6 +1028,7 @@ bind_and_reconcile <- function(new_data, old_data) {
 #' @description Create creds file
 #' @param polis_data_folder str: location of POLIS data folder
 #' @returns boolean for folder creation
+#' @keywords internal
 create_cred_file <- function(polis_data_folder) {
   list("polis_api_key" = "",
        "polis_data_folder" = "") |>
@@ -1035,6 +1042,7 @@ create_cred_file <- function(polis_data_folder) {
 #' @param crosswalk tibble: crosswalk file loaded through rio
 #' @param table_name str: name of table to be crosswalked
 #' @returns tibble: renamed table
+#' @keywords internal
 rename_via_crosswalk <- function(api_data,
                                  crosswalk,
                                  table_name) {
@@ -1058,6 +1066,7 @@ rename_via_crosswalk <- function(api_data,
 #' @description Utility function to return tibble without empty columns
 #' @param dataframe tibble: df
 #' @returns tibble: without any empty columns
+#' @keywords internal
 remove_empty_columns <- function(dataframe) {
 
   original_df <- dataframe
@@ -1086,6 +1095,7 @@ remove_empty_columns <- function(dataframe) {
 #' @param old str/array: array of character column names
 #' @param new str/array: array of character colunm names
 #' @returns str: Stop error or continue
+#' @keywords internal
 f.compare.dataframe.cols <- function(old, new) {
   cli::cli_process_start("Checking column names")
   if (length(setdiff(colnames(new), colnames(old))) >= 1 | length(setdiff(colnames(old), colnames(new))) >= 1) {
@@ -1108,6 +1118,7 @@ f.compare.dataframe.cols <- function(old, new) {
 #' @param old.download tibble
 #' @param new.download tibble
 #' @returns tibble: variables that are new or unaccounted for
+#' @keywords internal
 f.download.compare.01 <- function(old.download, new.download) {
 
   if (!requireNamespace("purrr", quietly = TRUE)) {
@@ -1165,6 +1176,7 @@ f.download.compare.01 <- function(old.download, new.download) {
 #' @param type str name of the df that the comparison is being made on, for use in log
 #' "AFP", "SIA", "ES", "POS"
 #' @returns tibble of variables to compare
+#' @keywords internal
 f.download.compare.02 <- function(df.from.f.download.compare.01,
                                   old.download,
                                   new.download,
@@ -1226,6 +1238,7 @@ f.download.compare.02 <- function(df.from.f.download.compare.01,
 #' @param df01 tibble: table of afp data
 #' @param global.dist.01 sf: spatial file of all locations
 #' @returns tibble with lat/lon for all unsampled locations
+#' @keywords internal
 f.pre.stsample.01 <- function(df01, global.dist.01) {
 
   #need to identify cases with no lat/lon
@@ -1508,6 +1521,7 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
 #' @param date1 date 1 is the date to be checked against date2
 #' @param date2 date 2 is the date of onset such that the date should be after onset
 #' @returns quality controlled date variable
+#' @keywords internal
 f.datecheck.onset <- function(date1, date2) {
   date1.qa <-
     dplyr::case_when(
@@ -1527,6 +1541,7 @@ f.datecheck.onset <- function(date1, date2) {
 #' @param old_table_metadata tibble
 #' @param table str: "AFP", "Other Surv", "SIA", "ES", "POS"
 #' @returns meta data comparisons
+#' @keywords internal
 f.compare.metadata <- function(new_table_metadata, old_table_metadata, table){
   #compare to old metadata
   compare_metadata <- new_table_metadata |>
@@ -1607,6 +1622,7 @@ f.compare.metadata <- function(new_table_metadata, old_table_metadata, table){
 #' @param dataframe tibble
 #' @param categorical_max int: maximum number of categories considered
 #' @returns tibble: metadata
+#' @keywords internal
 f.summarise.metadata <- function(dataframe, categorical_max = 10){
 
   #ungroup dataframe
@@ -1642,9 +1658,14 @@ f.summarise.metadata <- function(dataframe, categorical_max = 10){
 
 #' Function to read and report on latest log file entries
 #'
-#' @description Read log entries from the latest download and preprocessing run, create report to send to team
+#' @description Read log entries from the latest download and preprocessing run,
+#' create report to send to Teams chat. This function is not meant to be used outside
+#' of the SIR team at its current iteration. Future versions may allow for
+#' more flexibility in the function.
+#'
 #' @param log_file str: location of POLIS log file
 #' @param polis_data_folder str: location of the POLIS data folder
+#' @export
 log_report <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
                        polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")){
 
@@ -1705,10 +1726,11 @@ log_report <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
 #' function to archive log report
 #'
 #' @description
-#' Function to read in log file and archive entries older than 3 months
+#' Function to read in log file and archive entries older than 3 months.
 #'
 #' @param log_file str: location of POLIS log file
 #' @param polis_data_folder str: location of the POLIS data folder
+#' @export
 archive_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
                         polis_data_folder = Sys.getenv("POLIS_DATA_CACHE")){
 
@@ -1767,6 +1789,7 @@ archive_log <- function(log_file = Sys.getenv("POLIS_LOG_FILE"),
 #'
 #' @returns outputs a saved reference table of original date vars and a smaller
 #' core ready file without character dates
+#' @keywords internal
 remove_character_dates <- function(type,
                                    df,
                                    polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"),
@@ -1932,7 +1955,7 @@ create_response_vars <- function(pos,
 #' to use the "k-means" method we will group by events taking place within a certain
 #' period of time of each other. In this case the grouping days will be 365 or a year
 #' @returns `tibble` with clusters groups and cluster methodology used
-#' @export
+#' @keywords internal
 cluster_dates <- function(x,
                           seed = 1234,
                           method = "kmeans",
@@ -2006,13 +2029,14 @@ cluster_dates <- function(x,
 
 #' Function to create summary of key variable missingness in CORE datafiles
 #' @description
-#' a function to assess key variable missingness
+#' A function to assess key variable missingness
 #' @param data tibble the datatable for which we want to check key variable missingness
 #' @param type str "AFP", "ES", or "POS", type of dataset to check missingness
 #' @param output_folder_name str: Name of the output directory where processed
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
 #'        "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").
+#' @keywords internal
 check_missingness <- function(data,
                               type, output_folder_name) {
 
@@ -2923,16 +2947,25 @@ process_spatial <- function(gdb_folder,
 
 }
 
-#' add GPEI website reported cases
+#' Add GPEI website reported cases (DRAFT)
+#'
+#'
 #' @description
-#' a function to add manually extracted GPEI cases to positives file and estimate points
-#' based on lowest level admin data
+#' `r lifecycle::badge('experimental')`
+#'
+#' A function to add manually extracted GPEI cases to positives file and estimate points
+#' based on lowest level admin data. This function is currently in draft form and isn't
+#' intended to be used at this time.
+#'
 #' @param azcontainer Azure validated container object.
 #' @param proxy_data_loc str location of proxy_data on EDAV
 #' @param polis_pos_loc str location of latest positives dataset generated from POLIS API data
+#' @keywords internal
 add_gpei_cases <- function(azcontainer = suppressMessages(get_azure_storage_connection()),
                            proxy_data_loc = "/Data/proxy/polio_proxy_data.csv",
                            polis_pos_loc = "/Data/polis/positives_2001-01-01_2025-01-06.rds") {
+
+  cli::cli_abort("This function is in draft and cannot be used at this time.")
 
   long.global.ctry <- sirfunctions::load_clean_ctry_sp(type = "long")
   long.global.ctry$Shape <- NULL
@@ -4658,6 +4691,7 @@ s2_read_afp_data <- function(file_path) {
 #' \dontrun{
 #' s2_check_duplicated_epids(afp_data, "path/to/polis/folder")
 #' }
+#' @keywords internal
 s2_check_duplicated_epids <- function(data, polis_data_folder, output_folder_name) {
   cli::cli_process_start("Checking for duplicated EPIDs")
 
@@ -4762,7 +4796,7 @@ s2_check_duplicated_epids <- function(data, polis_data_folder, output_folder_nam
 #'      investigation, stool collection)
 #' - Cleans poliovirus type strings
 #' - Standardizes additional date fields with consistent naming
-#'
+#' @keywords internal
 s2_standardize_dates <- function(data) {
   cli::cli_process_start(
     "Fixing all dates from character to ymd format and fixing character variables",
@@ -4859,7 +4893,7 @@ s2_standardize_dates <- function(data) {
 #'
 #' @returns Invisibly returns the filtered data frame of records with missing
 #'    onset dates
-#' @export
+#' @keywords internal
 s2_export_missing_onsets <- function(data, polis_data_folder, output_folder_name) {
   missing_onsets <- data |>
     dplyr::select(epid, dateonset) |>
@@ -4897,7 +4931,7 @@ s2_export_missing_onsets <- function(data, polis_data_folder, output_folder_name
 #'        "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").
 #'
 #' @returns Invisibly returns the missingness summary
-#' @export
+#' @keywords internal
 s2_check_missingness <- function(data, type = "AFP", polis_data_folder,
                                  output_folder_name) {
   cli::cli_process_start("Checking for missingness in key variables")
@@ -4943,6 +4977,7 @@ s2_check_missingness <- function(data, type = "AFP", polis_data_folder,
 #' \dontrun{
 #' classified_data <- s2_classify_afp_cases(afp_data, 2020, 2023)
 #' }
+#' @keywords internal
 s2_classify_afp_cases <- function(data, startyr = 2020,
                                   endyr = lubridate::year(Sys.Date())) {
   cli::cli_process_start("Classification of cases using lab data",
@@ -5226,7 +5261,7 @@ s2_classify_afp_cases <- function(data, startyr = 2020,
 #'
 #' Known issues are filtered against a predefined whitelist
 #'
-#' @export
+#' @keywords internal
 s2_validate_classifications <- function(data) {
   cli::cli_process_start(
     paste0(
@@ -5306,7 +5341,7 @@ s2_validate_classifications <- function(data) {
 #' @param shape_data `sp` Spatial data containing administrative boundary info
 #'
 #' @returns A data frame with corrected admin GUIDs and added validation columns
-#' @export
+#' @keywords internal
 s2_fix_admin_guids <- function(data, shape_data) {
   cli::cli_process_start("Checking and fixing GUIDs",
                          msg_done = "Checked and fixed GUIDs"
@@ -5505,7 +5540,7 @@ s2_fix_admin_guids <- function(data, shape_data) {
 #'        "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").
 #'
 #' @returns A tibble with processed coordinate data
-#' @export
+#' @keywords internal
 s2_process_coordinates <- function(data, polis_data_folder, polis_folder,
                                    output_folder_name) {
 
@@ -5691,7 +5726,7 @@ s2_process_coordinates <- function(data, polis_data_folder, polis_folder,
 #' @param data `tibble` A data frame containing AFP data with spatial coordinates
 #'
 #' @returns A data frame with additional AFP analysis variables
-#' @export
+#' @keywords internal
 s2_create_afp_variables <- function(data) {
 
   cli::cli_process_start("Creating key AFP variables")
@@ -5884,7 +5919,7 @@ s2_create_afp_variables <- function(data) {
 #'    before overwriting. Default is `TRUE`.
 #'
 #' @returns Invisibly returns NULL
-#' @export
+#' @keywords internal
 s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
                                   col_afp_raw, output_folder_name, output_format,
                                   archive = TRUE) {
@@ -6226,7 +6261,7 @@ s2_export_afp_outputs <- function(data, latest_archive, polis_data_folder,
 #' 3. Identifying added, removed, and modified records
 #' 4. Generating a detailed report of differences
 #'
-#' @export
+#' @keywords internal
 s2_compare_with_archive <- function(data,
                                     polis_data_folder,
                                     latest_archive,
@@ -7075,6 +7110,7 @@ s3_sia_cluster_dates <- function(sia){
 #' global Polio SIAs
 #' @param type `str` vaccine type
 #' @returns `NULL` silently.
+#' @keywords internal
 #'
 s3_sia_cluster_dates_by_vax_type <- function(data,
                                  cache_folder = file.path(Sys.getenv("POLIS_DATA_FOLDER"),
