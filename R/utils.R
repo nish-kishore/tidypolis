@@ -11,6 +11,7 @@
 #' get_table_data(.table = "case")
 #' get_table_data(.table = "virus") #must run init_tidypolis first in order to specify API key
 #' }
+#' @export
 get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
                            .table) {
   base_url <- "https://extranet.who.int/polis/api/v2/"
@@ -475,6 +476,7 @@ get_table_size <- function(.table,
 #' @param .id str: id variable
 #' @param api_key str: POLIS API Key
 #' @returns character array of ids
+#' @export
 get_table_ids <-
   function(.table, .id, api_key = Sys.getenv("POLIS_API_KEY")) {
     cli::cli_process_start(paste0("Downloading ", .table, " table IDs"))
@@ -550,6 +552,7 @@ test_polis_key <- function(key) {
 #' @description Call multiple URLs
 #' @param urls array of url strings
 #' @returns tibble with all data
+#' @export
 call_urls <- function(urls) {
   doFuture::registerDoFuture() ## tell foreach to use future
 
@@ -875,8 +878,8 @@ update_polis_cache <- function(cache_file = Sys.getenv("POLIS_CACHE_FILE"),
 #'
 #' @description
 #' Get all data from crosswalk location
-#' @param file_loc str: location of crosswalk file
-#' @returns tibble: crosswalk data
+#' @param file_loc `str` location of crosswalk file
+#' @returns `tibble` crosswalk data
 get_crosswalk_data <- function(
     file_loc = file.path(Sys.getenv("POLIS_DATA_FOLDER"),
                          "misc",
