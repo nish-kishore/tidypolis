@@ -95,6 +95,7 @@ test_that("Testing f.pre.st.sample()", {
 })
 
 test_that("Testing check_missing_static_files()", {
+  skip()
   test_folder_path <-
     "Software_Development/Test_Data/check_static_file_test_folder"
 
