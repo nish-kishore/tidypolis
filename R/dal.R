@@ -87,40 +87,18 @@ tidypolis_io <- function(
 
   if (io == "read") {
     if (edav) {
+
       if (!requireNamespace("AzureStor", quietly = TRUE)) {
         stop('Package "AzureStor" must be installed to read from EDAV.',
           .call = FALSE
         )
       }
-
-      corrupted.rds <- NULL
-      tryCatch(
-        {
-          return(sirfunctions::edav_io(
-            io = "read",
-            default_dir = edav_default_dir,
-            file_loc = file_path, azcontainer = azcontainer
-          ))
-          corrupted.rds <<- FALSE
-        },
-        error = function(e) {
-          cli::cli_alert_warning("RDS download from EDAV was corrupted, downloading directly...")
-          corrupted.rds <<- TRUE
-        }
-      )
-
-      if (corrupted.rds) {
-        dest <- tempfile()
-        AzureStor::storage_download(
-          container = azcontainer,
-          paste0(edav_default_dir, file_path),
-          dest
-        )
-        x <- readRDS(dest)
-        unlink(dest)
-        return(x)
-      }
-    } else {
+        return(sirfunctions::edav_io(
+          io = "read",
+          default_dir = edav_default_dir,
+          file_loc = file_path, azcontainer = azcontainer
+        ))
+      } else {
       if (!grepl("\\.rds$|\\.rda$|\\.csv$|\\.parquet$", file_path)) {
         stop("At the moment only 'rds' 'rda' 'csv' and 'parquet' are supported for reading.")
       }

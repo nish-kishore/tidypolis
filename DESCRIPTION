@@ -42,7 +42,7 @@ Suggests:
     knitr,
     rmarkdown
 Remotes:
-    nish-kishore/sirfunctions
+    nish-kishore/sirfunctions@017bc64
 Config/testthat/edition: 3
 Roxygen: list(markdown = TRUE)
 VignetteBuilder: knitr
