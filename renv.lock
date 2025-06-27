@@ -3777,12 +3777,9 @@
         "httr",
         "jsonlite",
         "purrr",
-        "withr",
-        "yaml"
+        "withr"
       ],
       "Suggests": [
-        "arrow",
-        "qs2",
         "blastula",
         "forcats",
         "ggspatial",
@@ -3811,18 +3808,14 @@
       "Encoding": "UTF-8",
       "Roxygen": "list(markdown = TRUE)",
       "RoxygenNote": "7.3.2",
-      "RemoteType": "github",
-      "RemoteHost": "api.github.com",
-      "RemoteRepo": "sirfunctions",
-      "RemoteUsername": "nish-kishore",
-      "RemoteRef": "dev",
-      "RemoteSha": "017bc64f10e9438f949e32a0a2189b7e07ce2a17",
-      "NeedsCompilation": "no",
       "Author": "Nishant Kishore [aut, cre] (ORCID: <https://orcid.org/0000-0003-0408-2747>), Mervin Keith Cuadera [aut] (ORCID: <https://orcid.org/0000-0003-4898-2659>), Nicholas Heaghney [aut], Elizabeth Krow-Lucal [aut], Smita Chavan [aut]",
       "Maintainer": "Nishant Kishore <ynm2@cdc.gov>",
-      "Depends": [
-        "R (>= 4.1.0)"
-      ]
+      "RemoteType": "github",
+      "RemoteHost": "api.github.com",
+      "RemoteUsername": "nish-kishore",
+      "RemoteRepo": "sirfunctions",
+      "RemoteRef": "main",
+      "RemoteSha": "f6394058db387df530fb64d7c968053ebf226999"
     },
     "skimr": {
       "Package": "skimr",
