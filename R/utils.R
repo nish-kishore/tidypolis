@@ -4548,19 +4548,15 @@ s1_create_change_log <- function(polis_data_folder,
       polis_data_folder,
       output_folder_name,
       "Change Log",
-      timestamp,
-      paste0(substr(file, 1, nchar(file) - 4), ".rds")
-    )
+      timestamp, paste0(tools::file_path_sans_ext(file), ".rds"))
   )))
 
   invisible(capture.output(
     if (archive) {
       # Move most recent to archive
       tidypolis_io(io = "read", file_path = file.path(polis_data_folder, output_folder_name, file)) |>
-        tidypolis_io(
-          io = "write",
-          file_path = file.path(polis_data_folder, output_folder_name, "Archive", timestamp, file)
-        )
+      tidypolis_io(io = "write", file_path = file.path(polis_data_folder, output_folder_name,
+                                                       "Archive", timestamp, file))
     }
   ))
 

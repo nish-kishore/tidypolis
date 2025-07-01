@@ -32,7 +32,8 @@ Imports:
     foreach,
     yaml,
     utils,
-    lifecycle
+    lifecycle,
+    tools
 Suggests:
     fs,
     stats,

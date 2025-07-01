@@ -42,6 +42,7 @@
 #' @importFrom tidyr replace_na
 #' @importFrom tidyr separate_rows
 #' @importFrom tidyr uncount
+#' @importFrom tools file_path_sans_ext
 #' @importFrom utils capture.output
 #' @importFrom utils globalVariables
 #' @importFrom utils unzip
