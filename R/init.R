@@ -337,7 +337,7 @@ get_polis_data <- function(type = "all", output_format = "rds"){
   tables <- c("virus", "case", "human_specimen", "environmental_sample",
               "activity", "sub_activity", "lqas", "im")
 
-  if (type == "all") {
+  if (length(setdiff(type,"all")) == 0) {
 
     update_polis_log(.event = paste0("Start POLIS download of: ", paste(tables, collapse = ", ")),
                      .event_type = "START")
@@ -345,7 +345,7 @@ get_polis_data <- function(type = "all", output_format = "rds"){
     sapply(tables, function(x) get_table_data(.table = x,
                                               output_format = output_format))
 
-  } else if (type == "pop"){
+  } else if (length(setdiff(type,"pop")) == 0){
 
     update_polis_log(.event = "Start POLIS pop download",
                      .event_type = "START")
@@ -359,7 +359,7 @@ get_polis_data <- function(type = "all", output_format = "rds"){
     if (length(setdiff(type, tables)) != 0) {
       cli::cli_alert_danger("Invalid type passed")
       cli::cli_li(setdiff(type, tables))
-      cli::cli_abort("Please pass only valid values.")
+      cli::cli_abort("Please pass only valid types.")
     } else {
       sapply(type, \(x) get_table_data(.table = x,
                                        output_format = output_format))
