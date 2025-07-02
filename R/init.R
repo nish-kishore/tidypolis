@@ -312,7 +312,16 @@ init_tidypolis <- function(
 #' @description This function iterates through all tables and loads POLIS data. It
 #' checks to ensure that new rows are created, data are updated accordingly and
 #' deleted rows are reflected in the local system.
-#' @param type choose to download population data ("pop") or all other data. Default's to "all"
+#' @param type `str` A string or a list of strings of tables to download. Defaults to "all".
+#' May choose to download population data ("pop") or all other tables:
+#' - "activity": activities are all actions taken against Poliovirus.
+#' - "case": all identified cases of Poliovirus.
+#' - "environmental_sample": environmental surveillance data.
+#' - "human_specimen":  all specimens sent to laboratories to be investigated.
+#' - "im": independent monitoring data.
+#' - "lqas": lot quality assurance sampling.
+#' - "sub_activity": children activities are all sub-activities taken against Poliovirus.
+#' - "virus": all data related with viruses.
 #' @param output_format str: output_format to save files as.
 #'    Available formats include 'rds' 'rda' 'csv' 'qs' and 'parquet', Defaults is
 #'    'rds'.
@@ -325,20 +334,18 @@ init_tidypolis <- function(
 get_polis_data <- function(type = "all", output_format = "rds"){
 
   output_format <- normalize_format(output_format)
+  tables <- c("virus", "case", "human_specimen", "environmental_sample",
+              "activity", "sub_activity", "lqas", "im")
 
-  if(type == "all"){
-
-    tables <- c("virus", "case", "human_specimen", "environmental_sample",
-                "activity", "sub_activity", "lqas", "im")
+  if (type == "all") {
 
     update_polis_log(.event = paste0("Start POLIS download of: ", paste(tables, collapse = ", ")),
                      .event_type = "START")
 
-    sapply(tables, function(x) get_table_data(.table = x, output_format))
+    sapply(tables, function(x) get_table_data(.table = x,
+                                              output_format = output_format))
 
-  }
-
-  if(type == "pop"){
+  } else if (type == "pop"){
 
     update_polis_log(.event = "Start POLIS pop download",
                      .event_type = "START")
@@ -347,6 +354,17 @@ get_polis_data <- function(type = "all", output_format = "rds"){
 
     update_polis_log(.event = "POLIS Pop file donwloaded",
                      .event_type = "END")
+  } else {
+
+    if (length(setdiff(type, tables)) != 0) {
+      cli::cli_alert_danger("Invalid type passed")
+      cli::cli_li(setdiff(type, tables))
+      cli::cli_abort("Please pass only valid values.")
+    } else {
+      sapply(type, \(x) get_table_data(.table = x,
+                                       output_format = output_format))
+    }
+
   }
 
 

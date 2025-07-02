@@ -7,7 +7,18 @@
 get_polis_data(type = "all", output_format = "rds")
 }
 \arguments{
-\item{type}{choose to download population data ("pop") or all other data. Default's to "all"}
+\item{type}{\code{str} A string or a list of strings of tables to download. Defaults to "all".
+May choose to download population data ("pop") or all other tables:
+\itemize{
+\item "activity": activities are all actions taken against Poliovirus.
+\item "case": all identified cases of Poliovirus.
+\item "environmental_sample": environmental surveillance data.
+\item "human_specimen":  all specimens sent to laboratories to be investigated.
+\item "im": independent monitoring data.
+\item "lqas": lot quality assurance sampling.
+\item "sub_activity": children activities are all sub-activities taken against Poliovirus.
+\item "virus": all data related with viruses.
+}}
 
 \item{output_format}{str: output_format to save files as.
 Available formats include 'rds' 'rda' 'csv' 'qs' and 'parquet', Defaults is
