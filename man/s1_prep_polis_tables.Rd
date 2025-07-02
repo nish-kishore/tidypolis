@@ -12,6 +12,7 @@ s1_prep_polis_tables(
   timestamp,
   who_region,
   output_format,
+  raw_output_format,
   archive
 )
 }
@@ -30,7 +31,12 @@ s1_prep_polis_tables(
 Available inputs include AFRO, AMRO, EMRO, EURO, SEARO and  WPRO.}
 
 \item{output_format}{str: output_format to save files as.
-Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+Available formats include 'rds' 'rda' 'csv' 'qs' and 'parquet', Defaults is
+'rds'.}
+
+\item{raw_output_format}{str: raw_output_format of raw polis data based output_format
+supplied to get_table_data and files saved as.
+Available formats include 'rds' 'rda' 'csv' 'qs' and 'parquet', Defaults is
 'rds'.}
 
 \item{archive}{Logical. Whether to archive previous output directories

@@ -6,6 +6,9 @@
 #' @import cli lubridate dplyr readr
 #' @param api_key API Key
 #' @param .table Table value to retrieve
+#' @param output_format str: output_format to save files as.
+#'    Available formats include 'rds' 'rda' 'csv' 'qs' and 'parquet', Defaults is
+#'    'rds'.
 #' @returns Tibble with reference data
 #' @examples
 #' \dontrun{
@@ -13,7 +16,11 @@
 #' get_table_data(.table = "virus") #must run init_tidypolis first in order to specify API key
 #' }
 get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
-                           .table) {
+                           .table, output_format = "rds") {
+
+  # validate output_format
+  output_format <- normalize_format(output_format)
+
   base_url <- "https://extranet.who.int/polis/api/v2/"
   table_data <- get_polis_cache(.table = .table)
   table_url <- paste0(base_url, table_data$endpoint)
@@ -141,7 +148,7 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
       Sys.getenv("POLIS_DATA_CACHE"),
       "/",
       table_data$table,
-      ".rds"
+      output_format
     ))
     update_polis_log(.event = paste0(table_data$table, " data saved locally"),
                      .event_type = "PROCESS")
@@ -238,7 +245,7 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
             Sys.getenv("POLIS_DATA_CACHE"),
             "/",
             table_data$table,
-            ".rds"
+            output_format
           ))
         cli::cli_process_done()
         old_cache_n <- nrow(old_cache)
@@ -372,7 +379,7 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
             Sys.getenv("POLIS_DATA_CACHE"),
             "/",
             table_data$table,
-            ".rds"
+            output_format
           ))
           update_polis_log(.event = paste0(table_data$table, " data saved locally"),
                            .event_type = "PROCESS")
@@ -401,7 +408,7 @@ get_table_data <- function(api_key = Sys.getenv("POLIS_API_Key"),
                          Sys.getenv("POLIS_DATA_CACHE"),
                          "/",
                          table_data$table,
-                         ".rds"
+                        output_format
                        ))
           update_polis_log(.event = paste0(table_data$table, " data saved locally"),
                            .event_type = "PROCESS")
@@ -1089,7 +1096,7 @@ remove_empty_columns <- function(dataframe) {
   }
   return(
     original_df |>
-      dplyr::select(-empty_cols)
+      dplyr::select(-dplyr::all_of(empty_cols))
   )
 
 }
@@ -1261,36 +1268,32 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
     sf::st_as_sf(coords = c(x = "lon" , y = "lat"),
                  crs = sf::st_crs(global.dist.01))
 
-  global.dist.02 <- sf::st_make_valid(global.dist.01)
+    # filter out invalid shapes if the column exists
+    if ("shape_invalid" %in% names(global.dist.01)) {
+      global.dist.01 <- global.dist.01 |>
+        dplyr::filter(shape_invalid == FALSE)
+    } else {
+      global.dist.01 <- global.dist.01 |>
+        dplyr::mutate(valid = sf::st_is_valid(Shape)) |>
+        dplyr::filter(valid) |>
+        dplyr::select(-valid)
+    }
 
-  #identify bad shape rows after make_valid
-  check.dist.2 <- tibble::as_tibble(sf::st_is_valid(global.dist.02))
-
-  #removing all bad shapes post make valid
-  valid.shapes <- global.dist.02[check.dist.2$value, ] |>
-    dplyr::select(GUID, ADM1_GUID, ADM0_GUID, yr.st, yr.end, Shape)
-
-  cli::cli_process_start("Evaluating invalid district shapes")
-  #invalid shapes for which we'll turn off s2
-  invalid.shapes <- global.dist.02[!check.dist.2$value, ] |>
-    dplyr::select(GUID, ADM1_GUID, ADM0_GUID, yr.st, yr.end, Shape)
-
-  #do 2 seperate st_joins the first, df02, is for valid shapes and those attached cases
-  df02 <- sf::st_join(df01.sf |>
-                        dplyr::filter(!Admin2GUID %in% invalid.shapes$GUID), valid.shapes, left = T) |>
-    dplyr::filter(yronset >= yr.st & yronset <= yr.end)
-
-  #second st_join is for invalid shapes and those attached cases, turning off s2
-  sf::sf_use_s2(F)
-  df03 <- sf::st_join(df01.sf |>
-                        dplyr::filter(!Admin2GUID %in% valid.shapes$GUID), invalid.shapes, left = T) |>
-    dplyr::filter(yronset >= yr.st & yronset <= yr.end)
-  sf::sf_use_s2(T)
-
-  cli::cli_process_done()
-
-  #bind back together df02 and df03
-  df04 <- dplyr::bind_rows(df02, df03)
+  # spatial join to get district info
+  suppressMessages(
+    suppressWarnings({
+      sf::sf_use_s2(FALSE)
+      df04 <- sf::st_join(
+        df01.sf,
+        global.dist.01 |>
+          dplyr::select(GUID, ADM1_GUID, ADM0_GUID,
+                        yr.st, yr.end, Shape),
+        left = TRUE
+      ) |>
+        dplyr::filter(yronset >= yr.st & yronset <= yr.end)
+      sf::sf_use_s2(TRUE)
+    })
+  )
 
   cli::cli_process_done()
 
@@ -1380,18 +1383,16 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
 
   df07$geometry <- NULL
 
-  sf::st_geometry(global.dist.02) <- NULL
-
   #feed only cases with empty coordinates into st_sample (vars = GUID, nperarm, id, Shape)
   if (nrow(empty.coord |> dplyr::filter(Admin2GUID != "{NA}")) > 0) {
     # remove NAs because can't be sampled
     empty.coord.01 <- empty.coord |>
       tibble::as_tibble() |>
       dplyr::group_by(Admin2GUID) |>
-      dplyr::summarise(nperarm = dplyr::n()) |>
+      dplyr::summarise(nperarm = dplyr::n(),
+                       .groups = "drop") |>
       dplyr::arrange(Admin2GUID) |>
       dplyr::mutate(id = dplyr::row_number()) |>
-      dplyr::ungroup() |>
       dplyr::filter(Admin2GUID != "{NA}")
 
     empty.coord.02 <- global.dist.01 |>
@@ -1483,8 +1484,9 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
 
   #bind back placed point cases with df06 and finished
   df09 <- df08 |>
-    dplyr::left_join(global.dist.01 |> dplyr::select(ADM0_NAME, ADM1_NAME, ADM2_NAME, ADM0_GUID, ADM1_GUID, GUID),
-                     by = c("Admin0GUID" = "ADM0_GUID", "Admin1GUID" = "ADM1_GUID", "Admin2GUID" = "GUID")) |>
+    dplyr::left_join( sf::st_drop_geometry(global.dist.01) |>
+                        dplyr::select(ADM0_NAME, ADM1_NAME, ADM2_NAME, ADM0_GUID, ADM1_GUID, GUID),
+                      by = c("Admin0GUID" = "ADM0_GUID", "Admin1GUID" = "ADM1_GUID", "Admin2GUID" = "GUID")) |>
     dplyr::mutate(geo.corrected = ifelse(paste0("{", stringr::str_to_upper(admin2guid), "}", sep = "") != Admin2GUID, 1, 0),
                   geo.corrected = ifelse(paste0("{", stringr::str_to_upper(admin1guid), "}", sep = "") != Admin1GUID, 1, geo.corrected),
                   geo.corrected = ifelse(paste0("{", stringr::str_to_upper(admin0guid), "}", sep = "") != Admin0GUID, 1, geo.corrected),
@@ -1494,8 +1496,6 @@ f.pre.stsample.01 <- function(df01, global.dist.01) {
     dplyr::select(-c("wrongAdmin0GUID", "wrongAdmin1GUID", "wrongAdmin2GUID", "ADM1_GUID", "ADM0_GUID", "ADM0_NAME",
                      "ADM1_NAME", "ADM2_NAME")) |>
     dplyr::mutate(geo.corrected = ifelse(is.na(geo.corrected), 0, geo.corrected))
-
-  df09$Shape <- NULL
 
   final.guid.check <- df09 |>
     dplyr::filter((paste0("{", stringr::str_to_upper(admin2guid), "}", sep = "") != Admin2GUID |
@@ -1655,7 +1655,7 @@ f.summarise.metadata <- function(dataframe, categorical_max = 10){
     dplyr::select(var_name_class$var_name[var_name_class$character.n_unique <= categorical_max  & !is.na(var_name_class$character.n_unique)]) |>
     tidyr::pivot_longer(cols=tidyselect::everything(), names_to="var_name", values_to = "response") |>
     unique() |>
-    tidyr::pivot_wider(names_from=var_name, values_from=response) |>
+    tidyr::pivot_wider(names_from=var_name, values_from=response, values_fn = list ) |>
     tidyr::pivot_longer(cols=tidyselect::everything(), names_to="var_name", values_to="categorical_response_set")
 
   #Combine var names/classes/categorical-sets into a 'metadata table'
@@ -1820,7 +1820,8 @@ remove_character_dates <- function(type,
 
     df.02 <- df |>
       dplyr::select(env.sample.manual.edit.id, env.sample.id, !(dplyr::contains("date") & dplyr::where(is.character))) |>
-      dplyr::left_join(df.01.fixed)
+      dplyr::left_join(df.01.fixed,
+                       by = c("env.sample.manual.edit.id", "env.sample.id"))
 
   }
 
@@ -1868,7 +1869,9 @@ create_response_vars <- function(pos,
   #cVDPV3 <- tOPV / bOPV / mOPV3
   type1 <- dplyr::left_join(pos.sub |> dplyr::filter(measurement == "cVDPV 1"),
                             sia.sub |> dplyr::filter(vaccine.type %in% c("tOPV", "bOPV", "mOPV1")),
-                            by = c("admin2guid" = "adm2guid")) |>
+                            by = c("admin2guid" = "adm2guid"),
+                            relationship = "many-to-many"
+                            ) |>
     dplyr::mutate(time.to.response = difftime(sub.activity.start.date, dateonset, units = "days")) |>
     dplyr::filter(sub.activity.start.date < Sys.Date(),
                   dateonset < sub.activity.start.date,
@@ -1877,7 +1880,8 @@ create_response_vars <- function(pos,
 
   type2 <- dplyr::left_join(pos.sub |> dplyr::filter(measurement == "cVDPV 2"),
                             sia.sub |> dplyr::filter(vaccine.type %in% c("tOPV", "nOPV2", "mOPV2")),
-                            by = c("admin2guid" = "adm2guid")) |>
+                            by = c("admin2guid" = "adm2guid"),
+                            relationship = "many-to-many") |>
     dplyr::mutate(time.to.response = difftime(sub.activity.start.date, dateonset, units = "days")) |>
     dplyr::filter(sub.activity.start.date < Sys.Date(),
                   dateonset < sub.activity.start.date,
@@ -1886,14 +1890,15 @@ create_response_vars <- function(pos,
 
   type3 <- dplyr::left_join(pos.sub |> dplyr::filter(measurement == "cVDPV 3"),
                             sia.sub |> dplyr::filter(vaccine.type %in% c("tOPV", "bOPV", "mOPV3")),
-                            by = c("admin2guid" = "adm2guid")) |>
+                            by = c("admin2guid" = "adm2guid"),
+                            relationship = "many-to-many") |>
     dplyr::mutate(time.to.response = difftime(sub.activity.start.date, dateonset, units = "days")) |>
     dplyr::filter(sub.activity.start.date < Sys.Date(),
                   dateonset < sub.activity.start.date,
                   time.to.response <= 180) |>
     unique()
 
-  finished.responses <- rbind(type1, type2, type3) |>
+  finished.responses <- dplyr::bind_rows(type1, type2, type3) |>
     dplyr::group_by(epid, ntchanges, emergencegroup) |>
     dplyr::mutate(finished.responses = n()) |>
     dplyr::ungroup() |>
@@ -1913,7 +1918,8 @@ create_response_vars <- function(pos,
 
   planned.responses <- dplyr::left_join(pos.sub, planned.sia |> dplyr::select(adm2guid, planned.campaigns,
                                                                               sub.activity.start.date),
-                                        by = c("admin2guid" = "adm2guid")) |>
+                                        by = c("admin2guid" = "adm2guid"),
+                                        relationship = "many-to-many") |>
     dplyr::mutate(planned.campaigns = ifelse(is.na(planned.campaigns), 0, planned.campaigns)) |>
     unique() |>
     dplyr::select(epid, dateonset, ntchanges, emergencegroup, planned.campaigns, sub.activity.start.date) |>
@@ -1924,7 +1930,8 @@ create_response_vars <- function(pos,
                                    sia.sub |>
                                      dplyr::filter(vaccine.type == "IPV") |>
                                      dplyr::select(sub.activity.start.date, adm2guid),
-                                   by = c("admin2guid" = "adm2guid")) |>
+                                   by = c("admin2guid" = "adm2guid"),
+                                   relationship = "many-to-many") |>
     dplyr::filter(dateonset < sub.activity.start.date,
                   difftime(sub.activity.start.date, dateonset, units = "days") <= 180) |>
     dplyr::group_by(epid, ntchanges, emergencegroup, admin2guid) |>
@@ -1940,7 +1947,12 @@ create_response_vars <- function(pos,
                   planned.campaigns = ifelse(is.na(planned.campaigns), 0, planned.campaigns),
                   ipv.campaigns = ifelse(is.na(ipv.campaigns), 0, ipv.campaigns))
 
-  pos.final <- dplyr::left_join(pos, pos.sub.03) |>
+  pos.final <- dplyr::left_join(pos, pos.sub.03,
+                                c("epid", "dateonset", "place.admin.0",
+                                  "place.admin.1", "place.admin.2", "adm0guid",
+                                  "yronset", "adm1guid", "admin2guid",
+                                  "ntchanges", "emergencegroup", "measurement"),
+                                relationship = "many-to-many") |>
     dplyr::select(-sub.activity.start.date) |>
     unique()
 
@@ -2059,7 +2071,8 @@ check_missingness <- function(data,
 
     missing_by_group <- data |>
       dplyr::select("yronset", "place.admin.0", dplyr::any_of(afp.vars)) |>
-      dplyr::summarise(dplyr::across(dplyr::everything(), ~ mean(is.na(.)) * 100), .by = c("yronset", "place.admin.0")) |>
+      dplyr::summarise(dplyr::across(dplyr::everything(), ~ mean(is.na(.)) * 100),
+                       .by = c("yronset", "place.admin.0")) |>
       dplyr::filter(dplyr::if_any(dplyr::any_of(afp.vars), ~ . >= 10))
 
     invisible(capture.output(
@@ -2096,6 +2109,29 @@ check_missingness <- function(data,
   return(missing_by_group)
 }
 
+#' Normalize and validate file output format
+#'
+#' Ensures the format has a leading dot and is lowercase (e.g., '.rds'),
+#' and checks that it is one of the supported formats.
+#'
+#' @param fmt A character string specifying the output format
+#'            (e.g., 'rds', '.qs2', 'CSV').
+#'
+#' @return A normalized format string with a leading dot (e.g., '.qs2').
+#' @noRd
+normalize_format <- function(fmt) {
+  # Ensure lowercase and leading dot
+  fmt <- tolower(gsub("^([^\\.])", ".\\1", fmt))
+
+  # Check if supported
+  valid_formats <- c(".rds", ".rda", ".csv", ".qs", ".qs2", ".parquet")
+  if (!fmt %in% valid_formats) {
+    stop("Currently, only 'rds', 'rda', 'csv', 'qs', 'qs2', and 'parquet' are supported.")
+  }
+
+  return(fmt)
+}
+
 #### Pre-processing ####
 
 
@@ -2106,7 +2142,11 @@ check_missingness <- function(data,
 #' @import cli sirfunctions dplyr readr lubridate stringr tidyr stringi
 #' @param polis_folder str: location of the POLIS data folder
 #' @param output_format str: output_format to save files as.
-#'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+#'    Available formats include 'rds' 'rda' 'csv' 'qs' and 'parquet', Defaults is
+#'    'rds'.
+#' @param raw_output_format str: raw_output_format of raw polis data based output_format
+#'    supplied to get_table_data and files saved as.
+#'    Available formats include 'rds' 'rda' 'csv' 'qs' and 'parquet', Defaults is
 #'    'rds'.
 #' @param who_region str: optional WHO region to filter data
 #'      Available inputs include AFRO, AMRO, EMRO, EURO, SEARO and  WPRO.
@@ -2122,25 +2162,15 @@ check_missingness <- function(data,
 preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
                            who_region = NULL,
                            output_format = "rds",
+                           raw_output_format = "rds",
                            archive = TRUE,
                            keep_n_archives = Inf) {
 
   cli::cli_h1("Step 0/5: Set-up preprocessing environment")
 
-  # ensure leading dot in output_format
-  if (!startsWith(output_format, ".")) {
-    output_format <- paste0(".", output_format)
-  }
-
-  # validate output_format
-  if (!output_format %in% c(".rds", ".rda", ".csv", ".parquet")) {
-    stop("Currently, only 'rds', 'rda', 'csv', and 'parquet' are supported.")
-  }
-
-  # ensure leading dot
-  if (!startsWith(output_format, ".")) {
-    output_format <- paste0(".", output_format)
-  }
+# normalize and validate both output formats
+  output_format <- normalize_format(output_format)
+  raw_output_format <- normalize_format(raw_output_format)
 
   # Static global variables used in some part of our code
   polis_data_folder <- file.path(polis_folder, "data")
@@ -2241,8 +2271,8 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
 
   cli::cli_process_done()
 
-  #Step 0 - create a CORE datafiles to combine folder and check for datasets before continuing with pre-p =========
-
+  # Create a CORE datafiles to combine folder and check for datasets
+  # before continuing with pre-p =========
 
   core_files_folder_path <- file.path(polis_data_folder, "core_files_to_combine")
   if (!tidypolis_io(io = "exists.dir", file_path = core_files_folder_path)) {
@@ -2268,7 +2298,8 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
 
   s1_prep_polis_tables(polis_folder, polis_data_folder,
                        long.global.dist.01, ts, timestamp,
-                       who_region, output_format, archive = archive)
+                       who_region, output_format, raw_output_format,
+                       archive = archive)
 
   # Step 2 - Creating AFP and EPI datasets =====================================
 
@@ -2326,7 +2357,8 @@ preprocess_cdc <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
                             latest_folder_in_archive,
                             long.global.dist.01,
                             output_folder_name = output_folder_name,
-                            output_format = output_format)
+                            output_format = output_format,
+                            archive = archive)
 
   update_polis_log(.event = "Processing of CORE datafiles complete",
                    .event_type = "END")
@@ -2586,6 +2618,8 @@ process_spatial <- function(gdb_folder,
 
   #ensure CRS of ctry file is 4326
   global.ctry.01 <- sf::st_set_crs(global.ctry.01, 4326)
+  #make sure shapefile is valid before saving
+  global.ctry.01 <-  sf::st_make_valid(global.ctry.01)
 
   # save global country geodatabase in RDS file:
   if(edav) {
@@ -2721,6 +2755,10 @@ process_spatial <- function(gdb_folder,
 
   #ensure CRS is 4326
   global.prov.01 <- sf::st_set_crs(global.prov.01, 4326)
+
+  #make sure shapefile is valid before saving
+  global.prov.01 <-  sf::st_make_valid(global.prov.01)
+
   # save global province geodatabase in RDS file:
   if(edav) {
     tidypolis_io(io = "write", edav = T,
@@ -2751,6 +2789,12 @@ process_spatial <- function(gdb_folder,
     dplyr::slice(row.num.dist) |>
     dplyr::select(ADM0_NAME, ADM1_NAME, ADM2_NAME, GUID, yr.st, yr.end, paste(sf_var_dist)) |>
     dplyr::arrange(ADM0_NAME)
+
+  # flag rows with invalid geometries based on row indices
+  global.dist.01 <- global.dist.01 |>
+    dplyr::mutate(
+      shape_invalid = dplyr::row_number() %in% row.num.dist
+    )
 
   sf::st_geometry(invalid.dist.shapes) <- NULL
 
@@ -2848,6 +2892,10 @@ process_spatial <- function(gdb_folder,
 
   #ensure district CRS is 4326
   global.dist.01 <- sf::st_set_crs(global.dist.01, 4326)
+
+  #make sure shapefile is valid before saving
+  global.dist.01 <-  sf::st_make_valid(global.dist.01)
+
   # save global province geodatabase in RDS file:
   if(edav) {
     tidypolis_io(io = "write", edav = T,
@@ -2878,13 +2926,14 @@ process_spatial <- function(gdb_folder,
     df.list[[i]] <- df02
   }
 
-  long.global.prov.01 <- do.call(rbind, df.list)
+  long.global.prov.01 <- dplyr::bind_rows(df.list)
   cli::cli_process_start("Evaluating overlapping province shapes")
 
   if(endyr == lubridate::year(format(Sys.time())) & startyr == 2000) {
     prov.shape.issue.01 <- long.global.prov.01 |>
       dplyr::group_by(ADM0_NAME, ADM1_NAME, active.year.01) |>
-      dplyr::summarise(no.of.shapes = dplyr::n()) |>
+      dplyr::summarise(no.of.shapes = dplyr::n(),
+                       .groups = "drop") |>
       dplyr::filter(no.of.shapes > 1)
 
     if(edav) {
@@ -2918,14 +2967,15 @@ process_spatial <- function(gdb_folder,
     df.list[[i]] <- df02
   }
 
-  long.global.dist.01 <- do.call(rbind, df.list)
+  long.global.dist.01 <- dplyr::bind_rows(df.list)
 
   cli::cli_process_start("Evaluating overlapping district shapes")
 
   if(endyr == year(format(Sys.time())) & startyr == 2000) {
     dist.shape.issue.01 <- long.global.dist.01 |>
       dplyr::group_by(ADM0_NAME, ADM1_NAME, ADM2_NAME, active.year.01) |>
-      dplyr::summarise(no.of.shapes = dplyr::n()) |>
+      dplyr::summarise(no.of.shapes = dplyr::n(),
+                       .groups = "drop") |>
       dplyr::filter(no.of.shapes > 1)
 
     if(edav) {
@@ -2991,10 +3041,10 @@ add_gpei_cases <- function(azcontainer = suppressMessages(get_azure_storage_conn
     proxy.data.fill.prov.01 <- proxy.data.fill.prov |>
       tibble::as_tibble() |>
       dplyr::group_by(adm1guid) |>
-      dplyr::summarise(nperarm = dplyr::n()) |>
+      dplyr::summarise(nperarm = dplyr::n(),
+                       .groups = "drop") |>
       dplyr::arrange(adm1guid) |>
       dplyr::mutate(id = dplyr::row_number()) |>
-      dplyr::ungroup() |>
       dplyr::filter(adm1guid != "{NA}")
 
     proxy.data.fill.prov.02 <- global.prov |>
@@ -3088,10 +3138,10 @@ add_gpei_cases <- function(azcontainer = suppressMessages(get_azure_storage_conn
     proxy.data.fill.ctry.01 <- proxy.data.fill.ctry |>
       tibble::as_tibble() |>
       dplyr::group_by(adm0guid) |>
-      dplyr::summarise(nperarm = dplyr::n()) |>
+      dplyr::summarise(nperarm = dplyr::n(),
+                       .groups = "drop") |>
       dplyr::arrange(adm0guid) |>
       dplyr::mutate(id = dplyr::row_number()) |>
-      dplyr::ungroup() |>
       dplyr::filter(adm0guid != "{NA}")
 
     proxy.data.fill.ctry.02 <- global.ctry |>
@@ -3174,7 +3224,7 @@ add_gpei_cases <- function(azcontainer = suppressMessages(get_azure_storage_conn
   }
 
   if(exists("proxy.data.prov.final") & exists("proxy.data.ctry.final")) {
-    proxy.data.final <- rbind(proxy.data.prov.final, proxy.data.ctry.final) |>
+    proxy.data.final <- dplyr::bind_rows(proxy.data.prov.final, proxy.data.ctry.final) |>
       dplyr::mutate(dateonset = as.Date(dateonset, format = "%m/%d/%Y"),
                     report_date = as.Date(report_date, format = "%m/%d/%Y"),
                     latitude = as.character(latitude),
@@ -3303,7 +3353,7 @@ check_missing_static_files <- function(core_files_folder_path,
 #' @param who_region str: optional WHO region to filter data
 #'      Available inputs include AFRO, AMRO, EMRO, EURO, SEARO and  WPRO.
 #' @param output_format str: output_format to save files as.
-#'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+#'    Available formats include 'rds' 'rda' 'csv' 'qs' and 'parquet', Defaults is
 #'    'rds'.
 #' @param archive Logical. Whether to archive previous output directories
 #'    before overwriting. Default is `TRUE`.
@@ -3313,10 +3363,30 @@ check_missing_static_files <- function(core_files_folder_path,
 #'
 s1_prep_polis_tables <- function(polis_folder, polis_data_folder,
                                  long.global.dist.01, ts, timestamp, who_region,
-                                 output_format, archive) {
+                                 output_format, raw_output_format, archive) {
 
+# validate to see if polis raw files with raw_output_format exist for preprocessing
+required_files <- c(
+  case = file.path(polis_data_folder, paste0("case", raw_output_format)),
+  es = file.path(polis_data_folder, paste0("environmental_sample", raw_output_format)),
+  virus = file.path(polis_data_folder, paste0("virus", raw_output_format)),
+  sub_activ = file.path(polis_data_folder, paste0("sub_activity", raw_output_format)),
+  activ = file.path(polis_data_folder, paste0("activity", raw_output_format))
+)
+
+missing_idx <- !file.exists(required_files)
+missing_files <- required_files[missing_idx]
+
+if (length(missing_files) > 0) {
+  cli::cli_abort(c(
+    "Missing {length(missing_files)} raw data file{?s}:",
+    setNames(as.character(missing_files), names(missing_files)),
+    "!" = "Please check that your {.field raw_output_format} matches the format used to save raw files (e.g., {.val '.rds'} or {.val '.qs2'})."
+  ))
+}
+
+# Set region-specific folder name
   if (!is.null(who_region)) {
-    # Set region-specific folder name
     output_folder_name <- paste0("Core_Ready_Files_", who_region)
   } else {output_folder_name <- "Core_Ready_Files"}
 
@@ -3329,7 +3399,7 @@ s1_prep_polis_tables <- function(polis_folder, polis_data_folder,
 
   cli::cli_h2("Case")
   api_case_data <- s1_clean_case_table(
-    path = file.path(polis_data_folder, "case.rds"),
+    path = required_files[["case"]],
     crosswalk = crosswalk_data)
 
   if (!is.null(who_region)) {
@@ -3337,14 +3407,11 @@ s1_prep_polis_tables <- function(polis_folder, polis_data_folder,
       dplyr::filter(`WHO Region` == who_region)
     cli::cli_alert_success(
       paste0("Filtered case data to region: ", who_region))
-  } else {
-    cli::cli_alert_warning(
-      "Could not find WHO region column in case data. No filtering applied.")
   }
 
   cli::cli_h2("Environmental Samples")
   api_es_data <- s1_clean_es_table(
-    path = file.path(polis_data_folder, "environmental_sample.rds"),
+    path = required_files[["es"]],
     crosswalk = crosswalk_data
   )
 
@@ -3353,14 +3420,11 @@ s1_prep_polis_tables <- function(polis_folder, polis_data_folder,
       dplyr::filter(`WHO Region` == who_region)
     cli::cli_alert_success(
       paste0("Filtered ES data to region: ", who_region))
-  } else {
-    cli::cli_alert_warning(
-      "Could not find WHO region column in ES data. No filtering applied.")
   }
 
   cli::cli_h2("Virus")
   api_virus_data <- s1_clean_virus_table(
-    path = file.path(polis_data_folder, "virus.rds"),
+    path = required_files[["virus"]],
     crosswalk = crosswalk_data)
 
   if (!is.null(who_region)) {
@@ -3368,15 +3432,12 @@ s1_prep_polis_tables <- function(polis_folder, polis_data_folder,
       dplyr::filter(`WHO Region` == who_region)
     cli::cli_alert_success(
       paste0("Filtered Virus data to region: ", who_region))
-  } else {
-    cli::cli_alert_warning(
-      "Could not find WHO region column in Virus data. No filtering applied.")
   }
 
   cli::cli_h2("Activity")
   api_activity_data <- s1_clean_activity_table(
-    path = file.path(polis_data_folder, "activity.rds"),
-    subactivity_path = file.path(polis_data_folder, "sub_activity.rds"),
+    path = required_files[["activ"]],
+    subactivity_path = required_files["sub_activ"],
     crosswalk = crosswalk_data
   )
 
@@ -3385,14 +3446,11 @@ s1_prep_polis_tables <- function(polis_folder, polis_data_folder,
       dplyr::filter(`WHORegion` == who_region)
     cli::cli_alert_success(
       paste0("Filtered Activity data to region: ", who_region))
-  } else {
-    cli::cli_alert_warning(
-      "Could not find WHO region column in Activity data. No filtering applied.")
   }
 
   cli::cli_h2("Sub-activity")
   api_subactivity_data <- s1_clean_subactivity_table(
-    file.path(polis_data_folder, "sub_activity.rds"),
+    required_files[["sub_activ"]],
     api_activity_data,
     crosswalk_data,
     long.global.dist.01
@@ -3403,9 +3461,6 @@ s1_prep_polis_tables <- function(polis_folder, polis_data_folder,
       dplyr::filter(WHORegion == who_region)
     cli::cli_alert_success(
       paste0("Filtered Sub-activity data to region: ", who_region))
-  } else {
-    cli::cli_alert_warning(
-      "Could not find WHO region column in Sub-activity data. No filtering applied.")
   }
 
   rm(crosswalk_data)
@@ -4136,14 +4191,14 @@ s1_create_change_log <- function(polis_data_folder,
 
   potential_duplicates_new <- new |>
     dplyr::group_by(Id) |>
-    dplyr::summarise(count = n()) |>
-    dplyr::ungroup() |>
+    dplyr::summarise(count = n(),
+                     .groups = "drop") |>
     dplyr::filter(count >= 2)
 
   potential_duplicates_old <- old |>
     dplyr::group_by(Id) |>
-    dplyr::summarise(count = n()) |>
-    dplyr::ungroup() |>
+    dplyr::summarise(count = n(),
+                     .groups = "drop") |>
     dplyr::filter(count >= 2)
 
   new <- new |>
@@ -4257,7 +4312,7 @@ s1_create_change_log <- function(polis_data_folder,
 #'        region-specific processing, this should be set to
 #'        "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").
 #' @param output_format str: output_format to save files as.
-#'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+#'    Available formats include 'rds' 'rda' 'csv' 'qs' and 'parquet', Defaults is
 #'    'rds'.
 #' @returns NULL
 #' @keywords internal
@@ -4266,7 +4321,7 @@ s1_archive_old_files <- function(polis_data_folder, timestamp, output_folder_nam
 
   cli_process_start("Archiving old files")
   most_recent_files_01 <- s1_get_most_recent_files(polis_data_folder,
-                                                   c(".rds", ".rda", ".csv", ".xlsx", ".parquet"),
+                                                   c(".rds", ".rda", ".csv", ".xlsx", ".qs", ".parquet"),
                                                    output_folder_name)
 
   if (length(most_recent_files_01) > 0) {
@@ -4313,7 +4368,7 @@ s1_archive_old_files <- function(polis_data_folder, timestamp, output_folder_nam
 #'        region-specific processing, this should be set to
 #'        "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").
 #' @param output_format str: output_format to save files as.
-#'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+#'    Available formats include 'rds' 'rda' 'csv' 'qs' and 'parquet', Defaults is
 #'    'rds'.
 #'
 #' @returns `NULL`
@@ -4458,7 +4513,7 @@ s2_trim_archives <- function(polis_data_folder, output_folder_name, keep_n = 3) 
 #'        region-specific processing, this should be set to
 #'        "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").
 #' @param output_format str: output_format to save files as.
-#'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+#'    Available formats include 'rds' 'rda' 'csv' 'qs' and 'parquet', Defaults is
 #'    'rds'.
 #' @param archive Logical. Whether to archive previous output directories
 #'    before overwriting. Default is `TRUE`.
@@ -4501,7 +4556,8 @@ s2_fully_process_afp_data <- function(polis_data_folder, polis_folder,
   # Step 2b: Check for duplicate EPIDs
   has_duplicates <- s2_check_duplicated_epids(
     data = afp_raw_new,
-    polis_data_folder = polis_data_folder, output_folder_name = output_folder_name)
+    polis_data_folder = polis_data_folder,
+    output_folder_name = output_folder_name)
 
   if (has_duplicates) {
     cli::cli_alert_warning("Please review duplicates!")
@@ -4814,36 +4870,30 @@ s2_standardize_dates <- function(data) {
       admin2guid = admin.2.guid
     ) |>
     dplyr::mutate(
-      dateonset = lubridate::ymd(
-        as.Date(date.onset, tryFormats = c("%Y-%m-%dT%H:%M:%S", "%d/%m/%Y")),
-        quiet = TRUE
+      dateonset = lubridate::as_date(
+        lubridate::ymd_hms(date.onset, tz = "UTC", quiet = TRUE)
       ),
-      datenotify = lubridate::ymd(
-        as.Date(notification.date, tryFormats = c("%Y-%m-%dT%H:%M:%S", "%d/%m/%Y")),
-        quiet = TRUE
+      datenotify = lubridate::as_date(
+        lubridate::ymd_hms(notification.date, tz = "UTC", quiet = TRUE)
       ),
-      dateinvest = lubridate::ymd(
-        as.Date(investigation.date, tryFormats = c("%Y-%m-%dT%H:%M:%S", "%d/%m/%Y")),
-        quiet = TRUE
+      dateinvest = lubridate::as_date(
+        lubridate::ymd_hms(investigation.date, tz = "UTC", quiet = TRUE)
       ),
-      datestool1 = lubridate::ymd(
-        as.Date(stool.1.collection.date, tryFormats = c("%Y-%m-%dT%H:%M:%S", "%d/%m/%Y")),
-        quiet = TRUE
+      datestool1 = lubridate::as_date(
+        lubridate::ymd_hms(`stool.1.collection.date`, tz = "UTC",
+                           quiet = TRUE)
       ),
-      datestool2 = lubridate::ymd(
-        as.Date(stool.2.collection.date, tryFormats = c("%Y-%m-%dT%H:%M:%S", "%d/%m/%Y")),
-        quiet = TRUE
+      datestool2 = lubridate::as_date(
+        lubridate::ymd_hms(`stool.2.collection.date`, tz = "UTC",
+                           quiet = TRUE)
       ),
-      followup.date = lubridate::ymd(
-        as.Date(followup.date, tryFormats = c("%Y-%m-%dT%H:%M:%S", "%d/%m/%Y")),
-        quiet = TRUE
+      followup.date = lubridate::as_date(
+        lubridate::ymd_hms(followup.date, tz = "UTC", quiet = TRUE)
       ),
-      yronset = lubridate::year(dateonset),
-      yronset = dplyr::if_else(is.na(yronset),
-                               lubridate::year(datestool1), yronset
-      ),
-      yronset = dplyr::if_else(is.na(datestool1) & is.na(yronset),
-                               lubridate::year(datenotify), yronset
+      yronset = dplyr::coalesce(
+        lubridate::year(dateonset),
+        lubridate::year(datestool1),
+        lubridate::year(datenotify)
       ),
       age.months = as.numeric(`calculated.age.(months)`),
       ontostool1 = as.numeric(datestool1 - dateonset),
@@ -4863,14 +4913,15 @@ s2_standardize_dates <- function(data) {
           "case.date", "stool.date.sent.to.lab",
           "clinical.admitted.date", "followup.date"
         )),
-        ~ lubridate::ymd(as.Date(., tryFormats = c("%Y-%m-%dT%H:%M:%S", "%d/%m/%Y")), quiet = TRUE)
-      )
-    ) |>
-    dplyr::mutate(datenotificationtohq = date.notification.to.hq,
-                  casedate = case.date,
-                  stooltolabdate = stool.date.sent.to.lab,
-                  stooltoiclabdate = stool.date.sent.to.ic.lab,
-                  clinicadmitdate = clinical.admitted.date)
+        ~ lubridate::as_date(
+          lubridate::ymd_hms(.x, tz = "UTC", quiet = TRUE)
+        )
+      ),
+        datenotificationtohq = date.notification.to.hq,
+        casedate = case.date,
+        stooltolabdate = stool.date.sent.to.lab,
+        stooltoiclabdate = stool.date.sent.to.ic.lab,
+        clinicadmitdate = clinical.admitted.date)
 
   cli::cli_process_done()
 
@@ -5621,15 +5672,19 @@ s2_process_coordinates <- function(data, polis_data_folder, polis_folder,
     dplyr::bind_rows(dup_epid_01)
 
     for (i in 1:nrow(dup_epid_fixed |> dplyr::filter(!is.na(epid_fixed)))) {
-      update_polis_log(.event = paste0("Duplicate EPID ", dup_epid_fixed[i, "epid"], " updated to: ",
+
+      suppressMessages(
+      update_polis_log(.event = paste0("Duplicate EPID ",
+                                       dup_epid_fixed[i, "epid"], " updated to: ",
                                        dup_epid_fixed[i, "epid_fixed"]),
                        .event_type = "ALERT")
+      )
     }
 
     data_deduped <- dup_epid_fixed |>
       dplyr::select(-c("epid", "dup_epid")) |>
       dplyr::rename(epid = epid_fixed) |>
-      rbind(data_renamed |> filter(!epid %in% dup_epid_fixed$epid))
+      dplyr::bind_rows(data_renamed |> filter(!epid %in% dup_epid_fixed$epid))
 
 
     cli::cli_alert_warning(paste0(
@@ -5912,7 +5967,7 @@ s2_create_afp_variables <- function(data) {
 #'        region-specific processing, this should be set to
 #'        "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").
 #' @param output_format str: output_format to save files as.
-#'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+#'    Available formats include 'rds' 'rda' 'csv' 'qs' and 'parquet', Defaults is
 #'    'rds'.
 #' @param archive Logical. Whether to archive previous output directories
 #'    before overwriting. Default is `TRUE`.
@@ -6430,7 +6485,7 @@ s2_compare_with_archive <- function(data,
 #'        region-specific processing, this should be set to
 #'        "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").
 #' @param output_format str: output_format to save files as.
-#'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+#'    Available formats include 'rds' 'rda' 'csv' 'qs' and 'parquet', Defaults is
 #'    'rds'.
 #'
 #' @export
@@ -6983,7 +7038,7 @@ s3_sia_check_metadata <- function(sia.06, polis_data_folder, latest_folder_in_ar
 #'        region-specific processing, this should be set to
 #'        "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").
 #' @param output_format str: output_format to save files as.
-#'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+#'    Available formats include 'rds' 'rda' 'csv' 'qs' and 'parquet', Defaults is
 #'    'rds'.
 #'
 #' @returns NULL
@@ -7386,7 +7441,7 @@ s3_sia_evaluate_unmatched_guids <- function(sia.05, polis_data_folder, output_fo
 
   cty.yr.mismatch <- dist.sia.mismatch.01 |>
     dplyr::group_by(place.admin.0, yr.sia) |>
-    dplyr::summarise(no.of.mismatch.sia = n())
+    dplyr::summarise(no.of.mismatch.sia = n(), .groups = "drop")
 
   # excel file summarizing mismatch SIA by country
 
@@ -7426,7 +7481,7 @@ s3_sia_evaluate_unmatched_guids <- function(sia.05, polis_data_folder, output_fo
 #'        region-specific processing, this should be set to
 #'        "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").
 #' @param output_format str: output_format to save files as.
-#'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+#'    Available formats include 'rds' 'rda' 'csv' 'qs' and 'parquet', Defaults is
 #'    'rds'.
 #'
 #' @export
@@ -7757,7 +7812,8 @@ s4_es_data_processing <- function(es.01.new,
 
   es.space.03 <- es.space.02 |>
     dplyr::group_by(env.sample.manual.edit.id) |>
-    dplyr::summarise(virus.type.01 = paste(virus.type, collapse = ", "))
+    dplyr::summarise(virus.type.01 = paste(virus.type, collapse = ", "),
+                     .groups = "drop")
 
   es.space.03$virus.type.01[es.space.03$virus.type.01=="NA"] <- NA
 
@@ -7883,11 +7939,16 @@ s4_es_create_cdc_vars <- function(es.02, polis_folder, output_folder_name){
                              })
   ))
 
-  sf::sf_use_s2(F)
-  shape.name.01 <- global.ctry.01 |>
-    dplyr::select(ISO_3_CODE, ADM0_NAME.rep = ADM0_NAME) |>
-    dplyr::distinct(.keep_all = T)
-  sf::sf_use_s2(T)
+  suppressMessages(
+    suppressWarnings({
+      sf::sf_use_s2(FALSE)
+      shape.name.01 <- global.ctry.01 |>
+        dplyr::select(ISO_3_CODE, ADM0_NAME.rep = ADM0_NAME) |>
+        dplyr::distinct(.keep_all = T)
+      sf::sf_use_s2(FALSE)
+    }
+    )
+  )
 
   savescipen <- getOption("scipen")
   options(scipen = 999)
@@ -8034,7 +8095,7 @@ s4_es_check_metadata <- function(polis_data_folder, es.05,
 #'        region-specific processing, this should be set to
 #'        "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").
 #' @param output_format str: output_format to save files as.
-#'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+#'    Available formats include 'rds' 'rda' 'csv' 'qs' and 'parquet', Defaults is
 #'    'rds'.
 #'
 #' @returns `NULL` invisible return with write out to logs if necessary
@@ -8084,11 +8145,13 @@ s4_es_write_data <- function(polis_data_folder, es.05, output_folder_name, outpu
 #' @param output_folder_name str: Name of the output directory where processed
 #'        files will be saved. Defaults to "Core_Ready_Files". For
 #'        region-specific processing, this should be set to
-#'        "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").
+#'        "Core_Ready_Files_[REGION]" (e.g., "Core_Ready_Files_AFRO").
+#' @param archive Logical. Whether to archive previous output directories
+#'    before overwriting. Default is `TRUE`.
 #'
 #'   validation.
 #' @param output_format str: output_format to save files as.
-#'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+#'    Available formats include 'rds' 'rda' 'csv' 'qs' and 'parquet', Defaults is
 #'    'rds'.
 #'
 #' @returns `NULL` quietly upon success.
@@ -8099,7 +8162,7 @@ s5_fully_process_pos_data <- function(polis_folder,
                                       long.global.dist.01,
                                       polis_data_folder = file.path(polis_folder, "data"),
                                       output_folder_name,
-                                      output_format) {
+                                      output_format, archive) {
 
   virus.raw.new <- s5_pos_load_data(polis_data_folder, latest_folder_in_archive,
                                     output_folder_name)
@@ -8400,7 +8463,7 @@ s5_pos_check_duplicates <- function(virus.01, polis_data_folder, output_folder_n
   # Script below will stop further execution if there is a duplicate virus, with same onset date, virus type, emergence group, ntchanges
   if (nrow(virus.dup.01) >= 1) {
     cli::cli_alert_warning("Duplicate viruses in the virus table data. Check the data for duplicate records.
-          If they are the exact same, then contact Ashley")
+          If they are the exact same, then contact polis@who.int")
     virus.dup.01 <- virus.dup.01[order(virus.dup.01$surveillance.type,virus.dup.01$virustype, virus.dup.01$yronset),] |>
       dplyr::select(-virus_dup)
 
@@ -8527,7 +8590,7 @@ s5_pos_process_human_virus <- function(virus.01, polis_data_folder, output_folde
 
 
   #Combine AFP and other surveillance type cases
-  afp.02 <- rbind(afp.01, non.afp.01) |>
+  afp.02 <- dplyr::bind_rows(afp.01, non.afp.01) |>
     dplyr::select(epid, lat, lon, datenotificationtohq) |>
     dplyr::mutate(datenotificationtohq = parse_date_time(datenotificationtohq, c("%Y-%m-%d", "%d/%m/%Y")))
 
@@ -8795,7 +8858,7 @@ s5_pos_compare_with_archive <- function(afp.es.virus.01, afp.es.virus.03, polis_
     in_old_not_new <- old |>
       dplyr::filter(!(epid %in% new$epid))
 
-    in_new_and_old_but_modified <- new |>
+    in_new_and_old_but_modified <- suppressWarnings({ new |>
       dplyr::filter(epid %in% old$epid) |>
       dplyr::select(-c(setdiff(colnames(new), colnames(old)))) |>
       setdiff(old |>
@@ -8811,6 +8874,7 @@ s5_pos_compare_with_archive <- function(afp.es.virus.01, afp.es.virus.03, polis_
       dplyr::mutate(name = stringr::str_sub(name, 1, -3)) |>
       #long_to_wide
       tidyr::pivot_wider(names_from=source, values_from=value)
+    })
 
     if(nrow(in_new_and_old_but_modified) > 0){
       in_new_and_old_but_modified <- in_new_and_old_but_modified |>

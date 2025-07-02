@@ -8,6 +8,7 @@ preprocess_cdc(
   polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
   who_region = NULL,
   output_format = "rds",
+  raw_output_format = "rds",
   archive = TRUE,
   keep_n_archives = Inf
 )
@@ -19,7 +20,12 @@ preprocess_cdc(
 Available inputs include AFRO, AMRO, EMRO, EURO, SEARO and  WPRO.}
 
 \item{output_format}{str: output_format to save files as.
-Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+Available formats include 'rds' 'rda' 'csv' 'qs' and 'parquet', Defaults is
+'rds'.}
+
+\item{raw_output_format}{str: raw_output_format of raw polis data based output_format
+supplied to get_table_data and files saved as.
+Available formats include 'rds' 'rda' 'csv' 'qs' and 'parquet', Defaults is
 'rds'.}
 
 \item{archive}{Logical. Whether to archive previous output directories

@@ -26,9 +26,7 @@ further using \code{\link[=remove_character_dates]{remove_character_dates()}} an
 \item{output_folder_name}{str: Name of the output directory where processed
 files will be saved. Defaults to "Core_Ready_Files". For
 region-specific processing, this should be set to
-"Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").
-
-validation.}
+"Core_Ready_Files_\link{REGION}" (e.g., "Core_Ready_Files_AFRO").}
 
 \item{output_format}{str: output_format to save files as.
 Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is

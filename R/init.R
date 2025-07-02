@@ -312,36 +312,59 @@ init_tidypolis <- function(
 #' @description This function iterates through all tables and loads POLIS data. It
 #' checks to ensure that new rows are created, data are updated accordingly and
 #' deleted rows are reflected in the local system.
-#' @param type choose to download population data ("pop") or all other data. Default's to "all"
+#' @param type `str` A string or a list of strings of tables to download. Defaults to "all".
+#' May choose to download population data ("pop") or all other tables:
+#' - "activity": activities are all actions taken against Poliovirus.
+#' - "case": all identified cases of Poliovirus.
+#' - "environmental_sample": environmental surveillance data.
+#' - "human_specimen":  all specimens sent to laboratories to be investigated.
+#' - "im": independent monitoring data.
+#' - "lqas": lot quality assurance sampling.
+#' - "sub_activity": children activities are all sub-activities taken against Poliovirus.
+#' - "virus": all data related with viruses.
+#' @param output_format str: output_format to save files as.
+#'    Available formats include 'rds' 'rda' 'csv' 'qs' and 'parquet', Defaults is
+#'    'rds'.
 #' @import dplyr
 #' @examples
 #' \dontrun{
 #' get_polis_data() #must be run after using init_tidypolis and providing a valid API key
 #' }
 #' @export
-get_polis_data <- function(type = "all"){
+get_polis_data <- function(type = "all", output_format = "rds"){
 
-  if(type == "all"){
+  output_format <- normalize_format(output_format)
+  tables <- c("virus", "case", "human_specimen", "environmental_sample",
+              "activity", "sub_activity", "lqas", "im")
 
-    tables <- c("virus", "case", "human_specimen", "environmental_sample",
-                "activity", "sub_activity", "lqas", "im")
+  if (length(setdiff(type,"all")) == 0) {
 
     update_polis_log(.event = paste0("Start POLIS download of: ", paste(tables, collapse = ", ")),
                      .event_type = "START")
 
-    sapply(tables, function(x) get_table_data(.table = x))
+    sapply(tables, function(x) get_table_data(.table = x,
+                                              output_format = output_format))
 
-  }
-
-  if(type == "pop"){
+  } else if (length(setdiff(type,"pop")) == 0){
 
     update_polis_log(.event = "Start POLIS pop download",
                      .event_type = "START")
 
-    get_table_data(.table = "pop")
+    get_table_data(.table = "pop", output_format)
 
     update_polis_log(.event = "POLIS Pop file donwloaded",
                      .event_type = "END")
+  } else {
+
+    if (length(setdiff(type, tables)) != 0) {
+      cli::cli_alert_danger("Invalid type passed")
+      cli::cli_li(setdiff(type, tables))
+      cli::cli_abort("Please pass only valid types.")
+    } else {
+      sapply(type, \(x) get_table_data(.table = x,
+                                       output_format = output_format))
+    }
+
   }
 
 
@@ -398,13 +421,24 @@ freeze_polis_data <- function(){
 #' @description
 #' Create standard analytic datasets from raw POLIS data
 #'
+#' @param polis_folder str: location of the POLIS data folder
 #' @param type str: specify the type of preprocessing to complete
 #' @param who_region str: optional WHO region to filter data
 #'      Available inputs include AFRO, AMRO, EMRO, EURO, SEARO and  WPRO.
-#'
 #' @param output_format str: output_format to save files as.
-#'    Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+#'    Available formats include 'rds' 'rda' 'csv' 'qs' and 'parquet', Defaults is
 #'    'rds'.
+#' @param raw_output_format str: raw_output_format of raw polis data based output_format
+#'    supplied to get_table_data and files saved as.
+#'    Available formats include 'rds' 'rda' 'csv' 'qs' and 'parquet', Defaults is
+#'    'rds'.
+#' @param who_region str: optional WHO region to filter data
+#'      Available inputs include AFRO, AMRO, EMRO, EURO, SEARO and  WPRO.
+#' @param archive Logical. Whether to archive previous output directories
+#'    before overwriting. Default is `TRUE`.
+#' @param keep_n_archives Numeric. Number of archive folders to retain.
+#'   Defaults to `Inf`, which keeps all archives. Set to a finite number
+#'   (e.g., 3) to automatically delete older archives beyond the N most recent.
 #'
 #' @import cli
 #' @returns Analytic rds files
@@ -413,22 +447,30 @@ freeze_polis_data <- function(){
 #' preprocess_data(type = "cdc") #must run init_tidypolis to specify POLIS data location first
 #' }
 #' @export
-preprocess_data <- function(type = "cdc", who_region = NULL, output_format = "rds"){
+preprocess_data <- function(polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
+                            type = "cdc", who_region = NULL, output_format = "rds",
+                            raw_output_format = "rds", archive = TRUE, keep_n_archives = Inf){
 
   types <- c("cdc")
-  outputs <- c("rds", "rda", "csv", "parquet")
 
   if (!(type %in% types)) {
     cli::cli_abort(message = paste0("'", type, "'", " is not one of the accepted values for 'type'"))
   }
 
-  if (!(output_format %in% outputs)) {
-    cli::cli_abort(paste0("'", output_format, "'", " is not one of the accepted values for 'output_format'"))
-  }
+# normalize and validate both output formats
+  output_format <- normalize_format(output_format)
+  raw_output_format <- normalize_format(raw_output_format)
 
   #CDC pre-processing steps
   if (type == "cdc") {
-    preprocess_cdc(who_region = who_region, output_format = output_format)
+    preprocess_cdc(
+      polis_folder = polis_folder,
+      who_region = who_region,
+      output_format = output_format,
+      raw_output_format = raw_output_format,
+      archive = archive,
+      keep_n_archives = keep_n_archives
+    )
   }
 
 
