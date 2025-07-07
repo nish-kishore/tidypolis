@@ -611,7 +611,7 @@ call_urls <- function(urls) {
     y <-
       foreach::`%dopar%`(foreach::foreach(
         x = xs,
-        .packages = c("tidypolis", "tibble", "jsonlite", "httr")
+        .packages = c("tidypolis", "dplyr", "jsonlite", "httr")
       ), {
         # signal a progression update
         p()
