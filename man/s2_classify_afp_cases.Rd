@@ -43,3 +43,4 @@ The function performs the following classifications:
 classified_data <- s2_classify_afp_cases(afp_data, 2020, 2023)
 }
 }
+\keyword{internal}

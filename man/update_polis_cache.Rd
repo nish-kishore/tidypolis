@@ -12,13 +12,13 @@ update_polis_cache(
 )
 }
 \arguments{
-\item{cache_file}{str: location of cache file}
+\item{cache_file}{\code{str} location of cache file}
 
-\item{.table}{str: table to be updated}
+\item{.table}{\code{str} table to be updated}
 
 \item{.nrow}{double: nrow of table to be updated}
 
-\item{.update_val}{str: value to update data}
+\item{.update_val}{\code{str} value to update data}
 }
 \value{
 Return true if cache updated
@@ -26,3 +26,4 @@ Return true if cache updated
 \description{
 Update the POLIS cache directory
 }
+\keyword{internal}

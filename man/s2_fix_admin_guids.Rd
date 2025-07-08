@@ -19,3 +19,4 @@ Corrects incorrect or missing GUIDs for administrative boundaries by
 matching on administrative names when possible. This improves the spatial
 accuracy of AFP data.
 }
+\keyword{internal}

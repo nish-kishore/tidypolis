@@ -19,7 +19,7 @@ Core_Ready_Files.}
 
 \item{polis_folder}{\code{str} Path to the main POLIS folder.}
 
-\item{output_folder_name}{str: Name of the output directory where processed
+\item{output_folder_name}{\code{str} Name of the output directory where processed
 files will be saved. Defaults to "Core_Ready_Files". For
 region-specific processing, this should be set to
 "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").}
@@ -32,3 +32,4 @@ Handles missing coordinates, validates existing ones, and ensures that all
 AFP cases have accurate geographic coordinates for mapping and spatial
 analysis.
 }
+\keyword{internal}

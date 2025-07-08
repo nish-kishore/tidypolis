@@ -11,11 +11,12 @@ check_missingness(data, type, output_folder_name)
 
 \item{type}{str "AFP", "ES", or "POS", type of dataset to check missingness}
 
-\item{output_folder_name}{str: Name of the output directory where processed
+\item{output_folder_name}{\code{str} Name of the output directory where processed
 files will be saved. Defaults to "Core_Ready_Files". For
 region-specific processing, this should be set to
 "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").}
 }
 \description{
-a function to assess key variable missingness
+A function to assess key variable missingness
 }
+\keyword{internal}

@@ -15,7 +15,7 @@ s1_clean_subactivity_table(
 \arguments{
 \item{path}{\code{str} File path to the table.}
 
-\item{activity_table}{\code{tibble} Output of \code{\link[=clean_activity_table]{clean_activity_table()}}.}
+\item{activity_table}{\code{tibble} Output of \code{\link[=s1_clean_activity_table]{s1_clean_activity_table()}}.}
 
 \item{crosswalk}{\code{tibble} The crosswalk table. This is the output of
 \code{\link[=get_crosswalk_data]{get_crosswalk_data()}}.}
@@ -23,7 +23,7 @@ s1_clean_subactivity_table(
 \item{long_dist_sf}{\code{tibble} District shapefile in long format. The output of
 \code{sirfunctions::load_clean_dist_sp(type = "long")}.}
 
-\item{edav}{\code{bool} Data located on EDAV? Defaults to the
+\item{edav}{\code{logical} Data located on EDAV? Defaults to the
 EDAV flag.}
 }
 \value{

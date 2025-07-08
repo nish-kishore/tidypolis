@@ -10,7 +10,8 @@ vignette: >
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>")
+  comment = "#>"
+)
 ```
 
 ```{r setup, echo = FALSE, warning = FALSE}
@@ -137,4 +138,3 @@ Tidypolis logs all steps of initializing, downloading and processing. This infor
 
 ## Cache
 Tidypolis maintains a cache of information on each table available via API from POLIS. This cache contains information about the size of the table, when it was last downloaded, the unique ID and update date variables present in tables (where applicable) and the user who last downloaded it. 
-

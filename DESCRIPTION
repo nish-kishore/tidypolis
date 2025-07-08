@@ -1,7 +1,7 @@
 Package: tidypolis
 Type: Package
 Title: Download and process POLIS data
-Version: 1.1.1
+Version: 2.0.0
 Authors@R: c(person("Nishant", "Kishore", , "ynm2@cdc.gov", role = c("aut", "cre"), comment = c(ORCID = "0000-0003-0408-2747")),
              person("Nicholas", "Heaghney", , "uic3@cdc.gov", role = "aut"),
              person("Mervin Keith", "Cuadera", , "xrg9@cdc.gov", role = "aut", comment = c(ORCID = "0000-0003-4898-2659"))
@@ -12,34 +12,38 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.3.2
-Imports: 
-  cli,
-  yaml, 
-  tibble,
-  dplyr,
-  readr,
-  lubridate,
-  sirfunctions, 
-  AzureStor,
-  stringr,
-  httr,
-  jsonlite,
-  doFuture,
-  foreach,
-  future,
-  progressr,
-  sf,
-  skimr,
-  cluster, 
-  tidyr,
-  stringi,
-  readxl
-Suggests:
+Imports:
+    cluster,
+    doFuture,
+    future,
+    httr,
+    jsonlite,
+    progressr,
     purrr,
-    tidyselect,
-    stats,
+    readr,
+    sirfunctions,
+    skimr,
+    tidyr,
+    dplyr,
+    cli,
+    stringr,
+    lubridate,
+    sf,
+    foreach,
+    yaml,
     utils,
+    lifecycle,
+    tools
+Suggests:
+    fs,
+    stats,
     arrow,
-    testthat (>= 3.0.0)
+    AzureStor,
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown
+Remotes:
+    nish-kishore/sirfunctions@017bc64
 Config/testthat/edition: 3
 Roxygen: list(markdown = TRUE)
+VignetteBuilder: knitr

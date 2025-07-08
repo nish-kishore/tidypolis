@@ -12,13 +12,13 @@ remove_character_dates(
 )
 }
 \arguments{
-\item{type}{str: the table on which to remove original date vars, "AFP", "ES", "POS"}
+\item{type}{\code{str} the table on which to remove original date vars, "AFP", "ES", "POS"}
 
-\item{df}{tibble: the dataframe from which to remove character formatted dates}
+\item{df}{\code{tibble} the dataframe from which to remove character formatted dates}
 
-\item{polis_data_folder}{str:  location of user's polis data folder}
+\item{polis_data_folder}{\code{str}  location of user's polis data folder}
 
-\item{output_folder_name}{str: Name of the output directory where processed
+\item{output_folder_name}{\code{str} Name of the output directory where processed
 files will be saved. Defaults to "Core_Ready_Files". For
 region-specific processing, this should be set to
 "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").}
@@ -30,3 +30,4 @@ core ready file without character dates
 \description{
 remove original date variables from POLIS tables
 }
+\keyword{internal}

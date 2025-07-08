@@ -16,20 +16,16 @@ s5_pos_process_human_virus(
 
 \item{polis_data_folder}{\code{str} The data folder within the POLIS folder.}
 
-\item{output_folder_name}{str: Name of the output directory where processed
+\item{output_folder_name}{\code{str} Name of the output directory where processed
 files will be saved. Defaults to "Core_Ready_Files". For
 region-specific processing, this should be set to
 "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").
 
 validation.}
 
-\item{output_format}{str: output_format to save files as.
+\item{output_format}{\code{str} output_format to save files as.
 Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
 'rds'.}
-
-\item{startyr}{\code{int} Start year to process the positives dataset.}
-
-\item{endyr}{\code{int} End year to process the positives dataset.}
 }
 \value{
 \code{tibble} Cleaned positives dataset containing human cases only.

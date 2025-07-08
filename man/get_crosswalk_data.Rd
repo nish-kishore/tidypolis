@@ -9,11 +9,12 @@ get_crosswalk_data(
 )
 }
 \arguments{
-\item{file_loc}{str: location of crosswalk file}
+\item{file_loc}{\code{str} location of crosswalk file}
 }
 \value{
-tibble: crosswalk data
+\code{tibble} crosswalk data
 }
 \description{
 Get all data from crosswalk location
 }
+\keyword{internal}

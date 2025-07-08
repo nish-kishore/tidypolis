@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils.R
 \name{add_gpei_cases}
 \alias{add_gpei_cases}
-\title{add GPEI website reported cases}
+\title{Add GPEI website reported cases (DRAFT)}
 \usage{
 add_gpei_cases(
   azcontainer = suppressMessages(get_azure_storage_connection()),
@@ -18,6 +18,10 @@ add_gpei_cases(
 \item{polis_pos_loc}{str location of latest positives dataset generated from POLIS API data}
 }
 \description{
-a function to add manually extracted GPEI cases to positives file and estimate points
-based on lowest level admin data
+\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+
+A function to add manually extracted GPEI cases to positives file and estimate points
+based on lowest level admin data. This function is currently in draft form and isn't
+intended to be used at this time.
 }
+\keyword{internal}

@@ -17,3 +17,4 @@ A data frame with additional AFP analysis variables
 Creates and processes key variables used in AFP surveillance analysis, including
 data quality flags, stool adequacy measures, and follow-up indicators.
 }
+\keyword{internal}

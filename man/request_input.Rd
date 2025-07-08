@@ -21,3 +21,4 @@ val from \code{vals} or stops output
 \description{
 Manage input
 }
+\keyword{internal}

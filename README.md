@@ -1,4 +1,10 @@
 # tidypolis
+
+<!-- badges: start -->
+[![R-CMD-check](https://github.com/nish-kishore/tidypolis/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/nish-kishore/tidypolis/actions/workflows/R-CMD-check.yaml)
+<!-- badges: end -->
+
+
 A package to simplify downloading, caching and updating POLIS data. Functions 
 to clarify agency specific pre-processing and data cleaning steps are also included. 
 
@@ -16,22 +22,27 @@ tidypolis::{function}
 ```
 
 # Quick start 
+
+Here is a current list of core functions included in `tidypolis` with
+brief descriptions. The list is not exhaustive, and many more functions are available 
+to the users. Please refer to the package index for full function specifications.
+
 - Use the `tidypolis::init_tidypolis()` function to create a folder to store and update POLIS data. 
 You must specify if you wish the folder to be stored locally or on the EDAV environment by setting 
-the `edav` parameter in the function to `T` or `F`. 
+the `edav` parameter in the function to `TRUE` or `FALSE`. 
 - This function will ask for your POLIS API key so please have this ready
 - Use the `tidypolis::get_polis_data()` to pull all POLIS data and reconcile any missing or updated information, 
 the data will be stored in the local folder or in the EDAV environment you've specified. 
-- Use `tidypolis::preprocess_data(type = "cdc")` to process all POLIS data with cleaning methodologies 
-used by the SIR team. This requires access to the CDC EDAV environment. If you do not have this access please 
-contact us to get the pre-requisite data files to run this process locally. 
-
+- Use `tidypolis::preprocess_data()` to process all POLIS data with cleaning methodologies 
+used by the SIR team. The function can be used both locally and in the EDAV environment, for CDC employees.
+- User `tidypolis::process_spatial()` to process a WHO geodatabase with cleaning methdologies
+used by the SIR team. 
 
 ## Release Schedule
 
-- V1.2 to be released 10/11/2024, you can track progress [here](https://github.com/nish-kishore/tidypolis/milestone/3).
-
-Key features to be released are in development and will be shared shortly. 
+-   Please see the
+    [Releases](https://github.com/nish-kishore/tidypolis/releases)
+    page for specifics on previous releases.
 
 ## Contact 
 Please send a message to Nishant Kishore are ynm2@cdc.gov for any questions or queries. 

@@ -14,23 +14,23 @@ s5_pos_compare_with_archive(
 )
 }
 \arguments{
-\item{afp.es.virus.01}{\code{tibble} Output of \code{\link[=s5_pos_create_final_virus]{s5_pos_create_final_virus()}}.}
+\item{afp.es.virus.01}{\code{tibble} Output of \code{\link[=s5_pos_create_final_virus_data]{s5_pos_create_final_virus_data()}}.}
 
-\item{afp.es.virus.03}{\code{tibble} Output of \code{\link[=s5_pos_create_final_virus]{s5_pos_create_final_virus()}} but processed
+\item{afp.es.virus.03}{\code{tibble} Output of \code{\link[=s5_pos_create_final_virus_data]{s5_pos_create_final_virus_data()}} but processed
 further using \code{\link[=remove_character_dates]{remove_character_dates()}} and \code{\link[=create_response_vars]{create_response_vars()}}.}
 
 \item{polis_data_folder}{\code{str} The data folder within the POLIS folder.}
 
 \item{latest_folder_in_archive}{\code{str} Name of the latest folder in the archive, if one exists.}
 
-\item{output_folder_name}{str: Name of the output directory where processed
+\item{output_folder_name}{\code{str} Name of the output directory where processed
 files will be saved. Defaults to "Core_Ready_Files". For
 region-specific processing, this should be set to
 "Core_Ready_Files_REGION" (e.g., "Core_Ready_Files_AFRO").
 
 validation.}
 
-\item{output_format}{str: output_format to save files as.
+\item{output_format}{\code{str} output_format to save files as.
 Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
 'rds'.}
 }

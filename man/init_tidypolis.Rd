@@ -9,7 +9,7 @@ init_tidypolis(polis_folder = "POLIS", edav = F, api_debug = F)
 \arguments{
 \item{polis_folder}{\code{str} Location of folder where to store all information from POLIS.}
 
-\item{edav}{\code{bool} Should the system use EDAV as it's cache; default \code{FALSE}.}
+\item{edav}{\code{logical} Should the system use EDAV as it's cache; default \code{FALSE}.}
 
 \item{api_debug}{boolean: if true will log all api calls}
 }
@@ -22,8 +22,12 @@ tidycensus process for managing their API secrets.
 }
 \examples{
 \dontrun{
-init_tidypolis(polis_folder = "POLIS", data_folder = "Data", edav = T) #create a polis data cache on CDC EDAV
-init_tidypolis("C:/Users/user_name/Desktop/polis", "C:/Users/user_name/Desktop/data", edav = F)
-#create a polis data cache on your local desktop
+# create a polis data cache on CDC EDAV
+init_tidypolis(polis_folder = "POLIS", data_folder = "Data", edav = T)
+init_tidypolis("C:/Users/user_name/Desktop/polis",
+  "C:/Users/user_name/Desktop/data",
+  edav = F
+)
+# create a polis data cache on your local desktop
 }
 }

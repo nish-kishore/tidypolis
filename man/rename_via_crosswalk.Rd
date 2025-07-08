@@ -7,15 +7,16 @@
 rename_via_crosswalk(api_data, crosswalk, table_name)
 }
 \arguments{
-\item{api_data}{tibble: data pulled from api}
+\item{api_data}{\code{tibble} data pulled from api}
 
-\item{crosswalk}{tibble: crosswalk file loaded through rio}
+\item{crosswalk}{\code{tibble} crosswalk file loaded through rio}
 
-\item{table_name}{str: name of table to be crosswalked}
+\item{table_name}{\code{str} name of table to be crosswalked}
 }
 \value{
-tibble: renamed table
+\code{tibble} renamed table
 }
 \description{
 Rename variables in tibble using crosswalk data
 }
+\keyword{internal}

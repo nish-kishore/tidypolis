@@ -17,7 +17,7 @@ if on edav the gdb will need to be zipped, ensure that the gdb and the zipped fi
 
 \item{output_folder}{\code{str} Folder location to write outputs to.}
 
-\item{edav}{\code{bool} Whether gdb is on EDAV or local.}
+\item{edav}{\code{logical} Whether gdb is on EDAV or local.}
 
 \item{azcontainer}{\verb{Azure container} Azure storage container.}
 }
@@ -26,11 +26,15 @@ a function to process WHO spatial datasets
 }
 \examples{
 \dontrun{
-process_spatial(gdb_folder = "local_path/GEODATABASE.gdb",
-output_folder = "local_path",
-edav = F)
-process_spatial(gdb_folder = "edav_path/GEODATABASE.gdb",
-output_folder = "edav_path",
-edav = T)
+process_spatial(
+  gdb_folder = "local_path/GEODATABASE.gdb",
+  output_folder = "local_path",
+  edav = F
+)
+process_spatial(
+  gdb_folder = "edav_path/GEODATABASE.gdb",
+  output_folder = "edav_path",
+  edav = T
+)
 }
 }

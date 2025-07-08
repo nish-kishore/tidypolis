@@ -21,18 +21,18 @@ tidypolis_io(
 
 \item{file_path}{\code{str} Absolute path of file.}
 
-\item{edav}{\code{bool} Whether to interact with EDAV files. Defaults to \code{FALSE}.}
+\item{edav}{\code{logical} Whether to interact with EDAV files. Defaults to \code{FALSE}.}
 
 \item{azcontainer}{\verb{Azure container} An Azure container object.}
 
-\item{full_names}{\code{bool} If you want to include the full reference path in the response, default \code{FALSE}.}
+\item{full_names}{\code{logical} If you want to include the full reference path in the response, default \code{FALSE}.}
 
 \item{edav_default_dir}{\code{str} If \code{edav = TRUE}, specify the default directory used for \code{sirfunctions::edav_io()}.
 By default, this is \code{"GID/PEB/SIR"}.}
 }
 \value{
 Conditional on \code{io}. If \code{io} is "read", then it will return a tibble. If \code{io} is \code{"list"}, it will return a
-list of file names. Otherwise, the function will return \code{NULL}. \code{exists.dir} and \code{exists.file} will return a \code{bool}.
+list of file names. Otherwise, the function will return \code{NULL}. \code{exists.dir} and \code{exists.file} will return a \code{logical}.
 }
 \description{
 Manages read/write/list/create/delete functions for tidypolis

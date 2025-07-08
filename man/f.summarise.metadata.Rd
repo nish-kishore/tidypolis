@@ -9,11 +9,12 @@ f.summarise.metadata(dataframe, categorical_max = 10)
 \arguments{
 \item{dataframe}{tibble}
 
-\item{categorical_max}{int: maximum number of categories considered}
+\item{categorical_max}{\code{int} maximum number of categories considered}
 }
 \value{
-tibble: metadata
+\code{tibble} metadata
 }
 \description{
 Summarize metadata from tibble
 }
+\keyword{internal}
