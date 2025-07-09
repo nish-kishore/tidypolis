@@ -13,15 +13,15 @@ update_polis_log(
 )
 }
 \arguments{
-\item{log_file}{str: location of cache file}
+\item{log_file}{\code{str} location of cache file}
 
 \item{.time}{dttm: time of update}
 
 \item{.user}{double: user who conducted the action}
 
-\item{.event_type}{str: INIT, START, PROCESS, INFO, ERROR, ALERT, END}
+\item{.event_type}{\code{str} INIT, START, PROCESS, INFO, ERROR, ALERT, END}
 
-\item{.event}{str: event to be logged}
+\item{.event}{\code{str} event to be logged}
 }
 \value{
 Return true if cache updated
@@ -29,3 +29,4 @@ Return true if cache updated
 \description{
 Update the POLIS log
 }
+\keyword{internal}

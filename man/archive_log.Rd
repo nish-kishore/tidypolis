@@ -10,10 +10,10 @@ archive_log(
 )
 }
 \arguments{
-\item{log_file}{str: location of POLIS log file}
+\item{log_file}{\code{str} location of POLIS log file}
 
-\item{polis_data_folder}{str: location of the POLIS data folder}
+\item{polis_data_folder}{\code{str} location of the POLIS data folder}
 }
 \description{
-Function to read in log file and archive entries older than 3 months
+Function to read in log file and archive entries older than 3 months.
 }

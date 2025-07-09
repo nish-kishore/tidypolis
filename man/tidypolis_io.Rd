@@ -10,25 +10,31 @@ tidypolis_io(
   file_path,
   edav = as.logical(Sys.getenv("POLIS_EDAV_FLAG")),
   azcontainer = suppressMessages(sirfunctions::get_azure_storage_connection()),
-  full_names = F
+  full_names = F,
+  edav_default_dir = "GID/PEB/SIR"
 )
 }
 \arguments{
-\item{obj}{str: object to be loaded into EDAV}
+\item{obj}{\code{str} Object to be loaded into EDAV.}
 
-\item{io}{str: read/write/list/exists/create/delete}
+\item{io}{\code{str} read/write/list/exists/create/delete}
 
-\item{file_path}{str: absolute path of file}
+\item{file_path}{\code{str} Absolute path of file.}
 
-\item{edav}{boolean defaults to FALSE}
+\item{edav}{\code{logical} Whether to interact with EDAV files. Defaults to \code{FALSE}.}
 
-\item{azcontainer}{AZ container object returned by}
+\item{azcontainer}{\verb{Azure container} An Azure container object.}
 
-\item{full_names}{boolean: If you want to include the full reference path in the response, dfault FALSE}
+\item{full_names}{\code{logical} If you want to include the full reference path in the response, default \code{FALSE}.}
+
+\item{edav_default_dir}{\code{str} If \code{edav = TRUE}, specify the default directory used for \code{sirfunctions::edav_io()}.
+By default, this is \code{"GID/PEB/SIR"}.}
 }
 \value{
-conditional on `io`
+Conditional on \code{io}. If \code{io} is "read", then it will return a tibble. If \code{io} is \code{"list"}, it will return a
+list of file names. Otherwise, the function will return \code{NULL}. \code{exists.dir} and \code{exists.file} will return a \code{logical}.
 }
 \description{
 Manages read/write/list/create/delete functions for tidypolis
 }
+\keyword{internal}

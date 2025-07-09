@@ -12,13 +12,13 @@ get_table_size(
 )
 }
 \arguments{
-\item{.table}{str: Table to be downloaded}
+\item{.table}{\code{str} Table to be downloaded}
 
-\item{api_key}{str: API Key}
+\item{api_key}{\code{str} API Key}
 
-\item{cache_file}{str: Cache file location}
+\item{cache_file}{\code{str} Cache file location}
 
-\item{extra_filter}{str: additional filtering parameters}
+\item{extra_filter}{\code{str} additional filtering parameters}
 }
 \description{
 Get table size from POLIS

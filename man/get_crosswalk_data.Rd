@@ -4,14 +4,17 @@
 \alias{get_crosswalk_data}
 \title{Get crosswalk data}
 \usage{
-get_crosswalk_data(file_loc = "Data/misc/crosswalk.rds")
+get_crosswalk_data(
+  file_loc = file.path(Sys.getenv("POLIS_DATA_FOLDER"), "misc", "crosswalk.rds")
+)
 }
 \arguments{
-\item{file_loc}{str: location of crosswalk file}
+\item{file_loc}{\code{str} location of crosswalk file}
 }
 \value{
-tibble: crosswalk data
+\code{tibble} crosswalk data
 }
 \description{
 Get all data from crosswalk location
 }
+\keyword{internal}

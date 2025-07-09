@@ -11,7 +11,7 @@ f.compare.metadata(new_table_metadata, old_table_metadata, table)
 
 \item{old_table_metadata}{tibble}
 
-\item{table}{str: "AFP", "Other Surv", "SIA", "ES", "POS"}
+\item{table}{\code{str} "AFP", "Other Surv", "SIA", "ES", "POS"}
 }
 \value{
 meta data comparisons
@@ -19,3 +19,4 @@ meta data comparisons
 \description{
 compare meta data outputs between two datasets
 }
+\keyword{internal}

@@ -1,0 +1,140 @@
+---
+title: "Downloading and Processing POLIS Data"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Downloading and Processing POLIS Data}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup, echo = FALSE, warning = FALSE}
+library(tidypolis)
+```
+
+## Introduction
+
+The Surveillance, Innovation, and Research (SIR) Team within the Polio Eradication Branch at CDC obtains global polio data from [POLIS](https://extranet.who.int/polis/Account/Login). Collaborators outside of CDC who wish to download and process global polio data using the tidypolis package must have access to POLIS beforehand, as well obtain a POLIS API key.
+
+This guide is tailored for collaborators who wish to use the sirfunctions package to analyze global polio data and have access to data in POLIS.
+
+## Getting Started
+Ensure that you have a valid POLIS API key, this can be obtained by contacting **Minh-Ly Pham** [phamm\@who.int](mailto:phamm@who.int){.email} 
+
+### Setting up your POLIS folder {#polis-folder-setup}
+Choose a location for your POLIS data folder on your local machine, it is suggested that you keep this folder on your desktop.
+
+```
+library(tidypolis)
+init_tidypolis <- (
+    polis_folder = "path/to/POLIS", #replace with your file path
+    edav = F, #keep as F
+    api_debug = F #set to T to log individual API calls
+    )
+```
+
+This function will create a POLIS folder if one doesn't exist or connect to an already existing POLIS folder. If creating a folder you will be required to supply a valid POLIS API key. If the folder already exists your API key will be validated with POLIS. (Note: if POLIS is offline for any reason, ie maintenance, you will be unable to validate your API key)
+
+In creating your POLIS folder your API key will be stored in 'creds.rds' within your POLIS folder
+
+### Downloading Global Polio Data {#download-polis-data}
+Once you've created or connected to a POLIS folder you can download data via the POLIS API.
+
+```
+ get_polis_data()
+```
+Running this function will download the following tables:
+
+1. activity
+2. case
+3. environmental_sample
+4. human_specimen
+5. im
+6. lqas
+7. sub_activity
+8. virus
+
+The first download will pull the entirety of each table. Subsequent downloads will only pull updated records for tables that contain a unique identifier and updated date fields. 
+
+POLIS population data can also be downloaded with `get_polis_data()`
+
+```
+get_polis_data(type = "pop")
+```
+
+This will download the population dataset into the same location as the other POLIS tables.
+
+### Pre-processing Data
+
+## Set-up for processing
+In order to fully process POLIS data you will need the following:
+
+1. Global WHO geodatabase - this can be obtained by anyone with POLIS access, contact **Oluwadamilola Sonoiki** [sonoikio\@who.int](mailto:sonoikio@who.int){.email}
+2. Static AFP and SIA data pre-2020 - this can be obtained by contacting **Stephanie Kovacs** at [uvx4\@cdc.gov](mailto:uvx4@cdc.gov){.email}
+
+When you have these data then you can do the following:
+
+- Process shapefiles using the `preprocess_spatial` function in tidypolis:
+
+```
+preprocess_spatial(
+gdb_folder = "path/to/gdb_file.gdb", # replace with real path to the GDB file
+output_folder = "path/to/data/spatial", # replace with real path to the spatial folder
+edav = FALSE
+)
+```
+This will output three .rds shapefiles, `global.ctry.rds`, `global.prov.rds` and `global.dist.rds`. These three datasets need to be placed in the `misc` folder `POLIS_folder/misc/`.
+
+- Static files: you will need nine static files that will be appended to AFP and SIA data at the end of pre-processing. This is all pre-2020 data that remains static and contains certain hard coded values to correct for old POLIS entries that will not be updated. Six of those files are `afp_linelist_2001-01-01_2012-12-31.rds`, `afp_linelist_2013-01-01_2016-12-31.rds`, `afp_linelist_2017-01-01_2019-12-31.rds`, `other_surveillance_type_linelist_2016_2016.rds`, `other_surveillance_type_linelist_2017_2019.rds`, `sia_2000_2019.rds`. These need to be placed in the `core_files_to_combine` folder `POLIS_folder/data/core_files_to_combine/`. The other three static files are `crosswalk.rds`, `env_sites.rds` and `nopv_emg.table.rds` which all need to go in the `misc` folder.
+
+Once you have created and obtained these datasets you can begin pre-processing.
+
+## Processing POLIS data
+
+To process datasets for analysis all you need to run is the function 
+```
+preprocess_data(type = "cdc")
+```` 
+At this moment `cdc` is the only type of pre-processing supported by this function. Like `get_polis_data()` you will need to be connected to a valid POLIS folder before running this function. 
+
+There are five steps to pre-processing:
+
+0. Basic cleaning and standardization of variable names, creates four datasets that will become AFP/other surveillance, SIA, Environmental sample and Positives data. 
+1. Creates AFP and Other surveillance linelists, classifies cases and creates analysis variables as well as evaluates and corrects (when possible) geographic information.
+2. Creates SIA data including applying a clustering algorithm to impute round numbers (on first run this step will take many hours)
+3. Creates Environmental sample data, classifies detections and evaluates ES sites
+4. Creates Positives data, this uses the previously processed AFP and ES data to classify cases
+
+`preprocess_data()` will always run pre-processing in this order but if stepping through the function manually it should be noted that step 4 will not run if the previous steps have not been run prior. 
+
+This function will produce a number of outputs into `POLIS_folder/data/Core_Ready_Files/`, the primary outputs are the datasets: 
+
+- afp_linelist_2001-01-01_{date_of_latest_case}.rds
+- afp_linelist_2019-01-01_{date_of_latest_case}.rds
+- afp_linelist_2020-01-01_{date_of_latest_case}.rds
+- other_surveillance_type_linelist_2016_2025.rds
+- other_surveillance_type_linelist_2020_2025.rds
+- sia_2000_2025.rds
+- sia_2020_2025.rds
+- es_2001-01-08_{date_of_latest_detection}.rds
+- positives_2001-01-01_{date_of_latest_positive}.rds
+
+In addition to these datasets there are a number of additional QA/QC outputs, these include duplicate records, missing or unmatched geographies, original date variables/formats, and changed virus records. These outputs can be used to check for errors in POLIS and are helpful for understanding changes in POLIS data from week to week.
+
+CDC follows this schedule for updating and processing POLIS data:
+- Download of POLIS tables: Tuesdays at 6:00PM Eastern Time.
+- Running preprocessing: Wednesdays at 9:00AM Eastern Time.
+
+### Logging and Caching
+
+## Log
+Tidypolis logs all steps of initializing, downloading and processing. This information is output into `log.rds` within `POLIS_folder`. This can be used to understand changes in data from week to week, identify issues with the download, the data or the functions themselves, and provides a litany of useful information on each download and processing run. It is suggested that the user looks over the log after each run.
+
+## Cache
+Tidypolis maintains a cache of information on each table available via API from POLIS. This cache contains information about the size of the table, when it was last downloaded, the unique ID and update date variables present in tables (where applicable) and the user who last downloaded it. 

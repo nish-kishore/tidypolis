@@ -7,9 +7,9 @@
 run_single_table_diagnostic(.table, key = Sys.getenv("POLIS_API_Key"))
 }
 \arguments{
-\item{.table}{str: table name}
+\item{.table}{\code{str} table name}
 
-\item{key}{str: POLIS API Key}
+\item{key}{\code{str} POLIS API Key}
 }
 \value{
 tibble with diagnostic data

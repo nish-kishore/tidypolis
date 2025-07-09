@@ -8,15 +8,19 @@ ALL VALUES FOR NEW VARIABLE AND NEW VALUES FOR EXISTING}
 f.download.compare.02(
   df.from.f.download.compare.01,
   old.download,
-  new.download
+  new.download,
+  type = NULL
 )
 }
 \arguments{
-\item{df.from.f.download.compare.01}{tibble: output from f.download.compare.01}
+\item{df.from.f.download.compare.01}{\code{tibble} output from f.download.compare.01}
 
 \item{old.download}{tibble}
 
 \item{new.download}{tibble}
+
+\item{type}{str name of the df that the comparison is being made on, for use in log
+"AFP", "SIA", "ES", "POS"}
 }
 \value{
 tibble of variables to compare
@@ -24,3 +28,4 @@ tibble of variables to compare
 \description{
 List out distinct values that are not the same by variable
 }
+\keyword{internal}

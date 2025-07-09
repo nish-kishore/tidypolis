@@ -4,10 +4,30 @@
 \alias{preprocess_cdc}
 \title{Preprocess data process data in the CDC style}
 \usage{
-preprocess_cdc(polis_data_folder = Sys.getenv("POLIS_DATA_CACHE"))
+preprocess_cdc(
+  polis_folder = Sys.getenv("POLIS_DATA_FOLDER"),
+  who_region = NULL,
+  output_format = "rds",
+  archive = TRUE,
+  keep_n_archives = Inf
+)
 }
 \arguments{
-\item{polis_data_folder}{str: location of the POLIS data folder, defaults to value stored from init_tidypolis}
+\item{polis_folder}{\code{str} location of the POLIS data folder}
+
+\item{who_region}{\code{str} optional WHO region to filter data
+Available inputs include AFRO, AMRO, EMRO, EURO, SEARO and  WPRO.}
+
+\item{output_format}{\code{str} output_format to save files as.
+Available formats include 'rds' 'rda' 'csv' and 'parquet', Defaults is
+'rds'.}
+
+\item{archive}{Logical. Whether to archive previous output directories
+before overwriting. Default is \code{TRUE}.}
+
+\item{keep_n_archives}{Numeric. Number of archive folders to retain.
+Defaults to \code{Inf}, which keeps all archives. Set to a finite number
+(e.g., 3) to automatically delete older archives beyond the N most recent.}
 }
 \value{
 Outputs intermediary core ready files
@@ -15,3 +35,4 @@ Outputs intermediary core ready files
 \description{
 Process POLIS data into analytic datasets needed for CDC
 }
+\keyword{internal}
