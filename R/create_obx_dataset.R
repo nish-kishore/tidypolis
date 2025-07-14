@@ -1,4 +1,4 @@
-# source("./special_projects/obx_unit/obx_packages_01.R", local = T)
+source("./special_projects/obx_unit/obx_packages_01.R", local = T)
 library(here)
 
 # Inputs
@@ -16,9 +16,12 @@ v_type <- c("cVDPV 2", "cVDPV 3", "cVDPV 1")
 v_type1 <- c("cVDPV 2", "cVDPV 3", "cVDPV 1",
              "cVDPV1andcVDPV2", "cVDPV2andcVDPV3","VDPV1andcVDPV2", "CombinationWild1-cVDPV 2")
 
+# IPV Only Using Countries to Flag
+ipv_only <- c("CANADA", "GERMANY", "FINLAND", "ISRAEL", "POLAND" , "SPAIN", "UKRAINE", "THE UNITED KINGDOM", "UNITED STATES OF AMERICA")
+
 start.date <- lubridate::as_date("2016-01-01")
 
-end.date <-   lubridate::as_date("2025-05-31")
+end.date <-   lubridate::floor_date(lubridate::today())
 
 
 
@@ -266,6 +269,7 @@ op_epi2 = do.call(rbind, ob_epi)
 
 # Merge with overall dataset, include event vs outbreak definition variable
 
+
 df_all <- dplyr::left_join(df_all, op_epi2, by = "ob_id") |>
   dplyr::mutate(ob_cat = dplyr::case_when(
     no_detects == 1 & surv_es == 1 ~ "evt",
@@ -276,7 +280,8 @@ df_all <- dplyr::left_join(df_all, op_epi2, by = "ob_id") |>
 
 rm(ob_epi, op_epi2)
 
-# Export
+
+# Tidy up data set
 df_all <- df_all |> dplyr::select(ob_cat, ob_status, fv_yr, everything() )
 
 ### Add in SIA data now - #
@@ -285,15 +290,12 @@ sia_data  <- raw.data$sia |>
                   status == "Done")
 ob_sias <- list()
 
-
-# Test
-sia_ken <- sia_data |>
-              dplyr::filter(place.admin.0 == "KENYA") |>
-              dplyr::distinct(sia.code, .keep_all=T)
+# To move later
+cov_pct_lvl <- 6
 
 for (i in 1:nrow(df_all)){
 
-x <- "KEN-cVDPV2-3"
+# x <- "PNG-cVDPV1-1"
 x <- df_all$ob_id[i]
 df_sub <- df_all |> dplyr::filter(ob_id == x)
 
@@ -304,85 +306,150 @@ ctry <- df_sub$ob_country
 sero <- df_sub$ob_type
 mr_virus <- df_sub$most_recent
 
+# Get outbreak length to get median year of outbreak - rounded up for population estimates
+yr_start <- df_sub$fv_yr
+yr_end <- lubridate::year(df_sub$most_recent)
+yrs <- c(yr_start, yr_end)
+yr_pop<- round(median(yrs))
+# Population - get midpoint of year of outbreak
+
+
 # Pull out number of Admin1 regions
 dist <- raw.data$global.dist |>
            dplyr::filter(ADM0_NAME == ctry &
                          ENDDATE == "9999-12-31")
-dist <- nrow(dist)
+
+dist_c <- nrow(dist)
+
+prov <- raw.data$global.prov |>
+  dplyr::filter(ADM0_NAME == ctry &
+                  ENDDATE == "9999-12-31")
+
+prov_c <- nrow(prov)
+
+# population data
+pop <- raw.data$dist.pop |>
+  dplyr::filter(ADM0_NAME == ctry &
+                yr.end == "9999" &
+                year == yr_pop)
+
+tpop_u15 <- sum(pop$u15pop, na.rm = T)
+pop <- pop |>
+        dplyr::select(u15pop, adm2guid)
+
+
+# Extract total number of rounds listed
+# Extract total rounds over 10% of the country covered to avoid
+# If SNID or NID accept -> CR + greater than 10% coverage
+
+# Assumption that outbreak area was started in the intial round
+# Need to add people in
+# Then arrange by SIA date
+# Can use a breakthrough virus indication for the next d0
+# What is the country and population size for the SNID / NID and CR in the system?
+# Can remove all R0 if within 14 days of RO
+# RR - 400,000 (2-4 million)/ Min 2 million children,
+# Can remove if distinic in the pull in
+# Pull out anything that says mop-up
 
 
 if(sero == "cVDPV 2"){
 
-  # Extract total number of rounds listed
-
-
-
-  # Extract total rounds over 10% of the country covered to avoid
-  sia_rds <- sia_data |>
-            dplyr::filter(
-              place.admin.0 == ctry &
-                activity.start.date >= ob_start &
-                activity.start.date <= date_end &
-                vaccine.type %in% c("mOPV2", "tOPV", "nOPV2")) |>
-           dplyr::group_by(sia.code) |>
-           dplyr::summarise(
-                 total_prov = p_count,
-                 sia_prov = dplyr::n_distinct(place.admin.2),
-                 cov_pct = round(sia_prov / total_prov * 100)) |>
-           dplyr::filter(cov_pct >= 10)
-
-
-
-    sia_list <- sia_rds$sia.code
-
-  # Extract first / second / third rounds dates
-  # Did virus stop after rounds
-  # total number of larger rounds
-  sia_list <- sia_data |>
-    filter(place.admin.0 == ctry &
-             activity.start.date >= date_start &
-             activity.start.date <= date_end &
-             vaccine.type %in% c("mOPV2", "tOPV", "nOPV2")) |>
-    distinct(sia.code, .keep_all = T)
-
-  sia_check <- sia_data |>
-    filter(place.admin.0 == ctry &
-             activity.start.date >= date_start &
-             activity.start.date <= date_end &
-             vaccine.type %in% c("mOPV2", "tOPV", "nOPV2")) |>
-    group_by(sia.code) |>
-    count()
-
-}else if (sero %in% c("cVDPV 1" , "WILD 1")){
   sia_sub <- sia_data |>
-    filter(place.admin.0 == ctry &
-             activity.start.date >= date_start &
-             activity.start.date <= date_end &
-             vaccine.type %in% c("bOPV", "tOPV", "IPV + bOPV", "mOPV1")) |>
-    distinct(sia.code, .keep_all = T)
+    dplyr::filter(
+      place.admin.0 == ctry &
+        activity.start.date >= ob_start &
+        activity.start.date <= date_end &
+        vaccine.type %in% c("mOPV2", "tOPV", "nOPV2"))
 
-  sia_check <- sia_data |>
-    filter(place.admin.0 == ctry &
-             activity.start.date >= date_start &
+
+
+}else if (sero %in% c("cVDPV 1")){
+  sia_sub <- sia_data |>
+    dplyr::filter(place.admin.0 == ctry &
+             activity.start.date >= ob_start &
              activity.start.date <= date_end &
-             vaccine.type %in% c("bOPV", "tOPV", "IPV + bOPV", "mOPV1")) |>
-    group_by(sia.code) |>
-    count()
+             vaccine.type %in% c("bOPV", "tOPV", "IPV + bOPV", "mOPV1"))
+
+
 
 }else if(sero == "cVDPV 3"){
   sia_sub <- sia_data |>
-    filter(place.admin.0 == ctry &
-             activity.start.date >= date_start &
+    dplyr::filter(place.admin.0 == ctry &
+             activity.start.date >= ob_start &
              activity.start.date <= date_end &
-             vaccine.type %in% c("bOPV", "tOPV", "IPV + bOPV")) |>
-    distinct(sia.code, .keep_all = T)
+             vaccine.type %in% c("bOPV", "tOPV", "IPV + bOPV", "mOPV3"))
 
 }
 
 
+sia_sub <-  dplyr::left_join(sia_sub, pop, by = "adm2guid")
+
+# Quality check to pull out mop-ups or R0 that are not codeded as such
+sia_rds <- sia_sub |>
+  dplyr::arrange(sia.code, activity.start.date) |>
+  dplyr::group_by(sia.code) |>
+  dplyr::summarise(
+    sia_dist = dplyr::n_distinct(place.admin.2),
+    cov_pct_dist = sia_dist / dist_c * 100,
+    sia_prov = dplyr::n_distinct(place.admin.1),
+    cov_pct_prov = sia_prov / prov_c * 100,
+    sia_type = dplyr::first(activity.type),
+    cdc.round.num = dplyr::first(cdc.round.num),
+    cdc.max.round = dplyr::first(cdc.max.round),
+    cdc.last.camp = dplyr::first(cdc.last.camp),
+    sia_date = dplyr::first(activity.start.date),
+    tot_kids = sum(u15pop, na.rm = T),
+    pct_kids_tar = tot_kids /tpop_u15 * 100,
+    ob_R0 = dplyr::if_else(sia_date <= (ob_start + lubridate::days(14)), "Y", "N"))
+
+# Pull out total number of SIA coded rounds:
+sia_out <- sia_rds |>
+  dplyr::summarise(
+    id = x,
+    tot_rds = dplyr::n(),
+    sia_first = dplyr::first(sia_date),
+    sia_last = dplyr::last(sia_date))
 
 
 
+# # Focus on SNID / NIDS and CRS that do not appear as
+# Pull out any that do not cover
+# Some R0 can be big agains the
+sia_out2 <-    sia_rds |>
+  dplyr::filter(ob_R0 == "N" &
+                  (sia_type %in% c("SNID", "NID") |
+                  (sia_type == "CR" &
+                  cov_pct_dist >= cov_pct_lvl) |
+                  (sia_type == "CR" &
+                     cov_pct_dist < cov_pct_lvl &
+                     tot_kids > 400000))) |>
+         dplyr::summarise(
+           id = x,
+           reg_rds = dplyr::n(),
+           first_reg_sia = dplyr::first(sia_date),
+           sec_reg_sia = dplyr::nth(sia_date, 2),
+           thr_reg_sia = dplyr::nth(sia_date, 3),
+           forth_reg_sia = dplyr::nth(sia_date, 4),
+           last_reg_sia = dplyr::last(sia_date))
+
+sia_out <- dplyr::left_join(sia_out, sia_out2, by = "id")
+ob_sias[[i]] <- sia_out
+# rm(ob_check, ob_data, ob_viruses, df_sub)
+
+}
+
+ob_sias_all <- do.call(rbind, ob_sias)
+
+
+df_all <- dplyr::left_join(df_all, ob_sias_all, by = c("ob_id"="id"))
+
+
+df_all <- df_all |>
+             dplyr::mutate(ipv_ctry = dplyr::if_else(ob_country %in% ipv_only, "IPV Only", NA_character_))
+
+
+writexl::write_xlsx(df_all, path = "obx_df_test_140725.xlsx")
 
 # # Data Checking - All first report viruses are before
 # test <- df_all |>
