@@ -1,5 +1,4 @@
-#' This function checks one or more endpoint(s) in the POLIS API system,
-#' and returns a table with the live connection status of the endpoint.
+#' This function checks one or more endpoint(s) in the POLIS API system.
 #'
 #' @details
 #' Before running this function:
@@ -9,7 +8,7 @@
 #' @param ... One or more endpoint names as character strings. Accepts names in snake_case, camelCase, or PascalCase; all inputs are internally converted to snake_case.
 #' Use "all" or leave blank to check all available endpoints from cache.
 #'
-#' @return A tibble with status, timing, and diagnostic notes for each endpoint.
+#' @return A tibble with status of called API, timing, and diagnostic notes for each endpoint.
 
 check_polis_api_endpoints <- function(...) {
   base_url <- "https://extranet.who.int/polis/api/v2/"
