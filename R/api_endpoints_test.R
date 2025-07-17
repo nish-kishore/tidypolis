@@ -10,6 +10,7 @@
 #'
 #' @return A tibble with status of called API, timing, and diagnostic notes for each endpoint.
 #' @importFrom tibble tibble
+#' @export
 
 check_polis_api_endpoints <- function(...) {
   base_url <- "https://extranet.who.int/polis/api/v2/"
