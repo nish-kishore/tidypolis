@@ -9,6 +9,7 @@
 #' Use "all" or leave blank to check all available endpoints from cache.
 #'
 #' @return A tibble with status of called API, timing, and diagnostic notes for each endpoint.
+#' @importFrom tibble tibble
 
 check_polis_api_endpoints <- function(...) {
   base_url <- "https://extranet.who.int/polis/api/v2/"
@@ -91,7 +92,7 @@ check_polis_api_endpoints <- function(...) {
 
     # STATUS: Error when the cache does not contain data for this endpoint
     if (is.null(table_data) || !is.data.frame(table_data) || is.null(table_data$endpoint)) {
-      results[[.table]] <- tibble::tibble(
+      results[[.table]] <- tibble(
         table = .table,
         url = NA_character_,
         status = "error",
@@ -120,7 +121,7 @@ check_polis_api_endpoints <- function(...) {
 
     # STATUS: Failed API calls due to server errors or timeouts
     if (inherits(res, "error")) {
-      results[[.table]] <- tibble::tibble(
+      results[[.table]] <- tibble(
         table = .table,
         url = table_url,
         status = "down_api",
@@ -131,7 +132,7 @@ check_polis_api_endpoints <- function(...) {
 
       # STATUS: API called but returned no records to validate data presence
     } else if (nrow(res) == 0) {
-      results[[.table]] <- tibble::tibble(
+      results[[.table]] <- tibble(
         table = .table,
         url = table_url,
         status = "no_data_api_call",
@@ -142,7 +143,7 @@ check_polis_api_endpoints <- function(...) {
 
       # STATUS: Successful API call and data retrieved for validation
     } else {
-      results[[.table]] <- tibble::tibble(
+      results[[.table]] <- tibble(
         table = .table,
         url = table_url,
         status = "success_api_called",
