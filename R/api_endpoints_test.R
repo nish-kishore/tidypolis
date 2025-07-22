@@ -18,7 +18,7 @@ check_polis_api_endpoints <- function(...,
     split(cache_processed$table)
 
   tables_list <- cache_processed |>
-    dplyr::filter(!is.na(polis_id) & !is.na(endpoint)) |>
+    dplyr::filter(!is.na(.data$polis_id) & !is.na(.data$endpoint)) |>
     dplyr::pull(table)
 
   rm(cache_processed)
