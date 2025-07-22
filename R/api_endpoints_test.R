@@ -12,7 +12,7 @@ check_polis_api_endpoints <- function(...,
                                       cache_file = Sys.getenv("POLIS_CACHE_FILE")) {
 
   # Get table info
-  cache_processed <- tidypolis:::tidypolis_io(io = "read", file_path = cache_file) |>
+  cache_processed <- readRDS(cache_file) |>
     dplyr::filter(!is.na(table))
 
   table_metadata <- cache_processed |>
