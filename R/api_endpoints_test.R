@@ -109,7 +109,7 @@ check_polis_api_endpoints <- function(...,
     }
 
     # Store result
-    results[[.table]] <- tibble::tibble(
+    results[[.table]] <- tibble(
       table_name = .table, success_flag = success_flag, status_code = response$status_code,
       status_note = status_note, time_taken_sec = round(time_taken, 2), checked_at = check_datetime
     )
@@ -119,6 +119,6 @@ check_polis_api_endpoints <- function(...,
   if (length(results) > 0) {
     results |> dplyr::bind_rows()
   } else {
-    tibble::tibble()
+    tibble()
   }
 }
