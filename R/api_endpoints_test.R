@@ -1,165 +1,123 @@
-#' This function checks one or more endpoint(s) in the POLIS API system.
-#'
-#' @details
-#' Before running this function:
-#' - Make sure the tidypolis package is installed.
-#' - Set your POLIS API key as an environment variable.
-#'
-#' @param ... One or more endpoint names as character strings. Accepts names in snake_case, camelCase, or PascalCase; all inputs are internally converted to snake_case.
-#' Use "all" or leave blank to check all available endpoints from cache.
-#'
-#' @return A tibble with status of called API, timing, and diagnostic notes for each endpoint.
-#' @importFrom tibble tibble
+#' Check POLIS API Endpoints
+#' @description Tests WHO POLIS API endpoints for connectivity and response validation
+#' @param .table `str` Use "all" or no parameter set for all tables, input table "names" for specific endpoints to test (case-insensitive), input "help" for available options
+#' @param api_key `str` validated API key
+#' @returns tibble
 #' @export
 
-check_polis_api_endpoints <- function(...) {
-  base_url <- "https://extranet.who.int/polis/api/v2/"
+check_polis_api_endpoints <- function(...,
+                                      .table = NULL,
+                                      api_key = Sys.getenv("POLIS_API_KEY"),
+                                      cache_file = Sys.getenv("POLIS_CACHE_FILE")) {
 
-  # Endpoint name in snake_case format: converts camelCase, PascalCase, or Kebab-Case to snake_case
-  endpoint_name <- function(name) {
-    name <- gsub("-", "_", name)
-    tolower(
-      gsub("([A-Z]+)([A-Z][a-z])", "\\1_\\2",
-           gsub("([a-z0-9])([A-Z])", "\\1_\\2", name)
-      )
-    )
+  # Get table info
+  cache_processed <- tidypolis:::tidypolis_io(io = "read", file_path = cache_file) |>
+    dplyr::filter(!is.na(table))
+
+  table_metadata <- cache_processed |>
+    split(cache_processed$table)
+
+  tables_list <- cache_processed |>
+    dplyr::filter(!is.na(polis_id) & !is.na(endpoint)) |>
+    dplyr::pull(table)
+
+  rm(cache_processed)
+
+  # User input to select table
+  input_tables <- if (length(list(...)) > 0) {
+    list(...) |> unlist() |> tolower()
+  } else {
+    (.table %||% "all") |> tolower()
   }
 
-  # Fetch all endpoint names that exist in the tidypolis cache
-  get_valid_cached_tables <- function() {
-    # Initialize call to POLIS API base URL for all or user input endpoints
-    res <- tryCatch({
-      tidypolis::call_single_url(base_url)
-    }, error = function(e) {
-      message("Failed to get tables: ", e$message)
-      return(NULL)
-    })
+  # User input processing options
+  selected_tables <- if (is.null(input_tables) || length(input_tables) == 0 ||
+                         (length(input_tables) == 1 && input_tables == "all")) {
+    tables_list
 
-    if (is.null(res)) return(character(0))
+  } else if (length(input_tables) == 1 && input_tables == "help") {
+    available_msg <- paste(tables_list, collapse = ", ")
+    message("Available tables: ", available_msg)
+    return(invisible(tables_list))
 
-    # Extract endpoint names from the API response to build full URLs by concatenating with base URL for each endpoint check
-    tidypolis_api_endpoints <- res |>
-      (\(x) {
-        if (is.data.frame(x) && "endpoint" %in% colnames(x)) {
-          x$endpoint
-        } else if (is.list(x)) {
-          unlist(x)
-        } else {
-          message("Invalid API structure response: verify if the API base URL or response format has changed.")
-          character(0)
-        }
-      })()
+  } else {
+    found_tables <- input_tables[input_tables %in% tables_list]
+    missing_tables <- input_tables[!input_tables %in% tables_list]
 
-    available_tables <- character(0)
-
-    # Check which endpoints have cached data available in tidypolis cache
-    for (.table in tidypolis_api_endpoints) {
-      transformed_name <- endpoint_name(.table)
-
-      success <- tryCatch({
-        capture.output(
-          data <- get_polis_cache(.table = transformed_name),
-          type = "message"
-        ) |>
-          (\(msgs) !any(grepl("No entry found in the cache table", msgs)))()
-      }, error = function(e) FALSE)
-
-      if (success) {
-        available_tables <- c(available_tables, transformed_name)
+    if (length(missing_tables) > 0) {
+      if (length(missing_tables) == 1) {
+        cli::cli_alert_info("Table '{missing_tables}' doesn't exist or has invalid API configuration (NA polis_id/endpoint). Use check_polis_api_endpoints(\"help\") to see all available tables")
+      } else {
+        missing_list <- paste(missing_tables, collapse = ", ")
+        cli::cli_alert_info("Tables '{missing_list}' do not exist or have invalid API configuration (NA polis_id/endpoint). Use check_polis_api_endpoints(\"help\") to see all available tables")
       }
     }
 
-    unique(available_tables)
+    if (length(found_tables) > 0) {
+      found_tables
+    } else {
+      return(invisible(NULL))
+    }
   }
-
-  # Parse user input endpoints or fetch all cached endpoints in tidypolis by default
-  tables <- c(...) |>
-    (\(x) {
-      if (length(x) == 0 || (length(x) == 1 && tolower(x[1]) == "all")) {
-        get_valid_cached_tables()
-      } else {
-        endpoint_name(x)
-      }
-    })()
 
   results <- list()
 
-  # Loop through user-specified or all endpoints and attempt to retrieve cached data
-  for (.table in tables) {
-    table_data <- tryCatch(
-      get_polis_cache(.table = .table),
-      error = function(e) NULL
+  # Process each selected table
+  for (.table in selected_tables) {
+    start_time <- Sys.time()
+    table_data <- table_metadata[[.table]]
+
+    # Build API URL
+    api_url <- "https://extranet.who.int/polis/api/v2/" |>
+      paste0(table_data$endpoint, "?$inlinecount=allpages&$top=100")
+
+    # Make HTTP request
+    response <- httr::RETRY(
+      verb = "GET",
+      url = api_url,
+      config = httr::add_headers("authorization-token" = api_key),
+      times = 10,
+      pause_min = 2,
+      quiet = TRUE,
+      terminate_on_success = TRUE
     )
 
-    # STATUS: Error when the cache does not contain data for this endpoint
-    if (is.null(table_data) || !is.data.frame(table_data) || is.null(table_data$endpoint)) {
-      results[[.table]] <- tibble(
-        table = .table,
-        url = NA_character_,
-        status = "error",
-        note = "No entry found in cache table for this endpoint",
-        time_taken_sec = NA_real_,
-        checked_at = Sys.time()
-      )
-      next
+    # Process timing
+    check_datetime <- Sys.time()
+    time_taken <- check_datetime |>
+      difftime(start_time, units = "secs") |>
+      as.numeric()
+
+    # Extract HTTP request response
+    status_info <- httr::http_status(response)
+    success_flag <- status_info$category == "Success"
+    status_note <- status_info$message
+
+    # Parse and validate payload
+    if (success_flag) {
+      json_payload <- tryCatch({
+        response$content |> rawToChar() |> jsonlite::fromJSON()
+      }, error = function(e) {
+        success_flag <<- FALSE
+        NULL
+      })
+
+      if (!is.null(json_payload)) {
+        print(response)
+      }
     }
 
-    # Build full API URL
-    table_url <- paste0(base_url, table_data$endpoint)
-
-    # Time the API call and handle request with timeout, capturing duration
-    start_time <- Sys.time()
-
-    res <- tryCatch({
-      setTimeLimit(elapsed = 300, transient = TRUE)
-      on.exit(setTimeLimit(cpu = Inf, elapsed = Inf, transient = FALSE), add = TRUE)
-      tidypolis::call_single_url(table_url)
-    }, error = function(e) e)
-
-    time_taken <- difftime(Sys.time(), start_time, units = "secs") |>
-      as.numeric() |>
-      round(2)
-
-    # STATUS: Failed API calls due to server errors or timeouts
-    if (inherits(res, "error")) {
-      results[[.table]] <- tibble(
-        table = .table,
-        url = table_url,
-        status = "down_api",
-        note = "API call failed (server unavailable or timed out)",
-        time_taken_sec = time_taken,
-        checked_at = Sys.time()
-      )
-
-      # STATUS: API called but returned no records to validate data presence
-    } else if (nrow(res) == 0) {
-      results[[.table]] <- tibble(
-        table = .table,
-        url = table_url,
-        status = "no_data_api_call",
-        note = "API responded but returned no data",
-        time_taken_sec = time_taken,
-        checked_at = Sys.time()
-      )
-
-      # STATUS: Successful API call and data retrieved for validation
-    } else {
-      results[[.table]] <- tibble(
-        table = .table,
-        url = table_url,
-        status = "success_api_called",
-        note = "Successful API call with data presenece validated",
-        time_taken_sec = time_taken,
-        checked_at = Sys.time()
-      )
-
-      # Preview first few rows of successful API calls with returned data
-      dplyr::slice(res, 1:min(3, nrow(res))) |> invisible()
-      rm(res)
-      gc()
-    }
+    # Store result
+    results[[.table]] <- tibble::tibble(
+      table_name = .table, success_flag = success_flag, status_code = response$status_code,
+      status_note = status_note, time_taken_sec = round(time_taken, 2), checked_at = check_datetime
+    )
   }
 
-  # Combine each endpoint's API call result into one table and print for user
-  dplyr::bind_rows(results) |> print()
+  # Return results
+  if (length(results) > 0) {
+    results |> dplyr::bind_rows()
+  } else {
+    tibble::tibble()
+  }
 }
