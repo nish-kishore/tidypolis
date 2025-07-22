@@ -3,6 +3,7 @@
 #' @param .table `str` Use "all" or no parameter set for all tables, input table "names" for specific endpoints to test (case-insensitive), input "help" for available options
 #' @param api_key `str` validated API key
 #' @returns tibble
+#' @importFrom tibble tibble
 #' @export
 
 check_polis_api_endpoints <- function(...,
