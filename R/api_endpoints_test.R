@@ -1,6 +1,6 @@
 #' Check POLIS API Endpoints
 #' @description Tests WHO POLIS API endpoints for connectivity and response validation
-#' @param .table `str` Use "all" or no parameter set for all tables, input table "names" for specific endpoints to test (case-insensitive), input "help" for available options
+#' @param .table `str` Use "help" to see available table names, specify table names of interest to test (case-insensitive), or "all"/empty to test all tables
 #' @param api_key `str` validated API key
 #' @returns tibble
 #' @import From tibble tibble
